@@ -28,15 +28,26 @@ import {
   ZoomOut,
   Palette,
   Sparkles,
-  X
+  X,
+  RectangleHorizontal,
+  RectangleVertical,
+  LayoutGrid,
+  Triangle,
+  Minus,
+  PenTool,
+  ArrowUp,
+  ArrowDown,
+  ChevronsUp,
+  ChevronsDown,
 } from 'lucide-react';
 import { CardTemplateJSON, CardElement, TextElement, ShapeElement, QRCodeElement, BarcodeElement } from '@workspace/card-engine';
 import { enterpriseStore } from '@/lib/data/enterpriseStore';
 import { toast } from '@/components/ui/Toast';
 import { useTheme } from '@/components/ThemeProvider';
+import { LAYOUT_PRESETS, LayoutPreset } from '@/lib/data/layoutPresets';
 
 // Lazy-load Three.js viewer so heavy WebGL is only loaded when 3D preview is active
-const ThreeCardViewer = dynamic(() => import('@/components/three/ThreeCardViewer'), {
+const ThreeCardViewer = dynamic<any>(() => import('@/components/three/ThreeCardViewer'), {
   ssr: false,
   loading: () => (
     <div className="w-full h-[520px] rounded-2xl bg-slate-900 flex items-center justify-center text-slate-400 text-sm">
@@ -52,11 +63,18 @@ export default function CardDesignerPage() {
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
   const [showGrid, setShowGrid] = useState(true);
   const [showSafeMargin, setShowSafeMargin] = useState(true);
-  const [zoomLevel, setZoomLevel] = useState(1);
+  const [zoomLevel, setZoomLevel] = useState(0.85);
   const [show3DModal, setShow3DModal] = useState(false);
   const [showPublishModal, setShowPublishModal] = useState(false);
+  const [showLayoutModal, setShowLayoutModal] = useState(false);
   const [publishChangelog, setPublishChangelog] = useState('');
   const [saveSuccessNotice, setSaveSuccessNotice] = useState(false);
+
+  // Drag & Drop State
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragElementId, setDragElementId] = useState<string | null>(null);
+  const [dragStartPos, setDragStartPos] = useState({ x: 0, y: 0 });
+  const [elementStartPos, setElementStartPos] = useState({ x: 0, y: 0 });
 
   // Undo/Redo history
   const [history, setHistory] = useState<CardTemplateJSON[]>([enterpriseStore.activeTemplate]);
@@ -84,6 +102,96 @@ export default function CardDesignerPage() {
     }
   };
 
+  const isVertical = template.card.orientation === 'vertical';
+
+  // Portrait (V) layout — elements centered for 540×856 canvas
+  const VERTICAL_FRONT_LAYOUT: Record<string, Partial<{ x: number; y: number; width: number; height: number; textAlign: string }>> = {
+    'el-front-stripe':      { x: 0,   y: 0,   width: 540, height: 8  },
+    'el-front-logo':        { x: 0,   y: 20,  width: 540, height: 32, textAlign: 'center' },
+    'el-front-badge':       { x: 145, y: 60,  width: 250, height: 28 },
+    'el-front-badge-text':  { x: 145, y: 67,  width: 250, height: 18, textAlign: 'center' },
+    'el-front-photo':       { x: 185, y: 104, width: 170, height: 215 },
+    'el-front-name':        { x: 20,  y: 338, width: 500, height: 42, textAlign: 'center' },
+    'el-front-position':    { x: 20,  y: 388, width: 500, height: 28, textAlign: 'center' },
+    'el-front-id':          { x: 20,  y: 428, width: 500, height: 24, textAlign: 'center' },
+    'el-front-dept':        { x: 20,  y: 460, width: 500, height: 24, textAlign: 'center' },
+    'el-front-branch':      { x: 20,  y: 490, width: 500, height: 24, textAlign: 'center' },
+    'el-front-qr':          { x: 200, y: 630, width: 140, height: 140 },
+    'el-front-footer-line': { x: 30,  y: 800, width: 480, height: 1  },
+    'el-front-footer-text': { x: 30,  y: 814, width: 480, height: 16, textAlign: 'center' },
+  };
+
+  // Landscape (H) layout — original positions for 856×540 canvas
+  const HORIZONTAL_FRONT_LAYOUT: Record<string, Partial<{ x: number; y: number; width: number; height: number; textAlign: string }>> = {
+    'el-front-stripe':      { x: 0,   y: 0,   width: 856, height: 8  },
+    'el-front-logo':        { x: 50,  y: 28,  width: 280, height: 32, textAlign: 'left' },
+    'el-front-badge':       { x: 610, y: 26,  width: 195, height: 28 },
+    'el-front-badge-text':  { x: 610, y: 33,  width: 195, height: 18, textAlign: 'center' },
+    'el-front-photo':       { x: 50,  y: 90,  width: 175, height: 220 },
+    'el-front-name':        { x: 255, y: 110, width: 420, height: 42, textAlign: 'left' },
+    'el-front-position':    { x: 255, y: 160, width: 420, height: 28, textAlign: 'left' },
+    'el-front-id':          { x: 255, y: 205, width: 420, height: 24, textAlign: 'left' },
+    'el-front-dept':        { x: 255, y: 238, width: 420, height: 24, textAlign: 'left' },
+    'el-front-branch':      { x: 255, y: 268, width: 420, height: 24, textAlign: 'left' },
+    'el-front-qr':          { x: 680, y: 340, width: 125, height: 125 },
+    'el-front-footer-line': { x: 50,  y: 495, width: 756, height: 1  },
+    'el-front-footer-text': { x: 50,  y: 508, width: 756, height: 16, textAlign: 'left' },
+  };
+
+  // Back side Vertical positioning presets for 540×856 canvas
+  const VERTICAL_BACK_LAYOUT: Record<string, Partial<{ x: number; y: number; width: number; height: number; textAlign: string }>> = {
+    'el-back-magstripe':    { x: 0,   y: 40,  width: 540, height: 80 },
+    'el-back-sig-bg':       { x: 40,  y: 160, width: 460, height: 60 },
+    'el-back-sig-line':     { x: 60,  y: 205, width: 420, height: 1  },
+    'el-back-sig-label':    { x: 40,  y: 228, width: 460, height: 16, textAlign: 'center' },
+    'el-back-barcode':      { x: 80,  y: 300, width: 380, height: 90 },
+    'el-back-disclaimer-1': { x: 30,  y: 440, width: 480, height: 35, textAlign: 'center' },
+    'el-back-disclaimer-2': { x: 30,  y: 490, width: 480, height: 35, textAlign: 'center' },
+    'el-back-chip-label':   { x: 30,  y: 810, width: 480, height: 16, textAlign: 'center' },
+  };
+
+  // Back side Horizontal positioning presets for 856×540 canvas
+  const HORIZONTAL_BACK_LAYOUT: Record<string, Partial<{ x: number; y: number; width: number; height: number; textAlign: string }>> = {
+    'el-back-magstripe':    { x: 0,   y: 35,  width: 856, height: 80 },
+    'el-back-sig-bg':       { x: 50,  y: 155, width: 500, height: 55 },
+    'el-back-sig-line':     { x: 70,  y: 195, width: 460, height: 1  },
+    'el-back-sig-label':    { x: 50,  y: 215, width: 500, height: 16, textAlign: 'left' },
+    'el-back-barcode':      { x: 240, y: 260, width: 376, height: 80 },
+    'el-back-disclaimer-1': { x: 50,  y: 380, width: 756, height: 20, textAlign: 'center' },
+    'el-back-disclaimer-2': { x: 50,  y: 405, width: 756, height: 20, textAlign: 'center' },
+    'el-back-chip-label':   { x: 50,  y: 495, width: 756, height: 16, textAlign: 'center' },
+  };
+
+  // Toggle card orientation between horizontal (landscape) and vertical (portrait)
+  const handleOrientationToggle = (newOrientation: 'horizontal' | 'vertical') => {
+    if (template.card.orientation === newOrientation) return;
+    const newTemplate = JSON.parse(JSON.stringify(template)) as CardTemplateJSON;
+
+    // Swap canvas pixel dimensions
+    [newTemplate.card.width, newTemplate.card.height] = [newTemplate.card.height, newTemplate.card.width];
+    [newTemplate.card.physicalWidth, newTemplate.card.physicalHeight] = [newTemplate.card.physicalHeight, newTemplate.card.physicalWidth];
+    newTemplate.card.orientation = newOrientation;
+
+    // Reposition front elements
+    const frontMap = newOrientation === 'vertical' ? VERTICAL_FRONT_LAYOUT : HORIZONTAL_FRONT_LAYOUT;
+    newTemplate.front.elements = newTemplate.front.elements.map((el) => {
+      const overrides = frontMap[el.id];
+      if (!overrides) return el;
+      return { ...el, ...overrides } as typeof el;
+    });
+
+    // Reposition back elements
+    const backMap = newOrientation === 'vertical' ? VERTICAL_BACK_LAYOUT : HORIZONTAL_BACK_LAYOUT;
+    newTemplate.back.elements = newTemplate.back.elements.map((el) => {
+      const overrides = backMap[el.id];
+      if (!overrides) return el;
+      return { ...el, ...overrides } as typeof el;
+    });
+
+    pushHistory(newTemplate);
+    setSelectedElementId(null);
+  };
+
   const currentSurface = activeSide === 'front' ? template.front : template.back;
   const selectedElement = currentSurface.elements.find((el) => el.id === selectedElementId);
 
@@ -99,8 +207,74 @@ export default function CardDesignerPage() {
     }
   };
 
+  // Drag & Drop Handlers
+  const handleElementMouseDown = (e: React.MouseEvent, el: CardElement) => {
+    if (el.isLocked) return;
+    e.stopPropagation();
+    setSelectedElementId(el.id);
+
+    setIsDragging(true);
+    setDragElementId(el.id);
+    setDragStartPos({ x: e.clientX, y: e.clientY });
+    setElementStartPos({ x: el.x, y: el.y });
+  };
+
+  const handleCanvasMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging || !dragElementId) return;
+
+    const dx = Math.round((e.clientX - dragStartPos.x) / zoomLevel);
+    const dy = Math.round((e.clientY - dragStartPos.y) / zoomLevel);
+
+    const newX = Math.max(0, elementStartPos.x + dx);
+    const newY = Math.max(0, elementStartPos.y + dy);
+
+    setTemplate((prev) => {
+      const updated = JSON.parse(JSON.stringify(prev)) as CardTemplateJSON;
+      const surface = activeSide === 'front' ? updated.front : updated.back;
+      const idx = surface.elements.findIndex((eItem) => eItem.id === dragElementId);
+      if (idx !== -1) {
+        surface.elements[idx].x = newX;
+        surface.elements[idx].y = newY;
+      }
+      return updated;
+    });
+  };
+
+  const handleCanvasMouseUp = () => {
+    if (isDragging) {
+      setIsDragging(false);
+      setDragElementId(null);
+      pushHistory(template);
+    }
+  };
+
+  // Re-order element layer (stacking order)
+  const moveElementLayer = (id: string, direction: 'up' | 'down' | 'top' | 'bottom') => {
+    const newTemplate = JSON.parse(JSON.stringify(template)) as CardTemplateJSON;
+    const surface = activeSide === 'front' ? newTemplate.front : newTemplate.back;
+    const idx = surface.elements.findIndex((el) => el.id === id);
+    if (idx === -1) return;
+
+    const [item] = surface.elements.splice(idx, 1);
+    if (direction === 'up') {
+      surface.elements.splice(Math.min(surface.elements.length, idx + 1), 0, item);
+    } else if (direction === 'down') {
+      surface.elements.splice(Math.max(0, idx - 1), 0, item);
+    } else if (direction === 'top') {
+      surface.elements.push(item);
+    } else if (direction === 'bottom') {
+      surface.elements.unshift(item);
+    }
+
+    surface.elements.forEach((el, index) => {
+      el.zIndex = index + 1;
+    });
+
+    pushHistory(newTemplate);
+  };
+
   // Add new element to current surface
-  const addElement = (type: CardElement['type'], preset?: Partial<CardElement>) => {
+  const addElement = (type: CardElement['type'], preset?: any) => {
     const newId = `el-${Date.now().toString(36)}`;
     let newEl: CardElement;
 
@@ -131,8 +305,8 @@ export default function CardDesignerPage() {
       newEl = {
         id: newId,
         type: 'QR_CODE',
-        x: 650,
-        y: 340,
+        x: isVertical ? 200 : 650,
+        y: isVertical ? 630 : 340,
         width: 140,
         height: 140,
         data: 'https://verify.acmecorp.com/id/{{employee.employeeNumber}}',
@@ -150,9 +324,9 @@ export default function CardDesignerPage() {
       newEl = {
         id: newId,
         type: 'BARCODE',
-        x: 240,
-        y: 260,
-        width: 360,
+        x: isVertical ? 80 : 240,
+        y: isVertical ? 300 : 260,
+        width: isVertical ? 380 : 360,
         height: 80,
         data: '{{employee.employeeNumber}}',
         format: 'CODE128',
@@ -170,8 +344,8 @@ export default function CardDesignerPage() {
       newEl = {
         id: newId,
         type: 'EMPLOYEE_PHOTO',
-        x: 50,
-        y: 110,
+        x: isVertical ? 185 : 50,
+        y: isVertical ? 104 : 110,
         width: 170,
         height: 215,
         borderRadius: 10,
@@ -185,20 +359,21 @@ export default function CardDesignerPage() {
         zIndex: currentSurface.elements.length + 1,
       };
     } else {
-      // Shape
+      // Shape Element
+      const shapeType = preset && 'shapeType' in preset ? (preset.shapeType as any) : 'RECTANGLE';
       newEl = {
         id: newId,
         type: 'SHAPE',
-        shapeType: 'RECTANGLE',
-        x: 50,
-        y: 50,
-        width: 200,
-        height: 40,
-        fill: '#dc2626',
-        borderRadius: 0,
-        strokeWidth: 0,
-        rotation: 0,
-        opacity: 1,
+        shapeType: shapeType,
+        x: preset?.x ?? 50,
+        y: preset?.y ?? 50,
+        width: preset?.width ?? 200,
+        height: preset?.height ?? 40,
+        fill: preset?.fill ?? '#dc2626',
+        borderRadius: preset?.borderRadius ?? 0,
+        strokeWidth: preset?.strokeWidth ?? 0,
+        rotation: preset?.rotation ?? 0,
+        opacity: preset?.opacity ?? 1,
         isLocked: false,
         isHidden: false,
         zIndex: currentSurface.elements.length + 1,
@@ -221,8 +396,24 @@ export default function CardDesignerPage() {
     setSelectedElementId(null);
   };
 
+  const applyLayoutPreset = (preset: LayoutPreset) => {
+    const newTemplate = JSON.parse(JSON.stringify(template)) as CardTemplateJSON;
+    if (isVertical) {
+      newTemplate.front.elements = JSON.parse(JSON.stringify(preset.frontElementsV));
+      newTemplate.back.elements = JSON.parse(JSON.stringify(preset.backElementsV));
+    } else {
+      newTemplate.front.elements = JSON.parse(JSON.stringify(preset.frontElementsH));
+      newTemplate.back.elements = JSON.parse(JSON.stringify(preset.backElementsH));
+    }
+    pushHistory(newTemplate);
+    setShowLayoutModal(false);
+    toast.success(`Applied "${preset.name}" layout preset!`);
+  };
+
   const handleSaveDraft = () => {
     enterpriseStore.activeTemplate = JSON.parse(JSON.stringify(template));
+    setSaveSuccessNotice(true);
+    setTimeout(() => setSaveSuccessNotice(false), 3000);
     toast.success('Card design draft saved successfully.');
   };
 
@@ -261,7 +452,7 @@ export default function CardDesignerPage() {
           <div className="font-bold text-sm tracking-tight flex items-center gap-2">
             <span>Card Template Designer (2D Editor)</span>
             <span className={`text-[10px] font-mono px-2 py-0.5 rounded ${isDark ? 'text-slate-400 bg-slate-800' : 'text-slate-500 bg-slate-100 border border-slate-200'}`}>
-              CR80 (85.60 × 53.98mm)
+              CR80 ({isVertical ? '53.98 × 85.60mm ↕' : '85.60 × 53.98mm ↔'})
             </span>
           </div>
         </div>
@@ -287,6 +478,17 @@ export default function CardDesignerPage() {
 
           <div className={`h-4 w-[1px] mx-1 ${isDark ? 'bg-slate-800' : 'bg-slate-200'}`} />
 
+          {/* Layout Presets Launcher */}
+          <button
+            onClick={() => setShowLayoutModal(true)}
+            className="px-3 py-1.5 rounded-lg bg-indigo-600/10 text-indigo-500 hover:bg-indigo-600 hover:text-white border border-indigo-500/30 text-xs font-semibold flex items-center gap-1.5 transition"
+          >
+            <LayoutGrid className="w-3.5 h-3.5" />
+            Layouts
+          </button>
+
+          <div className={`h-4 w-[1px] mx-1 ${isDark ? 'bg-slate-800' : 'bg-slate-200'}`} />
+
           {/* Front / Back Switcher */}
           <div className={`flex p-0.5 rounded-lg border ${isDark ? 'bg-slate-900 border-slate-700' : 'bg-slate-100 border-slate-200'}`}>
             <button
@@ -302,6 +504,35 @@ export default function CardDesignerPage() {
                 }`}
             >
               Back
+            </button>
+          </div>
+
+          <div className={`h-4 w-[1px] mx-1 ${isDark ? 'bg-slate-800' : 'bg-slate-200'}`} />
+
+          {/* Orientation Switcher */}
+          <div
+            title="Card Orientation"
+            className={`flex p-0.5 rounded-lg border ${isDark ? 'bg-slate-900 border-slate-700' : 'bg-slate-100 border-slate-200'}`}
+          >
+            <button
+              onClick={() => handleOrientationToggle('horizontal')}
+              title="Horizontal (Landscape)"
+              className={`flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold transition ${
+                !isVertical ? 'bg-indigo-600 text-white' : isDark ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-900'
+              }`}
+            >
+              <RectangleHorizontal className="w-3.5 h-3.5" />
+              <span>H</span>
+            </button>
+            <button
+              onClick={() => handleOrientationToggle('vertical')}
+              title="Vertical (Portrait)"
+              className={`flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold transition ${
+                isVertical ? 'bg-indigo-600 text-white' : isDark ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-900'
+              }`}
+            >
+              <RectangleVertical className="w-3.5 h-3.5" />
+              <span>V</span>
             </button>
           </div>
 
@@ -324,9 +555,11 @@ export default function CardDesignerPage() {
           </button>
 
           <div className={`flex items-center border rounded px-2 py-1 text-xs ${zoomBar}`}>
-            <button onClick={() => setZoomLevel(Math.max(0.6, zoomLevel - 0.1))} className={isDark ? 'hover:text-white' : 'hover:text-slate-900'}><ZoomOut className="w-3.5 h-3.5" /></button>
+            <button onClick={() => setZoomLevel(Math.max(0.4, zoomLevel - 0.1))} className={isDark ? 'hover:text-white' : 'hover:text-slate-900'}><ZoomOut className="w-3.5 h-3.5" /></button>
             <span className="mx-2 font-mono text-[11px]">{Math.round(zoomLevel * 100)}%</span>
             <button onClick={() => setZoomLevel(Math.min(1.6, zoomLevel + 0.1))} className={isDark ? 'hover:text-white' : 'hover:text-slate-900'}><ZoomIn className="w-3.5 h-3.5" /></button>
+            <div className="w-[1px] h-3 bg-slate-700/50 mx-1.5" />
+            <button onClick={() => setZoomLevel(isVertical ? 0.75 : 0.8)} title="Fit Card to Screen" className="text-[10px] font-bold uppercase tracking-wider text-indigo-400 hover:text-indigo-300">Fit</button>
           </div>
 
           <div className={`h-4 w-[1px] mx-1 ${isDark ? 'bg-slate-800' : 'bg-slate-200'}`} />
@@ -378,7 +611,13 @@ export default function CardDesignerPage() {
               { label: 'Employee Photo', icon: <ImageIcon className="w-4 h-4 text-red-500" />, action: () => addElement('EMPLOYEE_PHOTO') },
               { label: 'Verification QR', icon: <QrCode className="w-4 h-4 text-indigo-500" />, action: () => addElement('QR_CODE') },
               { label: 'Code128 Barcode', icon: <Barcode className="w-4 h-4 text-slate-500" />, action: () => addElement('BARCODE') },
-              { label: 'Color Stripe / Shape', icon: <Square className="w-4 h-4 text-red-400" />, action: () => addElement('SHAPE') },
+              { label: 'Rectangle / Box', icon: <Square className="w-4 h-4 text-red-400" />, action: () => addElement('SHAPE', { shapeType: 'RECTANGLE' }) },
+              { label: 'Triangle Shape', icon: <Triangle className="w-4 h-4 text-emerald-400" />, action: () => addElement('SHAPE', { shapeType: 'TRIANGLE', width: 100, height: 100, fill: '#dc2626' }) },
+              { label: 'Circle / Oval', icon: <Circle className="w-4 h-4 text-purple-400" />, action: () => addElement('SHAPE', { shapeType: 'CIRCLE', width: 120, height: 120, fill: '#dc2626', borderRadius: 9999 }) },
+              { label: 'Divider Line', icon: <Minus className="w-4 h-4 text-slate-400" />, action: () => addElement('SHAPE', { shapeType: 'LINE', width: 300, height: 2, fill: '#cbd5e1' }) },
+              { label: 'Diagonal Stripe', icon: <Square className="w-4 h-4 text-indigo-400 rotate-45" />, action: () => addElement('SHAPE', { shapeType: 'DIAGONAL', width: 250, height: 100, fill: '#dc2626' }) },
+              { label: 'Signature Line', icon: <PenTool className="w-4 h-4 text-amber-400" />, action: () => addElement('SHAPE', { shapeType: 'SIGNATURE_LINE', width: 280, height: 40, fill: '#cbd5e1' }) },
+              { label: 'Smoke / Blob Accent', icon: <Sparkles className="w-4 h-4 text-pink-400" />, action: () => addElement('SHAPE', { shapeType: 'SMOKE', width: 180, height: 180, fill: '#dc2626' }) },
             ].map(({ label, icon, action }) => (
               <button
                 key={label}
@@ -419,7 +658,12 @@ export default function CardDesignerPage() {
         </aside>
 
         {/* Center Canvas Stage */}
-        <main className={`flex-1 overflow-auto flex items-center justify-center p-8 relative transition-colors duration-300 ${canvasBg}`}>
+        <main
+          onMouseMove={handleCanvasMouseMove}
+          onMouseUp={handleCanvasMouseUp}
+          onMouseLeave={handleCanvasMouseUp}
+          className={`flex-1 overflow-auto flex items-center justify-center p-8 relative transition-colors duration-300 ${canvasBg}`}
+        >
           {/* CR80 Card Frame */}
           <div
             style={{
@@ -427,9 +671,9 @@ export default function CardDesignerPage() {
               transformOrigin: 'center center',
               width: `${template.card.width}px`,
               height: `${template.card.height}px`,
+              transition: isDragging ? 'none' : 'width 0.25s ease, height 0.25s ease',
             }}
-            className={`relative rounded-[24px] shadow-2xl transition-transform duration-100 border border-slate-700/80 ${activeSide === 'front' ? 'bg-white' : 'bg-[#f8fafc]'
-              }`}
+            className={`relative shadow-2xl border border-slate-700/80 ${isVertical ? 'rounded-[18px]' : 'rounded-[24px]'} ${activeSide === 'front' ? 'bg-white' : 'bg-[#f8fafc]'}`}
           >
             {/* Grid Overlay */}
             {showGrid && (
@@ -453,10 +697,7 @@ export default function CardDesignerPage() {
               return (
                 <div
                   key={el.id}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelectedElementId(el.id);
-                  }}
+                  onMouseDown={(e) => handleElementMouseDown(e, el)}
                   style={{
                     position: 'absolute',
                     left: `${el.x}px`,
@@ -467,7 +708,7 @@ export default function CardDesignerPage() {
                     opacity: el.opacity ?? 1,
                     cursor: el.isLocked ? 'default' : 'move',
                   }}
-                  className={`group transition-shadow ${isSelected ? 'ring-2 ring-red-500 shadow-lg' : 'hover:ring-1 hover:ring-red-400/50'
+                  className={`group transition-shadow ${isSelected ? 'ring-2 ring-red-500 shadow-lg z-30' : 'hover:ring-1 hover:ring-red-400/50'
                     }`}
                 >
                   {/* Element Type Render */}
@@ -514,13 +755,68 @@ export default function CardDesignerPage() {
                   )}
 
                   {el.type === 'SHAPE' && (
-                    <div
-                      style={{
-                        backgroundColor: el.fill || '#dc2626',
-                        borderRadius: el.borderRadius ? `${el.borderRadius}px` : undefined,
-                      }}
-                      className="w-full h-full"
-                    />
+                    <>
+                      {el.shapeType === 'TRIANGLE' && (
+                        <div
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            backgroundColor: el.fill || '#dc2626',
+                            clipPath: 'polygon(50% 0%, 0% 100%, 100% 100%)',
+                          }}
+                        />
+                      )}
+                      {el.shapeType === 'CIRCLE' && (
+                        <div
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            backgroundColor: el.fill || '#dc2626',
+                            borderRadius: '9999px',
+                          }}
+                        />
+                      )}
+                      {el.shapeType === 'DIAGONAL' && (
+                        <div
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            backgroundColor: el.fill || '#dc2626',
+                            clipPath: 'polygon(0 0, 100% 0, 80% 100%, 0% 100%)',
+                          }}
+                        />
+                      )}
+                      {el.shapeType === 'SMOKE' && (
+                        <div
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            background: `radial-gradient(circle, ${el.fill || '#dc2626'} 0%, rgba(255,255,255,0) 70%)`,
+                            borderRadius: '50%',
+                          }}
+                        />
+                      )}
+                      {el.shapeType === 'SIGNATURE_LINE' && (
+                        <div className="w-full h-full flex flex-col justify-end">
+                          <div className="w-full h-[1px] bg-slate-400" />
+                          <span className="text-[9px] font-mono text-slate-400 text-center mt-1">SIGNATURE</span>
+                        </div>
+                      )}
+                      {el.shapeType === 'LOGO' && (
+                        <div className="w-full h-full border-2 border-dashed border-slate-400 rounded flex items-center justify-center bg-slate-100/50">
+                          <span className="text-xs font-bold tracking-widest text-slate-500">LOGO</span>
+                        </div>
+                      )}
+                      {(!el.shapeType || el.shapeType === 'RECTANGLE' || el.shapeType === 'LINE') && (
+                        <div
+                          style={{
+                            backgroundColor: el.fill || '#dc2626',
+                            borderRadius: el.borderRadius ? `${el.borderRadius}px` : undefined,
+                          }}
+                          className="w-full h-full"
+                        />
+                      )}
+                    </>
                   )}
 
                   {/* Resizing handles for selected item */}
@@ -629,6 +925,19 @@ export default function CardDesignerPage() {
                   </div>
 
                   <div>
+                    <label className={`text-[10px] ${labelCls}`}>Text Alignment</label>
+                    <select
+                      value={selectedElement.textAlign || 'left'}
+                      onChange={(e) => updateSelectedElement({ textAlign: e.target.value as any })}
+                      className={`w-full border rounded px-2 py-1 text-xs ${inputCls}`}
+                    >
+                      <option value="left">Left Aligned</option>
+                      <option value="center">Center Aligned</option>
+                      <option value="right">Right Aligned</option>
+                    </select>
+                  </div>
+
+                  <div>
                     <label className={`text-[10px] ${labelCls}`}>Text Color</label>
                     <div className="flex items-center gap-2">
                       <input
@@ -644,6 +953,58 @@ export default function CardDesignerPage() {
                         className={`flex-1 border rounded px-2 py-1 text-xs font-mono ${inputCls}`}
                       />
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Properties for SHAPE */}
+              {selectedElement.type === 'SHAPE' && (
+                <div className={`p-3 rounded-lg border space-y-3 ${cardRow}`}>
+                  <span className={`font-semibold block text-[10px] uppercase ${sectionHdr}`}>Shape Properties</span>
+                  <div>
+                    <label className={`text-[10px] ${labelCls}`}>Shape Type</label>
+                    <select
+                      value={(selectedElement as any).shapeType || 'RECTANGLE'}
+                      onChange={(e) => updateSelectedElement({ shapeType: e.target.value as any } as any)}
+                      className={`w-full border rounded px-2 py-1 text-xs ${inputCls}`}
+                    >
+                      <option value="RECTANGLE">Rectangle</option>
+                      <option value="CIRCLE">Circle / Oval</option>
+                      <option value="TRIANGLE">Triangle</option>
+                      <option value="DIAGONAL">Diagonal Stripe</option>
+                      <option value="SMOKE">Smoke Gradient</option>
+                      <option value="LINE">Line</option>
+                      <option value="SIGNATURE_LINE">Signature Line</option>
+                      <option value="LOGO">Logo Box</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className={`text-[10px] ${labelCls}`}>Fill Color</label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={(selectedElement as any).fill || '#dc2626'}
+                        onChange={(e) => updateSelectedElement({ fill: e.target.value } as any)}
+                        className={`w-7 h-7 rounded border cursor-pointer ${isDark ? 'border-slate-700 bg-transparent' : 'border-slate-300'}`}
+                      />
+                      <input
+                        type="text"
+                        value={(selectedElement as any).fill || '#dc2626'}
+                        onChange={(e) => updateSelectedElement({ fill: e.target.value } as any)}
+                        className={`flex-1 border rounded px-2 py-1 text-xs font-mono ${inputCls}`}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className={`text-[10px] ${labelCls}`}>Corner Radius (px)</label>
+                    <input
+                      type="number"
+                      value={(selectedElement as any).borderRadius || 0}
+                      onChange={(e) => updateSelectedElement({ borderRadius: parseInt(e.target.value) || 0 } as any)}
+                      className={`w-full border rounded px-2 py-1 text-xs ${inputCls}`}
+                    />
                   </div>
                 </div>
               )}
@@ -694,6 +1055,60 @@ export default function CardDesignerPage() {
           )}
         </aside>
       </div>
+
+      {/* Layout Presets Selection Modal */}
+      {showLayoutModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-6">
+          <div className={`w-full max-w-4xl rounded-2xl border ${panelBorder} ${panel} p-6 shadow-2xl max-h-[90vh] flex flex-col`}>
+            <div className="flex items-center justify-between mb-4 border-b border-slate-800 pb-3">
+              <div>
+                <h2 className="text-base font-bold flex items-center gap-2">
+                  <LayoutGrid className="w-5 h-5 text-indigo-500" />
+                  Select ID Card Layout Preset ({isVertical ? 'Vertical Portrait' : 'Horizontal Landscape'})
+                </h2>
+                <p className="text-slate-400 text-xs mt-1">
+                  Selecting a layout will replace current elements with a professionally designed pre-built template.
+                </p>
+              </div>
+              <button onClick={() => setShowLayoutModal(false)} className="text-slate-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 overflow-y-auto p-1">
+              {LAYOUT_PRESETS.map((preset: LayoutPreset) => (
+                <div
+                  key={preset.id}
+                  onClick={() => applyLayoutPreset(preset)}
+                  className={`group border rounded-xl p-4 cursor-pointer transition hover:scale-[1.02] flex flex-col justify-between ${
+                    isDark ? 'bg-slate-900 border-slate-800 hover:border-indigo-500' : 'bg-slate-50 border-slate-200 hover:border-indigo-500 shadow-sm'
+                  }`}
+                >
+                  <div>
+                    {/* Thumbnail preview bar */}
+                    <div
+                      style={{ backgroundColor: preset.themeColor }}
+                      className="w-full h-24 rounded-lg mb-3 flex items-center justify-center relative overflow-hidden shadow-inner"
+                    >
+                      <div className="absolute inset-0 opacity-20 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:10px_10px]" />
+                      <span className={`px-2.5 py-1 rounded text-[11px] font-bold ${preset.badgeBg} ${preset.badgeText} shadow-md`}>
+                        {preset.name}
+                      </span>
+                    </div>
+
+                    <h3 className="font-bold text-sm mb-1">{preset.name}</h3>
+                    <p className="text-xs text-slate-400 leading-relaxed">{preset.description}</p>
+                  </div>
+
+                  <button className="mt-4 w-full py-1.5 rounded-lg bg-indigo-600 text-white font-semibold text-xs group-hover:bg-indigo-500 transition shadow-sm">
+                    Apply Layout
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 3D Realistic Preview Modal */}
       {show3DModal && (
