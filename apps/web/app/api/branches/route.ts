@@ -25,9 +25,36 @@ export async function POST(request: Request) {
     }
 
     const supabase = await createServerSupabaseClient();
+    let companyId = body.companyId;
+    if (!companyId) {
+      const { data: company, error: companyError } = await supabase
+        .from('companies')
+        .select('id')
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .maybeSingle();
+
+      if (companyError) throw companyError;
+      companyId = company?.id;
+    }
+
+    if (!companyId) {
+      return NextResponse.json(
+        { error: 'No company is configured. Create a company record before adding a branch.' },
+        { status: 400 }
+      );
+    }
+
     const { data, error } = await supabase
       .from('branches')
-      .insert([{ name: body.name, code: body.code, address: body.address ?? '', contact_number: body.contactNumber ?? '', is_active: true }])
+      .insert([{
+        company_id: companyId,
+        name: body.name,
+        code: body.code,
+        address: body.address ?? '',
+        contact_number: body.contactNumber ?? '',
+        is_active: true,
+      }])
       .select()
       .single();
 

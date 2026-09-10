@@ -15,10 +15,35 @@ import {
   Building2,
   LogOut,
   Bell,
+  AlertTriangle,
+  CheckCircle2,
+  Clock,
+  XCircle,
   Sun,
   Moon
 } from 'lucide-react';
 import { useTheme } from '@/components/ThemeProvider';
+import type { KioskDevice, PrintJobRecord } from '@/lib/data/enterpriseStore';
+
+type HeaderNotification = {
+  id: string;
+  title: string;
+  description: string;
+  href: string;
+  timestamp: string;
+  severity: 'warning' | 'error' | 'info';
+};
+
+function formatNotificationTime(timestamp: string) {
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) return 'Recently';
+
+  const minutesAgo = Math.max(0, Math.floor((Date.now() - date.getTime()) / 60000));
+  if (minutesAgo < 1) return 'Just now';
+  if (minutesAgo < 60) return `${minutesAgo}m ago`;
+  if (minutesAgo < 1440) return `${Math.floor(minutesAgo / 60)}h ago`;
+  return `${Math.floor(minutesAgo / 1440)}d ago`;
+}
 
 export default function HrLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -33,39 +58,58 @@ export default function HrLayout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (isLoginPage) return;
 
-    // Read cookie/session to display user profile
-    const match = document.cookie.match(new RegExp('(^| )hr_auth_token=([^;]+)'));
-    if (match && match[2]) {
-      try {
-        const decoded = JSON.parse(atob(match[2].replace(/-/g, '+').replace(/_/g, '/')));
-        setAdminUser({
-          email: decoded.email || 'admin@magiccard.corp',
-          name: decoded.name || 'Admin HR',
-        });
-      } catch {
-        setAdminUser({ email: 'admin@magiccard.corp', name: 'Admin HR' });
-      }
-    }
+    const loadAdminProfile = () => {
+      fetch('/api/auth/profile')
+        .then((response) => response.json())
+        .then((json) => {
+          if (json.data) {
+            setAdminUser({ email: json.data.email, name: json.data.displayName });
+          }
+        })
+        .catch(() => {});
+    };
+
+    loadAdminProfile();
+    window.addEventListener('hr-profile-updated', loadAdminProfile);
+    return () => window.removeEventListener('hr-profile-updated', loadAdminProfile);
   }, [isLoginPage]);
 
   const [kiosksCount, setKiosksCount] = useState<number | null>(null);
   const [onlineKiosksCount, setOnlineKiosksCount] = useState<number>(0);
+  const [kiosks, setKiosks] = useState<KioskDevice[]>([]);
+  const [printJobs, setPrintJobs] = useState<PrintJobRecord[]>([]);
   const [branches, setBranches] = useState<Array<{ id: string; name: string }>>([]);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [notificationsError, setNotificationsError] = useState(false);
 
   // Fetch real KIOSK fleet count and branches from Supabase
   useEffect(() => {
     if (isLoginPage) return;
 
-    fetch('/api/kiosks')
-      .then((r) => r.json())
-      .then((json) => {
-        setKiosksCount(json.total ?? 0);
-        setOnlineKiosksCount(json.onlineCount ?? 0);
+    fetch('/api/kiosks', { cache: 'no-store' })
+      .then(async (r) => {
+        if (!r.ok) throw new Error('Kiosks API request failed.');
+        return r.json();
+      })
+      .then((kioskJson) => {
+        const loadedKiosks = kioskJson.data ?? [];
+        setKiosks(loadedKiosks);
+        setKiosksCount(kioskJson.total ?? loadedKiosks.length);
+        setOnlineKiosksCount(kioskJson.onlineCount ?? loadedKiosks.filter((kiosk: KioskDevice) => kiosk.status === 'ONLINE').length);
       })
       .catch(() => {
         setKiosksCount(0);
         setOnlineKiosksCount(0);
+        setNotificationsError(true);
       });
+
+    fetch('/api/print-jobs', { cache: 'no-store' })
+      .then(async (r) => {
+        if (!r.ok) throw new Error('Print jobs API request failed.');
+        return r.json();
+      })
+      .then((printJobJson) => setPrintJobs(printJobJson.data ?? []))
+      .catch(() => setNotificationsError(true));
 
     fetch('/api/branches')
       .then((r) => r.json())
@@ -75,15 +119,41 @@ export default function HrLayout({ children }: { children: React.ReactNode }) {
       .catch(() => {});
   }, [isLoginPage]);
 
+  const notifications: HeaderNotification[] = [
+    ...kiosks
+      .filter((kiosk) => kiosk.status !== 'ONLINE')
+      .map((kiosk) => ({
+        id: `kiosk-${kiosk.id}`,
+        title: `${kiosk.code} is ${kiosk.status.toLowerCase()}`,
+        description: kiosk.name,
+        href: '/hr/kiosks',
+        timestamp: kiosk.lastHeartbeat,
+        severity: kiosk.status === 'DISABLED' ? 'error' as const : 'warning' as const,
+      })),
+    ...printJobs
+      .filter((job) => ['FAILED', 'QUEUED', 'PRINTING'].includes(job.status))
+      .map((job) => ({
+        id: `print-job-${job.id}`,
+        title: `Print job ${job.status.toLowerCase()}`,
+        description: `${job.jobNumber} - ${job.employeeName}`,
+        href: '/hr/print-history',
+        timestamp: job.createdAt,
+        severity: job.status === 'FAILED' ? 'error' as const : 'info' as const,
+      })),
+  ].sort((first, second) => new Date(second.timestamp).getTime() - new Date(first.timestamp).getTime());
+
+  const visibleNotifications = notifications.slice(0, 5);
+
   const handleSignOut = async () => {
     try {
-      await fetch('/api/auth/logout', { method: 'POST' });
+      const response = await fetch('/api/auth/logout', { method: 'POST' });
+      if (!response.ok) throw new Error('Logout failed');
     } catch {
-      // Ignore network errors on logout
+      // Continue to the login screen even if the network is unavailable.
     }
-    // Clear client-side cookie directly as backup
     document.cookie = 'hr_auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
     router.replace('/hr/login');
+    router.refresh();
   };
 
   if (isLoginPage) {
@@ -217,10 +287,89 @@ export default function HrLayout({ children }: { children: React.ReactNode }) {
               {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-700" />}
             </button>
 
-            <button className="p-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition relative">
-              <Bell className="w-4 h-4" />
-              <span className="w-2 h-2 rounded-full bg-red-500 absolute top-1.5 right-1.5" />
-            </button>
+            <div className="relative">
+              <button
+                onClick={() => setIsNotificationsOpen((isOpen) => !isOpen)}
+                className="p-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition relative"
+                title={notifications.length ? `${notifications.length} notification${notifications.length === 1 ? '' : 's'}` : 'No new notifications'}
+                aria-label="Open notifications"
+                aria-expanded={isNotificationsOpen}
+              >
+                <Bell className="w-4 h-4" />
+                {notifications.length > 0 && (
+                  <span className="min-w-4 h-4 px-1 rounded-full bg-red-600 text-white text-[9px] font-bold absolute -top-1 -right-1 flex items-center justify-center">
+                    {notifications.length > 9 ? '9+' : notifications.length}
+                  </span>
+                )}
+              </button>
+
+              {isNotificationsOpen && (
+                <div className="absolute right-0 top-11 w-80 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#111827] shadow-xl z-50 overflow-hidden">
+                  <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                    <div>
+                      <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Notifications</h2>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400">Live kiosk and print activity</p>
+                    </div>
+                    <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">
+                      {notifications.length} open
+                    </span>
+                  </div>
+
+                  {notificationsError ? (
+                    <div className="px-4 py-6 text-center text-xs text-rose-600 dark:text-rose-400">
+                      Notifications are temporarily unavailable.
+                    </div>
+                  ) : visibleNotifications.length === 0 ? (
+                    <div className="px-4 py-7 text-center">
+                      <CheckCircle2 className="w-5 h-5 mx-auto mb-2 text-emerald-500" />
+                      <p className="text-xs font-medium text-slate-700 dark:text-slate-200">All systems are nominal</p>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">No kiosk or print issues need attention.</p>
+                    </div>
+                  ) : (
+                    <div className="max-h-80 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800">
+                      {visibleNotifications.map((notification) => {
+                        const Icon = notification.severity === 'error'
+                          ? XCircle
+                          : notification.severity === 'warning'
+                            ? AlertTriangle
+                            : Clock;
+                        const iconClass = notification.severity === 'error'
+                          ? 'text-rose-500'
+                          : notification.severity === 'warning'
+                            ? 'text-amber-500'
+                            : 'text-sky-500';
+
+                        return (
+                          <Link
+                            key={notification.id}
+                            href={notification.href}
+                            onClick={() => setIsNotificationsOpen(false)}
+                            className="flex gap-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition"
+                          >
+                            <Icon className={`w-4 h-4 mt-0.5 shrink-0 ${iconClass}`} />
+                            <span className="min-w-0">
+                              <span className="block text-xs font-semibold text-slate-800 dark:text-slate-100 truncate">{notification.title}</span>
+                              <span className="block text-[10px] text-slate-500 dark:text-slate-400 truncate">{notification.description}</span>
+                              <span className="block text-[10px] text-slate-400 dark:text-slate-500 mt-1">{formatNotificationTime(notification.timestamp)}</span>
+                            </span>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  <div className="px-4 py-2.5 border-t border-slate-200 dark:border-slate-700">
+                    <Link
+                      href="/hr/audit-logs"
+                      onClick={() => setIsNotificationsOpen(false)}
+                      className="text-[10px] font-semibold text-red-600 dark:text-red-400 hover:underline"
+                    >
+                      View audit logs
+                    </Link>
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* Profile Avatar */}
             <div className="flex items-center gap-3 pl-2 border-l border-slate-200 dark:border-slate-800">

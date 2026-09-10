@@ -1,16 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ShieldCheck, Lock, Mail, ArrowRight, CheckCircle2, AlertCircle } from 'lucide-react';
+import { ShieldCheck, Lock, Mail, ArrowRight, AlertCircle } from 'lucide-react';
 
-export default function HrLoginPage() {
+function HrLoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectPath = searchParams.get('redirect') || '/hr/dashboard';
 
   const [email, setEmail] = useState('admin@magiccard.corp');
-  const [password, setPassword] = useState('EnterprisePass2026!');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
@@ -135,20 +135,6 @@ export default function HrLoginPage() {
             </button>
           </form>
 
-          {/* Preset Credentials */}
-          <div className="mt-6 pt-6 border-t border-slate-800/80 text-center space-y-2">
-            <button
-              type="button"
-              onClick={() => {
-                setEmail('admin@magiccard.corp');
-                setPassword('EnterprisePass2026!');
-              }}
-              className="text-xs text-slate-400 hover:text-white inline-flex items-center gap-1.5 transition"
-            >
-              <CheckCircle2 className="w-3.5 h-3.5 text-red-500" />
-              Fill Enterprise HR Admin Credentials
-            </button>
-          </div>
         </div>
 
         {/* Security Footer */}
@@ -157,5 +143,13 @@ export default function HrLoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function HrLoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#080c14]" />}>
+      <HrLoginForm />
+    </Suspense>
   );
 }

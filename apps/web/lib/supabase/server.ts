@@ -5,9 +5,9 @@ import { cookies } from 'next/headers';
 export async function createServerSupabaseClient() {
   const cookieStore = await cookies();
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://mock-enterprise.supabase.co';
-  const anonKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'mock-anon-key';
+  const serverKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'mock-anon-key';
 
-  return createServerClient(url, anonKey, {
+  return createServerClient(url, serverKey, {
     cookies: {
       getAll() {
         return cookieStore.getAll();
