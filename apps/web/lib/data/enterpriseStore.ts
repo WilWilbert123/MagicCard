@@ -109,6 +109,7 @@ export const DEFAULT_CR80_TEMPLATE: CardTemplateJSON = {
     cornerRound: 3.18,
     bleedMm: 1.5,
     safeMarginMm: 3.0,
+    orientation: 'horizontal',
   },
   front: {
     background: { color: '#ffffff' },

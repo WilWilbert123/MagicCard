@@ -70,10 +70,11 @@ export default function ThreeCardViewer({
     const scene = new THREE.Scene();
 
     // ── Camera ─────────────────────────────────────────────────────
+    const isVertical = template?.card?.orientation === 'vertical' || (template?.card?.height > template?.card?.width);
     const width  = container.clientWidth  || 800;
     const height = container.clientHeight || 520;
     const camera = new THREE.PerspectiveCamera(36, width / height, 0.1, 100);
-    camera.position.set(0, 0, 4.4);
+    camera.position.set(0, 0, isVertical ? 5.2 : 4.4);
 
     // ── Renderer ───────────────────────────────────────────────────
     const renderer = new THREE.WebGLRenderer({
@@ -151,8 +152,8 @@ export default function ThreeCardViewer({
       return s;
     };
 
-    const cardWidth     = 3.4;
-    const cardHeight    = 2.14;
+    const cardWidth     = isVertical ? 2.14 : 3.4;
+    const cardHeight    = isVertical ? 3.4 : 2.14;
     const cardThickness = 0.035;
     const cornerRadius  = 0.16; // Standard CR80 ID card ratio
 
@@ -230,7 +231,7 @@ export default function ThreeCardViewer({
     cardGroup.add(backMesh);
 
     // ── Contact Shadow (soft blob under card) ──────────────────────
-    const shadowGeo    = new THREE.PlaneGeometry(4.4, 2.8);
+    const shadowGeo    = new THREE.PlaneGeometry(isVertical ? 3.0 : 4.4, isVertical ? 4.2 : 2.8);
     const shadowCanvas = document.createElement('canvas');
     shadowCanvas.width  = 256;
     shadowCanvas.height = 256;
@@ -252,7 +253,7 @@ export default function ThreeCardViewer({
     });
     const shadowMesh = new THREE.Mesh(shadowGeo, shadowMat);
     shadowMesh.rotation.x = -Math.PI / 2;
-    shadowMesh.position.y = -1.25;
+    shadowMesh.position.y = isVertical ? -1.85 : -1.25;
     scene.add(shadowMesh);
 
     // ── Render card face textures ──────────────────────────────────
