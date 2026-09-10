@@ -60,9 +60,18 @@ export default function HrEmployeesPage() {
     setIsLoading(true);
     try {
       const [empRes, brRes, deptRes] = await Promise.all([
-        fetch('/api/employees').then((r) => r.json()),
-        fetch('/api/branches').then((r) => r.json()),
-        fetch('/api/departments').then((r) => r.json()),
+        fetch('/api/employees', { cache: 'no-store' }).then(async (r) => {
+          if (!r.ok) throw new Error('Employees API request failed.');
+          return r.json();
+        }),
+        fetch('/api/branches', { cache: 'no-store' }).then(async (r) => {
+          if (!r.ok) throw new Error('Branches API request failed.');
+          return r.json();
+        }),
+        fetch('/api/departments', { cache: 'no-store' }).then(async (r) => {
+          if (!r.ok) throw new Error('Departments API request failed.');
+          return r.json();
+        }),
       ]);
 
       const loadedEmployees = empRes.data ?? [];

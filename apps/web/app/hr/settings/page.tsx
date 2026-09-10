@@ -14,13 +14,24 @@ import {
   MapPin, 
   Phone, 
   X,
-  Briefcase
+  Briefcase,
+  User,
+  Mail,
+  LockKeyhole
 } from 'lucide-react';
 import { Branch, Department } from '@/lib/data/enterpriseStore';
 
 export default function HrSettingsPage() {
-  const [activeTab, setActiveTab] = useState<'POLICIES' | 'BRANCHES' | 'DEPARTMENTS'>('POLICIES');
+  const [activeTab, setActiveTab] = useState<'POLICIES' | 'BRANCHES' | 'DEPARTMENTS' | 'ACCOUNT'>('POLICIES');
   const [saved, setSaved] = useState(false);
+  const [accountSaving, setAccountSaving] = useState(false);
+  const [accountForm, setAccountForm] = useState({
+    displayName: '',
+    email: '',
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
 
   // Policy States
   const [allowSelfServiceReprint, setAllowSelfServiceReprint] = useState(true);
@@ -50,8 +61,24 @@ export default function HrSettingsPage() {
 
   // Load real data from Supabase on mount
   useEffect(() => {
-    fetch('/api/branches')
+    fetch('/api/auth/profile', { cache: 'no-store' })
       .then((r) => r.json())
+      .then((json) => {
+        if (json.data) {
+          setAccountForm((previous) => ({
+            ...previous,
+            displayName: json.data.displayName,
+            email: json.data.email,
+          }));
+        }
+      })
+      .catch(() => toast.error('Failed to load account details.'));
+
+    fetch('/api/branches', { cache: 'no-store' })
+      .then(async (r) => {
+        if (!r.ok) throw new Error('Branches API request failed.');
+        return r.json();
+      })
       .then((json) => {
         // Supabase columns may be snake_case — normalize to camelCase
         const rows = (json.data ?? []).map((b: any) => ({
@@ -68,8 +95,11 @@ export default function HrSettingsPage() {
       .catch(() => toast.error('Failed to load branches.'))
       .finally(() => setBranchesLoading(false));
 
-    fetch('/api/departments')
-      .then((r) => r.json())
+    fetch('/api/departments', { cache: 'no-store' })
+      .then(async (r) => {
+        if (!r.ok) throw new Error('Departments API request failed.');
+        return r.json();
+      })
       .then((json) => {
         const rows = (json.data ?? []).map((d: any) => ({
           id: d.id,
@@ -86,6 +116,43 @@ export default function HrSettingsPage() {
     e.preventDefault();
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
+  };
+
+  const handleSaveAccount = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (accountForm.newPassword && accountForm.newPassword !== accountForm.confirmPassword) {
+      toast.error('New password confirmation does not match.');
+      return;
+    }
+
+    setAccountSaving(true);
+    try {
+      const res = await fetch('/api/auth/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(accountForm),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Failed to update account.');
+
+      setAccountForm((previous) => ({
+        ...previous,
+        email: json.data.email,
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: '',
+      }));
+      window.dispatchEvent(new Event('hr-profile-updated'));
+      toast.success(
+        json.emailConfirmationRequired
+          ? 'Profile saved. Check your new email to confirm the address.'
+          : 'Account details updated securely.'
+      );
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update account.');
+    } finally {
+      setAccountSaving(false);
+    }
   };
 
   const handleCreateBranch = async (e: React.FormEvent) => {
@@ -219,7 +286,114 @@ export default function HrSettingsPage() {
         >
           <Briefcase className="w-4 h-4" /> Departments ({departments.length})
         </button>
+        <button
+          onClick={() => setActiveTab('ACCOUNT')}
+          className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition flex items-center gap-2 ${
+            activeTab === 'ACCOUNT'
+              ? 'border-red-600 text-red-600 dark:border-red-500 dark:text-red-400 font-bold'
+              : 'border-transparent text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
+          }`}
+        >
+          <User className="w-4 h-4" /> Account
+        </button>
       </div>
+
+      {/* TAB 4: ACCOUNT */}
+      {activeTab === 'ACCOUNT' && (
+        <form onSubmit={handleSaveAccount} className="space-y-6 max-w-2xl">
+          <div>
+            <h2 className="text-base font-bold text-slate-900 dark:text-white">Admin Account</h2>
+            <p className="text-slate-500 dark:text-slate-400 text-xs mt-1">
+              Update the identity shown in the HR header. Password changes require your current password.
+            </p>
+          </div>
+
+          <div className="rounded-xl bg-white dark:bg-[#111827]/90 border border-slate-200/80 dark:border-slate-800 p-6 space-y-5 shadow-sm">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Display name</label>
+              <div className="relative">
+                <User className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                <input
+                  type="text"
+                  required
+                  minLength={2}
+                  maxLength={100}
+                  value={accountForm.displayName}
+                  onChange={(e) => setAccountForm({ ...accountForm, displayName: e.target.value })}
+                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg pl-9 pr-3 py-2 text-sm text-slate-900 dark:text-white"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Login email</label>
+              <div className="relative">
+                <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                <input
+                  type="email"
+                  required
+                  value={accountForm.email}
+                  onChange={(e) => setAccountForm({ ...accountForm, email: e.target.value })}
+                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg pl-9 pr-3 py-2 text-sm text-slate-900 dark:text-white"
+                />
+              </div>
+              <p className="text-[10px] text-slate-500 mt-1">Changing email requires confirmation at both addresses when enabled by Supabase Auth.</p>
+            </div>
+          </div>
+
+          <div className="rounded-xl bg-white dark:bg-[#111827]/90 border border-slate-200/80 dark:border-slate-800 p-6 space-y-5 shadow-sm">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <LockKeyhole className="w-4 h-4 text-red-500" /> Change password
+            </h3>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">Use at least 12 characters. Your current password is verified before the change.</p>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Current password</label>
+              <input
+                type="password"
+                autoComplete="current-password"
+                value={accountForm.currentPassword}
+                onChange={(e) => setAccountForm({ ...accountForm, currentPassword: e.target.value })}
+                className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white"
+              />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">New password</label>
+                <input
+                  type="password"
+                  autoComplete="new-password"
+                  minLength={12}
+                  value={accountForm.newPassword}
+                  onChange={(e) => setAccountForm({ ...accountForm, newPassword: e.target.value })}
+                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Confirm new password</label>
+                <input
+                  type="password"
+                  autoComplete="new-password"
+                  minLength={12}
+                  value={accountForm.confirmPassword}
+                  onChange={(e) => setAccountForm({ ...accountForm, confirmPassword: e.target.value })}
+                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-end">
+            <button
+              type="submit"
+              disabled={accountSaving}
+              className="px-5 py-2.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-semibold shadow-md shadow-red-600/30 transition disabled:opacity-50"
+            >
+              {accountSaving ? 'Saving securely...' : 'Save Account'}
+            </button>
+          </div>
+        </form>
+      )}
 
       {/* TAB 1: POLICIES */}
       {activeTab === 'POLICIES' && (

@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
-import Link from 'next/link';
 import { 
   Search, 
   Delete, 
@@ -245,15 +244,6 @@ export default function KioskMainPage() {
 
   return (
     <div className="min-h-screen w-full flex flex-col justify-center items-center bg-[#070a11] text-white select-none overflow-hidden touch-none font-sans relative">
-      {/* Discreet Admin Portal Link in Corner */}
-      <Link
-        href="/hr/dashboard"
-        title="Admin HR Portal"
-        className="fixed top-4 right-4 text-[11px] text-slate-700 hover:text-slate-400 transition z-50 px-2.5 py-1 rounded border border-transparent hover:border-slate-800"
-      >
-        Admin Portal
-      </Link>
-
       {/* ======================================================== */}
       {/* 0. SCREENSAVER / ATTRACT SCREEN ("TOUCH TO START")         */}
       {/* ======================================================== */}
