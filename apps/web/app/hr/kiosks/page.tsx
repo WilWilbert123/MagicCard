@@ -252,6 +252,31 @@ export default function HrKiosksPage() {
 
                 <div className="flex items-center gap-2">
                   <button
+                    onClick={async () => {
+                      try {
+                        const res = await fetch('/api/kiosks/pair', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ action: 'generate', kioskId: kiosk.id }),
+                        });
+                        const json = await res.json();
+                        if (json.pairingCode) {
+                          alert(`KIOSK ${kiosk.code} One-Time Pairing Code:\n\n${json.pairingCode}\n\nEnter this code in KioskAgent setup installer on host.`);
+                        } else {
+                          toast.error(json.error || 'Failed to generate code');
+                        }
+                      } catch (err: any) {
+                        toast.error(err.message);
+                      }
+                    }}
+                    className="px-2.5 py-1.5 rounded text-xs font-semibold bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 dark:bg-red-950/40 dark:hover:bg-red-900/60 dark:text-red-400 dark:border-red-900 transition flex items-center gap-1"
+                    title="Generate 6-digit pairing code for hardware KioskAgent"
+                  >
+                    <HardDrive className="w-3.5 h-3.5" />
+                    Pair Agent
+                  </button>
+
+                  <button
                     onClick={() => handleDeleteKiosk(kiosk)}
                     className="p-1.5 text-slate-400 hover:text-rose-600 rounded transition"
                     title="Delete Terminal"

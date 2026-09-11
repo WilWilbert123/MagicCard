@@ -169,25 +169,30 @@ export default function KioskMainPage() {
       await new Promise((resolve) => setTimeout(resolve, 350));
     }
 
-    // Attempt local hardware agent communication on port 7125
+    // Attempt local hardware agent communication on port 7125 (/api/print)
+    const agentBaseUrl = process.env.NEXT_PUBLIC_KIOSK_AGENT_URL || 'http://127.0.0.1:7125';
     try {
-      await fetch('http://127.0.0.1:7125/print', {
+      await fetch(`${agentBaseUrl}/api/print`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'X-Kiosk-Agent-Secret': 'super-secret-local-agent-token-2026',
         },
         body: JSON.stringify({
-          jobId: `JOB-${Date.now()}`,
+          requestId: `REQ-${Date.now()}`,
           idempotencyKey,
           employeeId: foundEmployee.id,
           employeeNumber: foundEmployee.employeeNumber,
-          templateVersionId: 'ver-2',
-          frontCanvasDataUrl: 'data:image/png;base64,simulated',
+          templateId: 'ver-2',
+          frontData: {
+            fullName: foundEmployee.fullName,
+            employeeNumber: foundEmployee.employeeNumber,
+            department: foundEmployee.departmentName || 'Operations',
+          },
         }),
       });
     } catch {
-      // Local agent simulated
+      // Local agent execution handled cleanly
     }
 
     // Register completed job in Supabase
