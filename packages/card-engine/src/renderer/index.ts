@@ -101,7 +101,9 @@ export async function renderCardToCanvas(
 
 function drawShape(ctx: CanvasRenderingContext2D, el: Extract<CardElement, { type: 'SHAPE' }>) {
   ctx.fillStyle = el.fill || '#dc2626';
-  if (el.shapeType === 'RECTANGLE') {
+  const shapeType = el.shapeType || 'RECTANGLE';
+
+  if (shapeType === 'RECTANGLE') {
     if (el.borderRadius && el.borderRadius > 0) {
       drawRoundedRect(ctx, el.x, el.y, el.width, el.height, el.borderRadius);
       ctx.fill();
@@ -118,7 +120,7 @@ function drawShape(ctx: CanvasRenderingContext2D, el: Extract<CardElement, { typ
         ctx.strokeRect(el.x, el.y, el.width, el.height);
       }
     }
-  } else if (el.shapeType === 'CIRCLE') {
+  } else if (shapeType === 'CIRCLE') {
     ctx.beginPath();
     ctx.arc(el.x + el.width / 2, el.y + el.height / 2, Math.min(el.width, el.height) / 2, 0, Math.PI * 2);
     ctx.fill();
@@ -127,15 +129,69 @@ function drawShape(ctx: CanvasRenderingContext2D, el: Extract<CardElement, { typ
       ctx.lineWidth = el.strokeWidth;
       ctx.stroke();
     }
-  } else if (el.shapeType === 'LINE') {
+  } else if (shapeType === 'LINE') {
     ctx.beginPath();
     ctx.moveTo(el.x, el.y);
     ctx.lineTo(el.x + el.width, el.y + el.height);
     ctx.strokeStyle = el.fill || '#000000';
     ctx.lineWidth = el.strokeWidth || 2;
     ctx.stroke();
+  } else if (shapeType === 'TRIANGLE') {
+    ctx.beginPath();
+    ctx.moveTo(el.x + el.width / 2, el.y);
+    ctx.lineTo(el.x, el.y + el.height);
+    ctx.lineTo(el.x + el.width, el.y + el.height);
+    ctx.closePath();
+    ctx.fill();
+    if (el.stroke && el.strokeWidth) {
+      ctx.strokeStyle = el.stroke;
+      ctx.lineWidth = el.strokeWidth;
+      ctx.stroke();
+    }
+  } else if (shapeType === 'DIAGONAL') {
+    ctx.beginPath();
+    ctx.moveTo(el.x, el.y);
+    ctx.lineTo(el.x + el.width, el.y);
+    ctx.lineTo(el.x + el.width * 0.8, el.y + el.height);
+    ctx.lineTo(el.x, el.y + el.height);
+    ctx.closePath();
+    ctx.fill();
+  } else if (shapeType === 'SMOKE') {
+    const cx = el.x + el.width / 2;
+    const cy = el.y + el.height / 2;
+    const r = Math.max(el.width, el.height) / 2;
+    const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+    grad.addColorStop(0, el.fill || '#dc2626');
+    grad.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(el.x, el.y, el.width, el.height);
+  } else if (shapeType === 'SIGNATURE_LINE') {
+    ctx.fillStyle = '#f1f5f9';
+    ctx.fillRect(el.x, el.y, el.width, el.height);
+    ctx.strokeStyle = el.stroke || '#cbd5e1';
+    ctx.lineWidth = el.strokeWidth || 1;
+    ctx.strokeRect(el.x, el.y, el.width, el.height);
+
+    ctx.strokeStyle = '#94a3b8';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(el.x + 10, el.y + el.height - 10);
+    ctx.lineTo(el.x + el.width - 10, el.y + el.height - 10);
+    ctx.stroke();
+  } else if (shapeType === 'LOGO') {
+    ctx.fillStyle = el.fill || '#f8fafc';
+    ctx.fillRect(el.x, el.y, el.width, el.height);
+    ctx.strokeStyle = el.stroke || '#dc2626';
+    ctx.lineWidth = el.strokeWidth || 2;
+    ctx.strokeRect(el.x, el.y, el.width, el.height);
+    ctx.fillStyle = el.stroke || '#dc2626';
+    ctx.font = 'bold 12px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('LOGO', el.x + el.width / 2, el.y + el.height / 2);
   }
 }
+
 
 function drawText(
   ctx: CanvasRenderingContext2D,

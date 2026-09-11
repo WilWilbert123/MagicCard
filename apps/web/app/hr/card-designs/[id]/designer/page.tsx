@@ -40,7 +40,7 @@ import {
   ChevronsUp,
   ChevronsDown,
 } from 'lucide-react';
-import { CardTemplateJSON, CardElement, TextElement, ShapeElement, QRCodeElement, BarcodeElement } from '@workspace/card-engine';
+import { CardTemplateJSON, CardElement, TextElement, ShapeElement, QRCodeElement, BarcodeElement, resolveDataBinding } from '@workspace/card-engine';
 import { enterpriseStore } from '@/lib/data/enterpriseStore';
 import { toast } from '@/components/ui/Toast';
 import { useTheme } from '@/components/ThemeProvider';
@@ -723,14 +723,22 @@ export default function CardDesignerPage() {
                       }}
                       className="w-full h-full flex items-center leading-none"
                     >
-                      {el.text}
+                      {resolveDataBinding(el.text, {
+                        employeeNumber: 'EMP-000125',
+                        fullName: 'Michael Brown',
+                        firstName: 'Michael',
+                        lastName: 'Brown',
+                        department: 'Global Operations',
+                        position: 'Staff',
+                        branch: 'West Coast Tech Campus',
+                      })}
                     </div>
                   )}
 
                   {el.type === 'EMPLOYEE_PHOTO' && (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
-                      src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=500&auto=format&fit=crop&q=80"
+                      src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500&auto=format&fit=crop&q=80"
                       alt="Preview Avatar"
                       style={{
                         borderRadius: `${el.borderRadius || 10}px`,
@@ -1129,7 +1137,24 @@ export default function CardDesignerPage() {
               </button>
             </div>
 
-            <ThreeCardViewer template={template} autoRotate={true} />
+            <ThreeCardViewer
+              template={template}
+              employeeNumber="EMP-000125"
+              employeeData={{
+                employeeNumber: 'EMP-000125',
+                fullName: 'Michael Brown',
+                firstName: 'Michael',
+                lastName: 'Brown',
+                department: 'Global Operations',
+                departmentName: 'Global Operations',
+                position: 'Staff',
+                positionTitle: 'Staff',
+                branch: 'West Coast Tech Campus',
+                branchName: 'West Coast Tech Campus',
+                photoUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500&auto=format&fit=crop&q=80',
+              }}
+              autoRotate={true}
+            />
 
             <div className="mt-4 flex justify-end">
               <button

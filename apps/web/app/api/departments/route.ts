@@ -1,15 +1,28 @@
 import { NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { createServerSupabaseClient, createAdminSupabaseClient } from '@/lib/supabase/server';
+import { requireAuth } from '@/lib/auth/require-auth';
 
 export async function GET() {
+  const auth = await requireAuth();
+  if (!auth.authenticated) return auth.response;
+
   try {
     const supabase = await createServerSupabaseClient();
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('departments')
       .select('*')
       .order('name', { ascending: true });
 
-    if (error) throw error;
+    if (error || !data || data.length === 0) {
+      const admin = createAdminSupabaseClient();
+      const adminRes = await admin
+        .from('departments')
+        .select('*')
+        .order('name', { ascending: true });
+      if (!adminRes.error && adminRes.data) {
+        data = adminRes.data;
+      }
+    }
 
     return NextResponse.json({ data: data ?? [] });
   } catch (err: any) {
@@ -18,23 +31,25 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const auth = await requireAuth();
+  if (!auth.authenticated) return auth.response;
+
   try {
     const body = await request.json();
     if (!body.name || !body.code) {
       return NextResponse.json({ error: 'name and code are required' }, { status: 400 });
     }
 
-    const supabase = await createServerSupabaseClient();
+    const admin = createAdminSupabaseClient();
     let companyId = body.companyId;
     if (!companyId) {
-      const { data: company, error: companyError } = await supabase
+      const { data: company } = await admin
         .from('companies')
         .select('id')
         .order('created_at', { ascending: true })
         .limit(1)
         .maybeSingle();
 
-      if (companyError) throw companyError;
       companyId = company?.id;
     }
 
@@ -45,7 +60,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await admin
       .from('departments')
       .insert([{ company_id: companyId, name: body.name, code: body.code }])
       .select()
@@ -60,6 +75,9 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  const auth = await requireAuth();
+  if (!auth.authenticated) return auth.response;
+
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');

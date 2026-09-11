@@ -15,22 +15,20 @@ interface ThreeCardViewerProps {
 }
 
 const fallbackEmployee = {
-  id: 'preview-emp-1',
-  employeeNumber: 'EMP-001234',
-  firstName: 'Jane',
-  lastName: 'Doe',
-  fullName: 'Jane Doe',
-  department: 'Operations & Security',
-  jobTitle: 'Senior Specialist',
-  badgeNumber: 'BDG-9981',
-  rfidUid: 'A1:B2:C3:D4',
-  qrPayload: 'https://verify.magiccard.corp/id/EMP-001234',
-  barcodePayload: '9981001234',
-  photoUrl: '',
-  avatarUrl: '',
+  id: 'preview-emp-125',
+  employeeNumber: 'EMP-000125',
+  firstName: 'Michael',
+  lastName: 'Brown',
+  fullName: 'Michael Brown',
+  department: 'Global Operations',
+  departmentName: 'Global Operations',
+  position: 'Staff',
+  positionTitle: 'Staff',
+  branch: 'West Coast Tech Campus',
+  branchName: 'West Coast Tech Campus',
+  email: 'm.brown@magiccard.corp',
+  photoUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500&auto=format&fit=crop&q=80',
   status: 'active' as const,
-  issueCount: 1,
-  metadata: {},
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
 };
@@ -397,31 +395,10 @@ export default function ThreeCardViewer({
         </button>
       </div>
 
-      <div
-        className={`absolute top-4 right-4 z-10 text-[11px] font-semibold px-2.5 py-1 rounded-md border backdrop-blur shadow-sm ${
-          stageTheme === 'light'
-            ? 'bg-white/90 text-slate-700 border-slate-300'
-            : 'bg-slate-900/80 text-slate-300 border-slate-800'
-        }`}
-      >
-        CR80 Smart PVC • 0.76mm Glossy Finish
-      </div>
+
 
       {/* Pure WebGL Canvas */}
       <canvas ref={canvasRef} className="w-full h-full block cursor-grab active:cursor-grabbing" />
-
-      {/* Interaction Hint */}
-      <div className="absolute bottom-4 left-0 right-0 text-center pointer-events-none">
-        <span
-          className={`text-[11px] font-medium px-3.5 py-1 rounded-full border backdrop-blur shadow-sm ${
-            stageTheme === 'light'
-              ? 'bg-white/80 text-slate-600 border-slate-200'
-              : 'bg-slate-950/70 text-slate-400 border-slate-800/80'
-          }`}
-        >
-          Click & drag to inspect in 3D • Scroll to zoom • Double-click to reset
-        </span>
-      </div>
     </div>
   );
 }

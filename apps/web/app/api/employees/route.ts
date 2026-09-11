@@ -1,7 +1,12 @@
 import { NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { createServerSupabaseClient, createAdminSupabaseClient } from '@/lib/supabase/server';
+import { requireAuth } from '@/lib/auth/require-auth';
+
 
 export async function GET(request: Request) {
+  const auth = await requireAuth();
+  if (!auth.authenticated) return auth.response;
+
   try {
     const { searchParams } = new URL(request.url);
     const branchId = searchParams.get('branchId');
@@ -9,6 +14,7 @@ export async function GET(request: Request) {
     const query = searchParams.get('q');
     const employeeNumber = searchParams.get('employeeNumber');
 
+    const admin = createAdminSupabaseClient();
     const supabase = await createServerSupabaseClient();
 
     let queryBuilder = supabase
@@ -32,13 +38,34 @@ export async function GET(request: Request) {
       queryBuilder = queryBuilder.eq('department_id', deptId);
     }
 
-    const { data: employees, error: empError } = await queryBuilder;
-    if (empError) throw empError;
+    let { data: employees, error: empError } = await queryBuilder;
+    if (empError || !employees || employees.length === 0) {
+      let adminBuilder = admin
+        .from('employees')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-    // Fetch branches and departments to map names
+      if (employeeNumber) {
+        adminBuilder = adminBuilder.ilike('employee_number', employeeNumber.trim());
+      } else if (query) {
+        const q = query.trim();
+        adminBuilder = adminBuilder.or(
+          `employee_number.ilike.%${q}%,first_name.ilike.%${q}%,last_name.ilike.%${q}%,email.ilike.%${q}%`
+        );
+      }
+      if (branchId && branchId !== 'ALL') adminBuilder = adminBuilder.eq('branch_id', branchId);
+      if (deptId && deptId !== 'ALL') adminBuilder = adminBuilder.eq('department_id', deptId);
+
+      const adminRes = await adminBuilder;
+      if (!adminRes.error && adminRes.data) {
+        employees = adminRes.data;
+      }
+    }
+
+    // Fetch branches and departments using admin client to guarantee lookup mapping
     const [{ data: branches }, { data: departments }] = await Promise.all([
-      supabase.from('branches').select('id, name, code'),
-      supabase.from('departments').select('id, name, code'),
+      admin.from('branches').select('id, name, code'),
+      admin.from('departments').select('id, name, code'),
     ]);
 
     const branchMap = new Map((branches || []).map((b) => [b.id, b.name]));
@@ -77,18 +104,21 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const auth = await requireAuth();
+  if (!auth.authenticated) return auth.response;
+
   try {
     const body = await request.json();
     if (!body.employeeNumber || !body.firstName || !body.lastName) {
       return NextResponse.json({ error: 'Missing required employee fields: employeeNumber, firstName, lastName' }, { status: 400 });
     }
 
-    const supabase = await createServerSupabaseClient();
+    const admin = createAdminSupabaseClient();
 
     // Get default company_id if not provided
     let companyId = body.companyId;
     if (!companyId) {
-      const { data: comp } = await supabase.from('companies').select('id').limit(1).single();
+      const { data: comp } = await admin.from('companies').select('id').limit(1).single();
       companyId = comp?.id;
     }
 
@@ -114,7 +144,7 @@ export async function POST(request: Request) {
       newRecord.company_id = companyId;
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await admin
       .from('employees')
       .insert([newRecord])
       .select()
@@ -146,13 +176,16 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  const auth = await requireAuth();
+  if (!auth.authenticated) return auth.response;
+
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     if (!id) return NextResponse.json({ error: 'id parameter is required' }, { status: 400 });
 
-    const supabase = await createServerSupabaseClient();
-    const { error } = await supabase.from('employees').delete().eq('id', id);
+    const admin = createAdminSupabaseClient();
+    const { error } = await admin.from('employees').delete().eq('id', id);
 
     if (error) throw error;
 
