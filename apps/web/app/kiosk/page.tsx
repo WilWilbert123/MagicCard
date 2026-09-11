@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { enterpriseStore, Employee } from '@/lib/data/enterpriseStore';
 import { toast } from '@/components/ui/Toast';
+import Card2DViewer from '@/components/card/Card2DViewer';
 
 // Lazy-load Three.js viewer
 const ThreeCardViewer = dynamic(() => import('@/components/three/ThreeCardViewer'), {
@@ -62,7 +63,7 @@ export default function KioskMainPage() {
   const [employeeInput, setEmployeeInput] = useState('');
   const [foundEmployee, setFoundEmployee] = useState<Employee | null>(null);
   const [errorMessage, setErrorMessage] = useState('');
-  const [previewMode, setPreviewMode] = useState<'2D' | '3D'>('2D');
+  const [previewMode, setPreviewMode] = useState<'2D' | '3D'>('3D');
   const [cardSide, setCardSide] = useState<'front' | 'back'>('front');
 
   // Print pipeline animation state
@@ -504,144 +505,13 @@ export default function KioskMainPage() {
                 />
               </div>
             ) : (
-              <div className="space-y-5 text-center">
-                {/* 2D Interactive Card Mockup - Pristine White Luxury PVC */}
-                <div
-                  className={`w-[520px] h-[328px] rounded-[20px] p-6 text-left relative overflow-hidden bg-white border border-slate-200/90 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.5)] transition-all duration-300 ${
-                    cardSide === 'front' ? 'text-slate-900' : 'text-slate-900'
-                  }`}
-                >
-                  {/* Glossy Diagonal PVC Light Reflection Sheen */}
-                  <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/40 to-transparent pointer-events-none z-20 opacity-60" />
-
-                  {cardSide === 'front' ? (
-                    <>
-                      {/* Top Metallic Crimson Stripe */}
-                      <div className="h-2 bg-gradient-to-r from-red-600 via-rose-500 to-red-600 absolute top-0 left-0 right-0" />
-
-                      <div className="flex justify-between items-start mb-3 pt-1">
-                        <div>
-                          <div className="font-extrabold text-red-600 text-lg tracking-wider flex items-center gap-1.5">
-                            <span className="text-red-500">▲</span> MAGIC CARD
-                          </div>
-                          <div className="text-[9px] font-bold text-slate-400 tracking-widest uppercase">
-                            Enterprise Smart Credential
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200/80 px-2.5 py-1 rounded-full shadow-sm">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                          <span className="text-[10px] font-bold text-slate-600 tracking-wide">
-                            NFC SECURE
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="flex gap-5 items-center mt-2">
-                        {/* Employee Photo */}
-                        <div className="relative">
-                          {foundEmployee.photoUrl ? (
-                            /* eslint-disable-next-line @next/next/no-img-element */
-                            <img
-                              src={foundEmployee.photoUrl}
-                              alt={foundEmployee.fullName}
-                              className="w-28 h-36 rounded-xl object-cover border-2 border-slate-200 shadow-md"
-                            />
-                          ) : (
-                            <div className="w-28 h-36 rounded-xl bg-slate-50 border-2 border-dashed border-slate-300 shadow-sm flex flex-col items-center justify-center text-slate-400">
-                              <User className="w-10 h-10 text-slate-400 mb-1" />
-                              <span className="text-[9px] font-bold tracking-wider uppercase text-slate-400">NO PHOTO</span>
-                            </div>
-                          )}
-                          {/* Gold Metallic EMV Contact Chip Accent */}
-                          <div className="absolute -bottom-2.5 -right-2.5 w-8 h-7 rounded-md bg-gradient-to-br from-amber-200 via-amber-400 to-yellow-600 border border-amber-600/40 shadow flex items-center justify-center">
-                            <div className="w-6 h-5 border border-amber-800/30 rounded-[3px] grid grid-cols-2 grid-rows-2" />
-                          </div>
-                        </div>
-
-                        <div className="flex-1 min-w-0 pr-16">
-                          <div className="text-2xl font-black text-slate-900 leading-tight tracking-tight truncate">
-                            {foundEmployee.fullName}
-                          </div>
-                          <div className="text-sm font-bold text-red-600 mt-0.5">
-                            {foundEmployee.positionTitle}
-                          </div>
-
-                          <div className="mt-2.5 space-y-1 text-xs">
-                            <div className="font-mono font-bold text-slate-700">
-                              ID: <span className="text-slate-900">{foundEmployee.employeeNumber}</span>
-                            </div>
-                            <div className="text-slate-500 text-[11px] truncate">
-                              DEPT: <strong className="text-slate-700">{foundEmployee.departmentName}</strong>
-                            </div>
-                            <div className="text-slate-500 text-[11px] truncate">
-                              LOC: <strong className="text-slate-700">{foundEmployee.branchName}</strong>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* QR Code Container */}
-                      <div className="absolute bottom-4 right-5">
-                        <div className="w-16 h-16 bg-white border border-slate-200 rounded-lg p-1 flex flex-col items-center justify-center shadow-sm">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=https://verify.magiccard.corp/id/${encodeURIComponent(foundEmployee.employeeNumber)}`}
-                            alt="QR Verification"
-                            className="w-12 h-12"
-                          />
-                          <span className="text-[7px] font-bold font-mono text-slate-400 mt-0.5">VERIFIED</span>
-                        </div>
-                      </div>
-
-                      {/* Bottom Microtext Hairline */}
-                      <div className="absolute bottom-2.5 left-6 right-6 flex items-center justify-between text-[8px] font-bold tracking-widest text-slate-400 uppercase border-t border-slate-100 pt-1">
-                        <span>MAGIC CARD TRUST ID</span>
-                        <span>ISO/IEC 7810 ID-1 • 2026</span>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      {/* Back Side of Card */}
-                      <div className="h-2 bg-gradient-to-r from-red-600 via-rose-500 to-red-600 absolute top-0 left-0 right-0" />
-
-                      {/* Magnetic Stripe */}
-                      <div className="h-12 bg-gradient-to-b from-[#1e293b] via-[#0f172a] to-[#1e293b] -mx-6 mt-1 shadow-inner relative">
-                        <div className="absolute inset-0 bg-white/5" />
-                      </div>
-
-                      <div className="pt-3 px-1 text-left">
-                        {/* Signature Strip */}
-                        <div className="flex items-center gap-3">
-                          <div className="h-8 bg-slate-100 border border-slate-300 rounded flex-1 flex items-center px-3">
-                            <span className="text-[9px] italic font-serif text-slate-400">Authorized Signature Required</span>
-                          </div>
-                          <div className="font-mono text-[9px] font-bold text-slate-600 bg-slate-100 px-2 py-1 rounded border border-slate-200">
-                            CVC: 981
-                          </div>
-                        </div>
-
-                        <p className="text-[9px] text-slate-500 mt-3 leading-relaxed">
-                          This smart credential remains the property of the issuing organization and must be presented to authorized personnel upon demand. If found, please return to any Security Dispatch desk or mail to Corporate HQ.
-                        </p>
-
-                        <div className="my-3 flex justify-center">
-                          <div className="border border-slate-200 px-4 py-1.5 bg-white rounded shadow-sm text-center">
-                            <span className="font-mono text-xs tracking-widest font-black text-slate-900 block">
-                              ||||| | |||| ||| ||||| || |||
-                            </span>
-                            <span className="font-mono text-[9px] text-slate-500 font-bold block mt-0.5">
-                              {foundEmployee.employeeNumber}
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="text-[8px] text-slate-400 uppercase font-bold text-center tracking-wider">
-                          Internal Security & Self-Service Check-In Terminal Only
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
+              <div className="space-y-5 text-center flex flex-col items-center">
+                {/* 2D Interactive Card Canvas - Powered by Card Engine */}
+                <Card2DViewer
+                  template={enterpriseStore.activeTemplate}
+                  side={cardSide}
+                  employeeData={foundEmployee}
+                />
 
                 {/* Flip Card Toggle */}
                 <div className="flex justify-center gap-2">

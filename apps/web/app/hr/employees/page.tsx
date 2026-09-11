@@ -550,13 +550,13 @@ export default function HrEmployeesPage() {
       {/* Add Employee Modal */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-lg rounded-2xl bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 p-6 shadow-2xl">
+          <div className="w-full max-w-lg rounded-2xl bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 p-6 shadow-2xl transition-colors duration-200">
             <div className="flex items-center justify-between mb-4 border-b border-slate-200 dark:border-slate-800 pb-3">
               <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
                 <Plus className="w-5 h-5 text-red-500" />
                 Add Corporate Employee
               </h2>
-              <button onClick={() => setShowAddModal(false)} className="text-slate-400 hover:text-slate-700 dark:hover:text-white">
+              <button onClick={() => setShowAddModal(false)} className="text-slate-400 hover:text-slate-700 dark:hover:text-white transition">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -564,72 +564,72 @@ export default function HrEmployeesPage() {
             <form onSubmit={handleCreateEmployee} className="space-y-4 text-xs">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-slate-300 mb-1 font-semibold">First Name *</label>
+                  <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">First Name *</label>
                   <input
                     type="text"
                     required
                     value={formData.firstName}
                     onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white"
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition"
                   />
                 </div>
                 <div>
-                  <label className="block text-slate-300 mb-1 font-semibold">Last Name *</label>
+                  <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Last Name *</label>
                   <input
                     type="text"
                     required
                     value={formData.lastName}
                     onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white"
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-slate-300 mb-1 font-semibold">Employee ID *</label>
+                  <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Employee ID *</label>
                   <input
                     type="text"
                     required
                     value={formData.employeeNumber}
                     onChange={(e) => setFormData({ ...formData, employeeNumber: e.target.value })}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono"
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white font-mono placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition"
                   />
                 </div>
                 <div>
-                  <label className="block text-slate-300 mb-1 font-semibold">Corporate Email *</label>
+                  <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Corporate Email *</label>
                   <input
                     type="email"
                     required
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white"
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-slate-300 mb-1">Branch</label>
+                  <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Branch</label>
                   <select
                     value={formData.branchId}
                     onChange={(e) => setFormData({ ...formData, branchId: e.target.value })}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white"
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition"
                   >
                     {branches.map((b) => (
-                      <option key={b.id} value={b.id}>{b.name}</option>
+                      <option key={b.id} value={b.id} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">{b.name}</option>
                     ))}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-slate-300 mb-1">Department</label>
+                  <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Department</label>
                   <select
                     value={formData.departmentId}
                     onChange={(e) => setFormData({ ...formData, departmentId: e.target.value })}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white"
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition"
                   >
                     {departments.map((d) => (
-                      <option key={d.id} value={d.id}>{d.name}</option>
+                      <option key={d.id} value={d.id} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">{d.name}</option>
                     ))}
                   </select>
                 </div>
@@ -637,49 +637,49 @@ export default function HrEmployeesPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-slate-300 mb-1">Job Title</label>
+                  <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Job Title</label>
                   <input
                     type="text"
                     required
                     value={formData.positionTitle}
                     onChange={(e) => setFormData({ ...formData, positionTitle: e.target.value })}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white"
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition"
                   />
                 </div>
                 <div>
-                  <label className="block text-slate-300 mb-1">Contact Phone</label>
+                  <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Contact Phone</label>
                   <input
                     type="text"
                     placeholder="+1 (555) 000-0000"
                     value={formData.contactNumber}
                     onChange={(e) => setFormData({ ...formData, contactNumber: e.target.value })}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white"
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-slate-300 mb-1">Photo URL (Optional)</label>
+                <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Photo URL (Optional)</label>
                 <input
                   type="text"
                   placeholder="https://..."
                   value={formData.photoUrl}
                   onChange={(e) => setFormData({ ...formData, photoUrl: e.target.value })}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-[11px]"
+                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition text-[11px]"
                 />
               </div>
 
-              <div className="pt-4 border-t border-slate-800 flex justify-end gap-2">
+              <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 rounded-lg border border-slate-700 text-slate-300 hover:bg-slate-800"
+                  className="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white font-semibold shadow-md shadow-red-600/30"
+                  className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white font-semibold shadow-md shadow-red-600/30 transition"
                 >
                   Save Employee
                 </button>
@@ -691,32 +691,32 @@ export default function HrEmployeesPage() {
 
       {/* Mass Import & Format Generator Modal */}
       {showImportModal && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-          <div className="w-full max-w-2xl rounded-2xl bg-[#111827] border border-slate-800 p-6 shadow-2xl my-8">
-            <div className="flex items-center justify-between mb-4 border-b border-slate-800 pb-3">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="w-full max-w-2xl rounded-2xl bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 p-6 shadow-2xl my-8 transition-colors duration-200">
+            <div className="flex items-center justify-between mb-4 border-b border-slate-200 dark:border-slate-800 pb-3">
               <div>
-                <h2 className="text-base font-bold text-white flex items-center gap-2">
+                <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
                   <FileSpreadsheet className="w-5 h-5 text-red-500" />
                   Import Employee Roster (CSV)
                 </h2>
-                <p className="text-[11px] text-slate-400 mt-0.5">
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
                   Upload employee data in bulk using the standard CSV format.
                 </p>
               </div>
-              <button onClick={() => { setShowImportModal(false); setParsedPreview([]); setImportResult(null); }} className="text-slate-400 hover:text-white">
+              <button onClick={() => { setShowImportModal(false); setParsedPreview([]); setImportResult(null); }} className="text-slate-400 hover:text-slate-700 dark:hover:text-white transition">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <div className="space-y-4 text-xs">
               {/* Step 1: Download Format Template */}
-              <div className="p-4 rounded-xl bg-gradient-to-r from-red-950/30 to-slate-900 border border-red-800/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="p-4 rounded-xl bg-red-50/60 dark:bg-gradient-to-r dark:from-red-950/30 dark:to-slate-900 border border-red-200 dark:border-red-800/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
-                  <div className="font-bold text-white flex items-center gap-1.5">
-                    <FileDown className="w-4 h-4 text-red-400" />
+                  <div className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                    <FileDown className="w-4 h-4 text-red-500 dark:text-red-400" />
                     Step 1: Download Official CSV Template
                   </div>
-                  <div className="text-slate-400 text-[11px] mt-0.5">
+                  <div className="text-slate-600 dark:text-slate-400 text-[11px] mt-0.5">
                     Pre-configured with exact column names and sample data rows.
                   </div>
                 </div>
@@ -731,23 +731,23 @@ export default function HrEmployeesPage() {
               </div>
 
               {/* Format Guide Toggle */}
-              <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-3">
+              <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 p-3">
                 <button
                   type="button"
                   onClick={() => setShowFormatGuide(!showFormatGuide)}
-                  className="w-full flex items-center justify-between text-left font-semibold text-slate-300 hover:text-white"
+                  className="w-full flex items-center justify-between text-left font-semibold text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
                 >
                   <span className="flex items-center gap-1.5">
                     <HelpCircle className="w-4 h-4 text-slate-400" />
                     View Exact Column Headers & Format Guide
                   </span>
-                  <span className="text-[11px] text-red-400">{showFormatGuide ? 'Hide Guide ▲' : 'Show Guide ▼'}</span>
+                  <span className="text-[11px] text-red-500 dark:text-red-400">{showFormatGuide ? 'Hide Guide ▲' : 'Show Guide ▼'}</span>
                 </button>
 
                 {showFormatGuide && (
-                  <div className="mt-3 pt-3 border-t border-slate-800 overflow-x-auto">
-                    <table className="w-full text-left text-[11px] text-slate-300">
-                      <thead className="bg-slate-950 text-slate-400 uppercase text-[9px]">
+                  <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-800 overflow-x-auto">
+                    <table className="w-full text-left text-[11px] text-slate-700 dark:text-slate-300">
+                      <thead className="bg-slate-100 dark:bg-slate-950 text-slate-500 dark:text-slate-400 uppercase text-[9px]">
                         <tr>
                           <th className="p-2">Column Header</th>
                           <th className="p-2">Requirement</th>
@@ -755,66 +755,66 @@ export default function HrEmployeesPage() {
                           <th className="p-2">Description</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-800 font-mono">
+                      <tbody className="divide-y divide-slate-200 dark:divide-slate-800 font-mono">
                         <tr>
-                          <td className="p-2 text-red-400 font-bold">employeeNumber</td>
-                          <td className="p-2 text-amber-400">Required</td>
-                          <td className="p-2 text-slate-400">EMP-100001</td>
-                          <td className="p-2 font-sans text-slate-400">Unique alphanumeric badge ID</td>
+                          <td className="p-2 text-red-600 dark:text-red-400 font-bold">employeeNumber</td>
+                          <td className="p-2 text-amber-600 dark:text-amber-400">Required</td>
+                          <td className="p-2 text-slate-500 dark:text-slate-400">EMP-100001</td>
+                          <td className="p-2 font-sans text-slate-500 dark:text-slate-400">Unique alphanumeric badge ID</td>
                         </tr>
                         <tr>
-                          <td className="p-2 text-red-400 font-bold">firstName</td>
-                          <td className="p-2 text-amber-400">Required</td>
-                          <td className="p-2 text-slate-400">John</td>
-                          <td className="p-2 font-sans text-slate-400">Employee first name</td>
+                          <td className="p-2 text-red-600 dark:text-red-400 font-bold">firstName</td>
+                          <td className="p-2 text-amber-600 dark:text-amber-400">Required</td>
+                          <td className="p-2 text-slate-500 dark:text-slate-400">John</td>
+                          <td className="p-2 font-sans text-slate-500 dark:text-slate-400">Employee first name</td>
                         </tr>
                         <tr>
-                          <td className="p-2 text-red-400 font-bold">lastName</td>
-                          <td className="p-2 text-amber-400">Required</td>
-                          <td className="p-2 text-slate-400">Smith</td>
-                          <td className="p-2 font-sans text-slate-400">Employee last name</td>
+                          <td className="p-2 text-red-600 dark:text-red-400 font-bold">lastName</td>
+                          <td className="p-2 text-amber-600 dark:text-amber-400">Required</td>
+                          <td className="p-2 text-slate-500 dark:text-slate-400">Smith</td>
+                          <td className="p-2 font-sans text-slate-500 dark:text-slate-400">Employee last name</td>
                         </tr>
                         <tr>
-                          <td className="p-2 text-red-400 font-bold">email</td>
-                          <td className="p-2 text-amber-400">Required</td>
-                          <td className="p-2 text-slate-400">john@magiccard.corp</td>
-                          <td className="p-2 font-sans text-slate-400">Corporate work email</td>
+                          <td className="p-2 text-red-600 dark:text-red-400 font-bold">email</td>
+                          <td className="p-2 text-amber-600 dark:text-amber-400">Required</td>
+                          <td className="p-2 text-slate-500 dark:text-slate-400">john@magiccard.corp</td>
+                          <td className="p-2 font-sans text-slate-500 dark:text-slate-400">Corporate work email</td>
                         </tr>
                         <tr>
-                          <td className="p-2 text-white">departmentName</td>
-                          <td className="p-2 text-slate-400">Optional</td>
-                          <td className="p-2 text-slate-400">Engineering & Technology</td>
-                          <td className="p-2 font-sans text-slate-400">Department / Division name</td>
+                          <td className="p-2 text-slate-800 dark:text-white">departmentName</td>
+                          <td className="p-2 text-slate-500 dark:text-slate-400">Optional</td>
+                          <td className="p-2 text-slate-500 dark:text-slate-400">Engineering & Technology</td>
+                          <td className="p-2 font-sans text-slate-500 dark:text-slate-400">Department / Division name</td>
                         </tr>
                         <tr>
-                          <td className="p-2 text-white">branchName</td>
-                          <td className="p-2 text-slate-400">Optional</td>
-                          <td className="p-2 text-slate-400">Global Headquarters (NYC)</td>
-                          <td className="p-2 font-sans text-slate-400">Branch office name</td>
+                          <td className="p-2 text-slate-800 dark:text-white">branchName</td>
+                          <td className="p-2 text-slate-500 dark:text-slate-400">Optional</td>
+                          <td className="p-2 text-slate-500 dark:text-slate-400">Global Headquarters (NYC)</td>
+                          <td className="p-2 font-sans text-slate-500 dark:text-slate-400">Branch office name</td>
                         </tr>
                         <tr>
-                          <td className="p-2 text-white">positionTitle</td>
-                          <td className="p-2 text-slate-400">Optional</td>
-                          <td className="p-2 text-slate-400">Software Engineer</td>
-                          <td className="p-2 font-sans text-slate-400">Official job title</td>
+                          <td className="p-2 text-slate-800 dark:text-white">positionTitle</td>
+                          <td className="p-2 text-slate-500 dark:text-slate-400">Optional</td>
+                          <td className="p-2 text-slate-500 dark:text-slate-400">Software Engineer</td>
+                          <td className="p-2 font-sans text-slate-500 dark:text-slate-400">Official job title</td>
                         </tr>
                         <tr>
-                          <td className="p-2 text-white">contactNumber</td>
-                          <td className="p-2 text-slate-400">Optional</td>
-                          <td className="p-2 text-slate-400">+1 (555) 123-4567</td>
-                          <td className="p-2 font-sans text-slate-400">Phone contact</td>
+                          <td className="p-2 text-slate-800 dark:text-white">contactNumber</td>
+                          <td className="p-2 text-slate-500 dark:text-slate-400">Optional</td>
+                          <td className="p-2 text-slate-500 dark:text-slate-400">+1 (555) 123-4567</td>
+                          <td className="p-2 font-sans text-slate-500 dark:text-slate-400">Phone contact</td>
                         </tr>
                         <tr>
-                          <td className="p-2 text-white">dateHired</td>
-                          <td className="p-2 text-slate-400">Optional</td>
-                          <td className="p-2 text-slate-400">2024-01-15</td>
-                          <td className="p-2 font-sans text-slate-400">Date hired (YYYY-MM-DD)</td>
+                          <td className="p-2 text-slate-800 dark:text-white">dateHired</td>
+                          <td className="p-2 text-slate-500 dark:text-slate-400">Optional</td>
+                          <td className="p-2 text-slate-500 dark:text-slate-400">2024-01-15</td>
+                          <td className="p-2 font-sans text-slate-500 dark:text-slate-400">Date hired (YYYY-MM-DD)</td>
                         </tr>
                         <tr>
-                          <td className="p-2 text-white">photoUrl</td>
-                          <td className="p-2 text-slate-400">Optional</td>
-                          <td className="p-2 text-slate-400">https://...</td>
-                          <td className="p-2 font-sans text-slate-400">Direct image URL for photo badge</td>
+                          <td className="p-2 text-slate-800 dark:text-white">photoUrl</td>
+                          <td className="p-2 text-slate-500 dark:text-slate-400">Optional</td>
+                          <td className="p-2 text-slate-500 dark:text-slate-400">https://...</td>
+                          <td className="p-2 font-sans text-slate-500 dark:text-slate-400">Direct image URL for photo badge</td>
                         </tr>
                       </tbody>
                     </table>
@@ -824,11 +824,11 @@ export default function HrEmployeesPage() {
 
               {/* Step 2: Upload CSV File */}
               <div>
-                <div className="font-bold text-white mb-1.5">Step 2: Select Filled CSV File</div>
-                <div className="p-6 border-2 border-dashed border-slate-700 hover:border-red-500/60 rounded-xl bg-slate-900/60 text-center transition">
+                <div className="font-bold text-slate-900 dark:text-white mb-1.5">Step 2: Select Filled CSV File</div>
+                <div className="p-6 border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-red-500/60 rounded-xl bg-slate-50 dark:bg-slate-900/60 text-center transition">
                   <Upload className="w-8 h-8 text-slate-400 mx-auto mb-2" />
                   <label className="cursor-pointer">
-                    <span className="text-red-400 hover:text-red-300 font-semibold underline">
+                    <span className="text-red-600 dark:text-red-400 hover:underline font-semibold">
                       Choose CSV file from computer
                     </span>
                     <input
@@ -844,8 +844,8 @@ export default function HrEmployeesPage() {
               </div>
 
               {parseError && (
-                <div className="p-3 rounded-lg bg-red-950/40 border border-red-800/60 text-red-200 flex items-start gap-2">
-                  <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                <div className="p-3 rounded-lg bg-red-100 dark:bg-red-950/40 border border-red-200 dark:border-red-800/60 text-red-700 dark:text-red-200 flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
                   <span>{parseError}</span>
                 </div>
               )}
@@ -854,15 +854,15 @@ export default function HrEmployeesPage() {
               {parsedPreview.length > 0 && (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="text-emerald-400 font-semibold flex items-center gap-1.5">
+                    <span className="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1.5">
                       <CheckCircle2 className="w-4 h-4" />
                       Ready to Import: {parsedPreview.length} employee record(s) detected
                     </span>
                   </div>
 
-                  <div className="max-h-40 overflow-y-auto rounded-lg border border-slate-800 bg-slate-950">
-                    <table className="w-full text-left text-[11px] text-slate-300">
-                      <thead className="bg-slate-900 sticky top-0 text-[10px] text-slate-400">
+                  <div className="max-h-40 overflow-y-auto rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
+                    <table className="w-full text-left text-[11px] text-slate-700 dark:text-slate-300">
+                      <thead className="bg-slate-100 dark:bg-slate-900 sticky top-0 text-[10px] text-slate-500 dark:text-slate-400">
                         <tr>
                           <th className="p-2">ID</th>
                           <th className="p-2">Name</th>
@@ -871,14 +871,14 @@ export default function HrEmployeesPage() {
                           <th className="p-2">Position</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-800">
+                      <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
                         {parsedPreview.map((row, i) => (
-                          <tr key={i} className="hover:bg-slate-900/50">
-                            <td className="p-2 font-mono text-red-400">{row.employeeNumber}</td>
-                            <td className="p-2 font-semibold text-white">{row.fullName}</td>
-                            <td className="p-2 text-slate-400">{row.email}</td>
-                            <td className="p-2 text-slate-400">{row.departmentName}</td>
-                            <td className="p-2 text-slate-400">{row.positionTitle}</td>
+                          <tr key={i} className="hover:bg-slate-50 dark:hover:bg-slate-900/50">
+                            <td className="p-2 font-mono text-red-600 dark:text-red-400">{row.employeeNumber}</td>
+                            <td className="p-2 font-semibold text-slate-900 dark:text-white">{row.fullName}</td>
+                            <td className="p-2 text-slate-500 dark:text-slate-400">{row.email}</td>
+                            <td className="p-2 text-slate-500 dark:text-slate-400">{row.departmentName}</td>
+                            <td className="p-2 text-slate-500 dark:text-slate-400">{row.positionTitle}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -888,7 +888,7 @@ export default function HrEmployeesPage() {
               )}
 
               {importResult && (
-                <div className="p-3 rounded-lg bg-emerald-950/40 border border-emerald-800/60 text-emerald-400 flex items-center gap-2">
+                <div className="p-3 rounded-lg bg-emerald-100 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 text-emerald-700 dark:text-emerald-400 flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 shrink-0" />
                   <span>
                     Successfully imported {importResult.imported} employee records into the system!
@@ -896,11 +896,11 @@ export default function HrEmployeesPage() {
                 </div>
               )}
 
-              <div className="pt-4 border-t border-slate-800 flex justify-end gap-2">
+              <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => { setShowImportModal(false); setParsedPreview([]); setImportResult(null); }}
-                  className="px-4 py-2 rounded-lg border border-slate-700 text-slate-300 hover:bg-slate-800"
+                  className="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
                 >
                   Close
                 </button>
@@ -908,7 +908,7 @@ export default function HrEmployeesPage() {
                   <button
                     type="button"
                     onClick={handleCommitParsedImport}
-                    className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white font-semibold shadow-md shadow-red-600/30 flex items-center gap-1.5"
+                    className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white font-semibold shadow-md shadow-red-600/30 flex items-center gap-1.5 transition"
                   >
                     <Check className="w-4 h-4" />
                     Commit Import ({parsedPreview.length} Records)
