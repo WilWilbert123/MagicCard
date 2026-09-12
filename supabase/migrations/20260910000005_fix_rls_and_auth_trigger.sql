@@ -95,35 +95,40 @@ DECLARE
     v_default_company_id UUID;
     v_default_branch_id UUID;
 BEGIN
-    -- Get default company and branch if existing
-    SELECT id INTO v_default_company_id FROM companies LIMIT 1;
-    SELECT id INTO v_default_branch_id FROM branches LIMIT 1;
-    SELECT id INTO v_admin_role_id FROM roles WHERE name = 'Super Admin' LIMIT 1;
+    BEGIN
+        -- Get default company and branch if existing
+        SELECT id INTO v_default_company_id FROM public.companies LIMIT 1;
+        SELECT id INTO v_default_branch_id FROM public.branches LIMIT 1;
+        SELECT id INTO v_admin_role_id FROM public.roles WHERE name = 'Super Admin' LIMIT 1;
 
-    -- Create Profile
-    INSERT INTO public.profiles (id, company_id, branch_id, email, full_name, is_active)
-    VALUES (
-        NEW.id,
-        v_default_company_id,
-        v_default_branch_id,
-        NEW.email,
-        COALESCE(NEW.raw_user_meta_data->>'full_name', SPLIT_PART(NEW.email, '@', 1)),
-        TRUE
-    )
-    ON CONFLICT (id) DO UPDATE SET
-        email = EXCLUDED.email,
-        updated_at = NOW();
+        -- Create Profile
+        INSERT INTO public.profiles (id, company_id, branch_id, email, full_name, is_active)
+        VALUES (
+            NEW.id,
+            v_default_company_id,
+            v_default_branch_id,
+            NEW.email,
+            COALESCE(NEW.raw_user_meta_data->>'full_name', SPLIT_PART(NEW.email, '@', 1)),
+            TRUE
+        )
+        ON CONFLICT (id) DO UPDATE SET
+            email = EXCLUDED.email,
+            updated_at = NOW();
 
-    -- Assign Super Admin role if available
-    IF v_admin_role_id IS NOT NULL THEN
-        INSERT INTO public.user_roles (user_id, role_id)
-        VALUES (NEW.id, v_admin_role_id)
-        ON CONFLICT DO NOTHING;
-    END IF;
+        -- Assign Super Admin role if available
+        IF v_admin_role_id IS NOT NULL THEN
+            INSERT INTO public.user_roles (user_id, role_id)
+            VALUES (NEW.id, v_admin_role_id)
+            ON CONFLICT DO NOTHING;
+        END IF;
+    EXCEPTION WHEN OTHERS THEN
+        -- Prevent any trigger error from failing auth.users insertion
+        NULL;
+    END;
 
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- Drop existing trigger if it exists
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;

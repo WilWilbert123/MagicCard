@@ -7,14 +7,15 @@ export function buildResolutionDictionary(employee, baseUrl = 'https://verify.ac
         [employee.firstName, employee.middleName, employee.lastName, employee.suffix]
             .filter(Boolean)
             .join(' ');
+    const empAny = employee;
     return {
         'employee.fullName': constructedFullName,
         'employee.firstName': employee.firstName || '',
         'employee.lastName': employee.lastName || '',
         'employee.employeeNumber': employee.employeeNumber || '',
-        'employee.department': employee.department || 'N/A',
-        'employee.position': employee.position || 'Employee',
-        'employee.branch': employee.branch || 'Headquarters',
+        'employee.department': employee.department || empAny.departmentName || 'N/A',
+        'employee.position': employee.position || empAny.positionTitle || 'Employee',
+        'employee.branch': employee.branch || empAny.branchName || 'Headquarters',
         'employee.email': employee.email || '',
         'employee.contactNumber': employee.contactNumber || '',
         'employee.dateHired': employee.dateHired || new Date().toISOString().split('T')[0],
