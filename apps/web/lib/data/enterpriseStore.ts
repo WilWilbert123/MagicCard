@@ -60,6 +60,9 @@ export interface KioskDevice {
   printerModel: string;
   printerStatus: string;
   ribbonLevelPct: number;
+  cardsPrinted?: number;
+  maxCardCapacity?: number;
+  cardsRemaining?: number;
   lastHeartbeat: string;
 }
 

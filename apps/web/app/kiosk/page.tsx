@@ -103,6 +103,29 @@ export default function KioskMainPage() {
       .catch(() => {});
   }, []);
 
+  // Send real-time heartbeat to Supabase database every 15 seconds
+  useEffect(() => {
+    const sendHeartbeat = async () => {
+      try {
+        await fetch('/api/kiosks/heartbeat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            kioskCode: 'KIOSK-SOR-01',
+            printerStatus: 'READY - Magicard 600NEO (Ribbon 100%)',
+            agentVersion: 'v1.4.0',
+            ipAddress: '127.0.0.1',
+          }),
+        });
+      } catch {}
+    };
+
+    sendHeartbeat();
+    const interval = setInterval(sendHeartbeat, 15000);
+    return () => clearInterval(interval);
+  }, []);
+
+
   // Inactivity timeout back to Screensaver on SEARCH screen
   useEffect(() => {
     if (step !== 'SEARCH') return;
@@ -231,6 +254,9 @@ export default function KioskMainPage() {
           employeeNumber: foundEmployee.employeeNumber,
           employeeName: foundEmployee.fullName,
           branchName: foundEmployee.branchName || 'Main Campus',
+          branchId: foundEmployee.branchId || null,
+          departmentName: foundEmployee.departmentName || 'General',
+          departmentId: foundEmployee.departmentId || null,
           idempotencyKey,
           status: 'COMPLETED',
         }),
@@ -562,7 +588,7 @@ export default function KioskMainPage() {
             <div>
               <div className="text-sm font-bold text-white">{foundEmployee.fullName}</div>
               <div className="text-xs text-slate-400">
-                Ready for physical production • Magicard 300 Duo YMCKO
+                Ready for physical production • Magicard 600NEO YMCKO
               </div>
             </div>
 

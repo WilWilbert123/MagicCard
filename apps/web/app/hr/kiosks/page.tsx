@@ -11,7 +11,10 @@ import {
   HardDrive, 
   Wifi, 
   ShieldAlert,
-  Power
+  Power,
+  Trash2,
+  Building2,
+  Search,
 } from 'lucide-react';
 import { KioskDevice, Branch } from '@/lib/data/enterpriseStore';
 import { toast } from '@/components/ui/Toast';
@@ -24,6 +27,21 @@ export default function HrKiosksPage() {
   const [newKioskCode, setNewKioskCode] = useState('KIOSK-01');
   const [newKioskName, setNewKioskName] = useState('Main Lobby Kiosk');
   const [selectedBranchId, setSelectedBranchId] = useState('');
+
+  const [branchFilter, setBranchFilter] = useState('ALL');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const formatHeartbeatTime = (dateStr?: string) => {
+    if (!dateStr) return 'never';
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffSec = Math.floor((now.getTime() - date.getTime()) / 1000);
+    if (isNaN(diffSec) || diffSec < 0) return 'just now';
+    if (diffSec < 45) return 'just now';
+    if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`;
+    if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`;
+    return date.toLocaleDateString();
+  };
 
   const loadKiosks = async () => {
     try {
@@ -47,6 +65,8 @@ export default function HrKiosksPage() {
 
   useEffect(() => {
     loadKiosks();
+    const interval = setInterval(loadKiosks, 10000);
+    return () => clearInterval(interval);
   }, []);
 
   const handleRegister = async (e: React.FormEvent) => {
@@ -119,6 +139,22 @@ export default function HrKiosksPage() {
     }
   };
 
+  const filteredKiosks = kiosks.filter((k) => {
+    if (branchFilter !== 'ALL' && k.branchId !== branchFilter && k.branchName !== branchFilter) {
+      return false;
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      return (
+        k.code.toLowerCase().includes(q) ||
+        k.name.toLowerCase().includes(q) ||
+        k.branchName.toLowerCase().includes(q) ||
+        k.ipAddress.toLowerCase().includes(q)
+      );
+    }
+    return true;
+  });
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       {/* Header */}
@@ -131,6 +167,13 @@ export default function HrKiosksPage() {
         </div>
 
         <div className="flex items-center gap-3">
+          <button
+            onClick={loadKiosks}
+            className="p-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111827] text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition"
+            title="Refresh Fleet Status"
+          >
+            <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+          </button>
           <a
             href="/kiosk"
             target="_blank"
@@ -148,29 +191,81 @@ export default function HrKiosksPage() {
         </div>
       </div>
 
+      {/* Controls Bar: Search & Branch Filter */}
+      <div className="p-4 rounded-xl bg-white dark:bg-[#111827]/90 border border-slate-200/80 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+        {/* Search Input */}
+        <div className="relative w-full sm:w-80">
+          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search terminal code, name, IP..."
+            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700/80 rounded-lg pl-9 pr-4 py-1.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-red-500"
+          />
+        </div>
+
+        {/* Branch Filter Dropdown */}
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="relative flex items-center w-full sm:w-auto">
+            <Building2 className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 pointer-events-none z-10" />
+            <select
+              value={branchFilter}
+              onChange={(e) => setBranchFilter(e.target.value)}
+              className="w-full sm:w-auto bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700/80 rounded-lg pl-8 pr-8 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-red-500 appearance-none font-medium"
+            >
+              <option value="ALL">All Branches ({kiosks.length} Terminals)</option>
+              {branches.map((b) => {
+                const count = kiosks.filter((k) => k.branchId === b.id || k.branchName === b.name).length;
+                return (
+                  <option key={b.id} value={b.id}>
+                    {b.name} ({count})
+                  </option>
+                );
+              })}
+            </select>
+            <div className="absolute right-2.5 pointer-events-none text-slate-400 text-[10px]">▼</div>
+          </div>
+        </div>
+      </div>
+
       {/* KIOSKs Fleet Grid */}
       {isLoading ? (
         <div className="p-12 text-center text-slate-500 border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-[#111827]/90 shadow-sm">
           <div className="w-5 h-5 border-2 border-slate-400 border-t-red-500 rounded-full animate-spin mx-auto mb-2" />
           <p className="text-xs">Loading KIOSK fleet from Supabase...</p>
         </div>
-      ) : kiosks.length === 0 ? (
+      ) : filteredKiosks.length === 0 ? (
         <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111827]/90 p-12 text-center text-slate-500 dark:text-slate-400 shadow-sm">
           <Monitor className="w-10 h-10 mx-auto mb-3 text-slate-400 dark:text-slate-600" />
-          <h3 className="text-base font-bold text-slate-900 dark:text-white mb-1">No KIOSK Terminals Configured</h3>
+          <h3 className="text-base font-bold text-slate-900 dark:text-white mb-1">No Matching KIOSK Terminals</h3>
           <p className="text-xs text-slate-500 max-w-sm mx-auto mb-4">
-            You currently have no hardware KIOSK terminals registered in Supabase. Register your first physical terminal to begin monitoring.
+            {kiosks.length === 0
+              ? 'You currently have no hardware KIOSK terminals registered in Supabase.'
+              : 'No terminals match your active branch filter or search query.'}
           </p>
-          <button
-            onClick={() => setShowRegisterModal(true)}
-            className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-semibold shadow transition"
-          >
-            Register Terminal
-          </button>
+          {kiosks.length === 0 ? (
+            <button
+              onClick={() => setShowRegisterModal(true)}
+              className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-semibold shadow transition"
+            >
+              Register Terminal
+            </button>
+          ) : (
+            <button
+              onClick={() => {
+                setBranchFilter('ALL');
+                setSearchQuery('');
+              }}
+              className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold shadow transition"
+            >
+              Clear Filters
+            </button>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {kiosks.map((kiosk) => {
+          {filteredKiosks.map((kiosk) => {
           const isOnline = kiosk.status === 'ONLINE';
           const isWarning = kiosk.status === 'WARNING';
           const isDisabled = kiosk.status === 'DISABLED';
@@ -206,12 +301,30 @@ export default function HrKiosksPage() {
                 <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">{kiosk.name}</h3>
 
                 {/* Specs Grid */}
-                <div className="grid grid-cols-2 gap-3 text-xs mb-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs mb-4">
                   <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800">
                     <span className="text-slate-500 block text-[10px] uppercase font-semibold">Printer Model</span>
-                    <span className="font-semibold text-slate-900 dark:text-white">{kiosk.printerModel}</span>
+                    <span className="font-semibold text-slate-900 dark:text-white">{kiosk.printerModel || 'Magicard 600NEO'}</span>
                     <span className={`block text-[11px] mt-1 font-medium ${isWarning ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
                       {kiosk.printerStatus}
+                    </span>
+                  </div>
+
+                  <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800">
+                    <span className="text-slate-500 block text-[10px] uppercase font-semibold">Card Feed Tray</span>
+                    <div className="flex items-center justify-between mt-1">
+                      <span className="font-bold text-slate-900 dark:text-white">
+                        {kiosk.cardsPrinted ?? 0} / {kiosk.maxCardCapacity ?? 50} Printed
+                      </span>
+                    </div>
+                    <div className="w-full h-1.5 bg-slate-200 dark:bg-slate-800 rounded-full mt-1.5 overflow-hidden">
+                      <div
+                        style={{ width: `${Math.min(100, (((kiosk.cardsPrinted ?? 0) / (kiosk.maxCardCapacity ?? 50)) * 100))}%` }}
+                        className="h-full rounded-full bg-blue-500"
+                      />
+                    </div>
+                    <span className="block text-[10px] text-slate-400 mt-1">
+                      {kiosk.cardsRemaining ?? 50} cards remaining
                     </span>
                   </div>
 
@@ -236,7 +349,7 @@ export default function HrKiosksPage() {
                     <span className="font-mono text-slate-900 dark:text-white">{kiosk.agentVersion} (Daemon: 7125)</span>
                   </div>
 
-                  <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800">
+                  <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 col-span-2 sm:col-span-1">
                     <span className="text-slate-500 block text-[10px] uppercase font-semibold">Active Template</span>
                     <span className="text-emerald-600 dark:text-emerald-400 font-semibold">{kiosk.activeTemplateVersion}</span>
                   </div>
@@ -247,7 +360,7 @@ export default function HrKiosksPage() {
               <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs">
                 <span className="text-slate-500 text-[11px] flex items-center gap-1">
                   <Wifi className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                  IP: {kiosk.ipAddress} • Last heartbeat: just now
+                  IP: {kiosk.ipAddress} • Last heartbeat: {formatHeartbeatTime(kiosk.lastHeartbeat)}
                 </span>
 
                 <div className="flex items-center gap-2">
@@ -278,10 +391,10 @@ export default function HrKiosksPage() {
 
                   <button
                     onClick={() => handleDeleteKiosk(kiosk)}
-                    className="p-1.5 text-slate-400 hover:text-rose-600 rounded transition"
+                    className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition"
                     title="Delete Terminal"
                   >
-                    <XCircle className="w-4 h-4" />
+                    <Trash2 className="w-4 h-4 text-rose-500" />
                   </button>
 
                   <button

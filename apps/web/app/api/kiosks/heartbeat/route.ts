@@ -1,31 +1,58 @@
 import { NextResponse } from 'next/server';
-import { enterpriseStore } from '@/lib/data/enterpriseStore';
+import { createAdminSupabaseClient } from '@/lib/supabase/server';
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { kioskCode, printerStatus, templateVersion, agentVersion } = body;
+    const { kioskCode, kioskId, printerStatus, agentVersion, ipAddress } = body;
 
-    const kiosk = enterpriseStore.kiosks.find((k) => k.code === kioskCode);
+    const admin = createAdminSupabaseClient();
+    const now = new Date().toISOString();
+
+    const codeToSearch = kioskCode || kioskId || 'KIOSK-SOR-01';
+
+    // 1. Fetch target kiosk from Supabase
+    const { data: kiosk } = await admin
+      .from('kiosks')
+      .select('id, kiosk_code, status')
+      .or(`kiosk_code.eq.${codeToSearch},id.eq.${codeToSearch}`)
+      .maybeSingle();
+
     if (kiosk) {
-      kiosk.lastHeartbeat = new Date().toISOString();
-      if (printerStatus) kiosk.printerStatus = printerStatus;
-      if (agentVersion) kiosk.agentVersion = agentVersion;
+      const updateData: any = {
+        last_heartbeat_at: now,
+        updated_at: now,
+      };
+      if (kiosk.status !== 'DISABLED') {
+        updateData.status = 'ONLINE';
+      }
+      if (printerStatus) updateData.printer_status_summary = printerStatus;
+      if (agentVersion) updateData.agent_version = agentVersion;
+      if (ipAddress) updateData.ip_address = ipAddress;
+
+      await admin.from('kiosks').update(updateData).eq('id', kiosk.id);
     }
 
-    // Return current active template version info so KIOSK detects if it needs to sync
-    const activeVersion = enterpriseStore.templateVersions.find((v) => v.status === 'PUBLISHED');
+    // 2. Fetch current published template version from Supabase
+    const { data: activeVersion } = await admin
+      .from('card_template_versions')
+      .select('id, version_number, published_at')
+      .eq('status', 'PUBLISHED')
+      .order('version_number', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
     return NextResponse.json({
       status: 'ACK',
-      timestamp: new Date().toISOString(),
+      timestamp: now,
       activeTemplate: {
-        versionId: activeVersion?.id,
-        versionTag: activeVersion?.versionTag,
-        publishedAt: activeVersion?.publishedAt,
+        versionId: activeVersion?.id || null,
+        versionTag: activeVersion ? `v${activeVersion.version_number}.0.0` : 'v1.0.0',
+        publishedAt: activeVersion?.published_at || null,
       },
     });
-  } catch (err) {
-    return NextResponse.json({ error: (err as Error).message }, { status: 500 });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
+

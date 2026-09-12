@@ -836,7 +836,7 @@ export default function HrSettingsPage() {
           <div className="rounded-xl bg-white dark:bg-[#111827]/90 border border-slate-200/80 dark:border-slate-800 p-6 space-y-4 shadow-sm">
             <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <Printer className="w-4 h-4 text-red-500" />
-              Physical Print Margins & CR80 Defaults (Magicard 300 Duo)
+              Physical Print Margins & CR80 Defaults (Magicard 600NEO)
             </h2>
 
             <div className="grid grid-cols-2 gap-4 text-xs">
