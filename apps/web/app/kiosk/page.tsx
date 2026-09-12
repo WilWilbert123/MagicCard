@@ -14,7 +14,7 @@ import {
   Check,
   User,
 } from 'lucide-react';
-import { enterpriseStore, Employee } from '@/lib/data/enterpriseStore';
+import { enterpriseStore, Employee, DEFAULT_CR80_TEMPLATE } from '@/lib/data/enterpriseStore';
 import { toast } from '@/components/ui/Toast';
 import Card2DViewer from '@/components/card/Card2DViewer';
 
@@ -65,6 +65,7 @@ export default function KioskMainPage() {
   const [errorMessage, setErrorMessage] = useState('');
   const [previewMode, setPreviewMode] = useState<'2D' | '3D'>('3D');
   const [cardSide, setCardSide] = useState<'front' | 'back'>('front');
+  const [kioskTemplate, setKioskTemplate] = useState<any>(DEFAULT_CR80_TEMPLATE);
 
   // Print pipeline animation state
   const [currentPrintStepIndex, setCurrentPrintStepIndex] = useState(0);
@@ -193,6 +194,37 @@ export default function KioskMainPage() {
       }
 
       setFoundEmployee(emp);
+
+      // Fetch dynamic active published card template for employee's branch or global default
+      try {
+        const tplRes = await fetch('/api/card-templates');
+        const tplJson = await tplRes.json();
+        if (tplRes.ok && Array.isArray(tplJson.data)) {
+          const templates = tplJson.data;
+          const matchingBranchTpl = templates.find(
+            (t: any) =>
+              t.branchId &&
+              (t.branchId === emp.branchId ||
+                (emp.branchName && t.branchName?.toLowerCase() === emp.branchName?.toLowerCase()) ||
+                (emp.branchCode && t.branchCode === emp.branchCode))
+          );
+          const defaultTpl = templates.find((t: any) => t.isDefault) || templates[0];
+          const targetTpl = matchingBranchTpl || defaultTpl;
+
+          if (targetTpl) {
+            const detailRes = await fetch(`/api/card-templates/${targetTpl.id}`);
+            const detailJson = await detailRes.json();
+            if (detailRes.ok && detailJson.data?.layout) {
+              setKioskTemplate(detailJson.data.layout);
+            } else if (targetTpl.layout) {
+              setKioskTemplate(targetTpl.layout);
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to fetch published card template for KIOSK:', err);
+      }
+
       setStep('PREVIEW');
     } catch (err: any) {
       setErrorMessage(`Failed to verify employee record: ${err.message}`);
@@ -554,7 +586,7 @@ export default function KioskMainPage() {
             {previewMode === '3D' ? (
               <div className="w-full">
                 <ThreeCardViewer
-                  template={enterpriseStore.activeTemplate}
+                  template={kioskTemplate}
                   employeeNumber={foundEmployee.employeeNumber}
                   employeeData={foundEmployee}
                   autoRotate={false}
@@ -564,7 +596,7 @@ export default function KioskMainPage() {
               <div className="space-y-5 text-center flex flex-col items-center">
                 {/* 2D Interactive Card Canvas - Powered by Card Engine */}
                 <Card2DViewer
-                  template={enterpriseStore.activeTemplate}
+                  template={kioskTemplate}
                   side={cardSide}
                   employeeData={foundEmployee}
                 />

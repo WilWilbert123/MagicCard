@@ -28,12 +28,17 @@ export async function renderCardToCanvas(canvas, template, side, employee, optio
             continue;
         ctx.save();
         ctx.globalAlpha = el.opacity ?? 1;
-        // Apply rotation around element center if specified
-        if (el.rotation && el.rotation !== 0) {
+        // Apply rotation & flips around element center
+        if ((el.rotation && el.rotation !== 0) || el.flipX || el.flipY) {
             const centerX = el.x + el.width / 2;
             const centerY = el.y + el.height / 2;
             ctx.translate(centerX, centerY);
-            ctx.rotate((el.rotation * Math.PI) / 180);
+            if (el.rotation && el.rotation !== 0) {
+                ctx.rotate((el.rotation * Math.PI) / 180);
+            }
+            if (el.flipX || el.flipY) {
+                ctx.scale(el.flipX ? -1 : 1, el.flipY ? -1 : 1);
+            }
             ctx.translate(-centerX, -centerY);
         }
         switch (el.type) {
