@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { 
   Users, 
@@ -23,12 +24,29 @@ import {
   User,
   HelpCircle,
   FileDown,
-  Check
+  Check,
+  Eye,
 } from 'lucide-react';
-import { Employee, Branch, Department } from '@/lib/data/enterpriseStore';
+import dynamic from 'next/dynamic';
+import { Employee, Branch, Department, DEFAULT_CR80_TEMPLATE } from '@/lib/data/enterpriseStore';
 import { toast } from '@/components/ui/Toast';
+import Card2DViewer from '@/components/card/Card2DViewer';
+
+const ThreeCardViewer = dynamic(() => import('@/components/three/ThreeCardViewer'), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-[400px] rounded-2xl bg-slate-900 flex items-center justify-center text-slate-400 text-sm font-semibold">
+      Rendering 3D Card Geometry...
+    </div>
+  ),
+});
 
 export default function HrEmployeesPage() {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
@@ -49,6 +67,87 @@ export default function HrEmployeesPage() {
   const [parseError, setParseError] = useState('');
   const [showFormatGuide, setShowFormatGuide] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // 3D Card Preview Modal state
+  const [cardTemplates, setCardTemplates] = useState<any[]>([]);
+  const [show3dPreviewModal, setShow3dPreviewModal] = useState(false);
+  const [previewEmployee, setPreviewEmployee] = useState<Employee | null>(null);
+  const [previewMode, setPreviewMode] = useState<'3D' | '2D'>('3D');
+  const [previewCardSide, setPreviewCardSide] = useState<'front' | 'back'>('front');
+  const [previewTemplate, setPreviewTemplate] = useState<any>(DEFAULT_CR80_TEMPLATE);
+
+  const getAssignedTemplateId = (emp: Employee) => {
+    if (cardTemplates && cardTemplates.length > 0) {
+      const matchingBranchTpl = cardTemplates.find(
+        (t: any) =>
+          (t.branchId && t.branchId === emp.branchId) ||
+          (emp.branchName && (
+            t.branchName?.toLowerCase() === emp.branchName?.toLowerCase() ||
+            (emp.branchName.toLowerCase().includes('sorsogon') && t.branchName?.toLowerCase().includes('sorsogon'))
+          )) ||
+          ((emp as any).branchCode && t.branchCode === (emp as any).branchCode)
+      );
+      const defaultTpl = cardTemplates.find((t: any) => t.isDefault) || cardTemplates[0];
+      const activeTpl = matchingBranchTpl || defaultTpl;
+      return activeTpl?.id || 'template-acme-cr80';
+    }
+    return 'template-acme-cr80';
+  };
+
+  const handleOpenPreview3dModal = async (emp: Employee) => {
+    // Reset modal states to new employee immediately
+    setPreviewEmployee(emp);
+    setPreviewMode('3D');
+    setPreviewCardSide('front');
+
+    // Synchronously resolve template from pre-loaded cardTemplates cache if available
+    let targetTpl: any = null;
+    if (cardTemplates.length > 0) {
+      const matchingBranchTpl = cardTemplates.find(
+        (t: any) =>
+          (t.branchId && (t.branchId === emp.branchId ||
+          (emp.branchName && t.branchName?.toLowerCase() === emp.branchName?.toLowerCase()) ||
+          ((emp as any).branchCode && t.branchCode === (emp as any).branchCode)))
+      );
+      targetTpl = matchingBranchTpl || cardTemplates.find((t: any) => t.isDefault) || cardTemplates[0];
+    }
+
+    if (targetTpl?.layout) {
+      setPreviewTemplate(targetTpl.layout);
+    } else {
+      setPreviewTemplate(DEFAULT_CR80_TEMPLATE);
+    }
+
+    setShow3dPreviewModal(true);
+
+    // Asynchronously fetch layout details if needed without blocking or leaking previous template
+    try {
+      const tplRes = await fetch('/api/card-templates');
+      const tplJson = tplRes.ok ? await tplRes.json() : null;
+      if (tplJson?.data && Array.isArray(tplJson.data)) {
+        const templates = tplJson.data;
+        setCardTemplates(templates);
+        const matchingBranchTpl = templates.find(
+          (t: any) =>
+            (t.branchId && (t.branchId === emp.branchId ||
+            (emp.branchName && t.branchName?.toLowerCase() === emp.branchName?.toLowerCase()) ||
+            ((emp as any).branchCode && t.branchCode === (emp as any).branchCode)))
+        );
+        const defaultTpl = templates.find((t: any) => t.isDefault) || templates[0];
+        const activeTpl = matchingBranchTpl || defaultTpl;
+
+        if (activeTpl) {
+          const detailRes = await fetch(`/api/card-templates/${activeTpl.id}`);
+          const detailJson = detailRes.ok ? await detailRes.json() : null;
+          if (detailJson?.data?.layout) {
+            setPreviewTemplate(detailJson.data.layout);
+          } else if (activeTpl.layout) {
+            setPreviewTemplate(activeTpl.layout);
+          }
+        }
+      }
+    } catch {}
+  };
 
   // New Employee Form
   const [formData, setFormData] = useState({
@@ -78,7 +177,7 @@ export default function HrEmployeesPage() {
     positionTitle: '',
     photoUrl: '',
     employmentStatus: 'ACTIVE' as 'ACTIVE' | 'INACTIVE' | 'SUSPENDED',
-    cardStatus: 'NOT_ISSUED' as 'NOT_ISSUED' | 'PRINTED' | 'REPRINT_REQUESTED',
+    cardStatus: 'NOT_ISSUED' as 'NOT_ISSUED' | 'PRINTED' | 'ISSUED' | 'REPRINT_REQUESTED',
   });
 
   const handleOpenEditModal = (emp: Employee) => {
@@ -124,7 +223,7 @@ export default function HrEmployeesPage() {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [empRes, brRes, deptRes] = await Promise.all([
+      const [empRes, brRes, deptRes, tplRes] = await Promise.all([
         fetch('/api/employees', { cache: 'no-store' }).then(async (r) => {
           if (!r.ok) throw new Error('Employees API request failed.');
           return r.json();
@@ -137,15 +236,21 @@ export default function HrEmployeesPage() {
           if (!r.ok) throw new Error('Departments API request failed.');
           return r.json();
         }),
+        fetch('/api/card-templates', { cache: 'no-store' }).then(async (r) => {
+          if (!r.ok) return null;
+          return r.json();
+        }),
       ]);
 
       const loadedEmployees = empRes.data ?? [];
       const loadedBranches = brRes.data ?? [];
       const loadedDepartments = deptRes.data ?? [];
+      const loadedTemplates = tplRes?.data ?? [];
 
       setEmployees(loadedEmployees);
       setBranches(loadedBranches);
       setDepartments(loadedDepartments);
+      setCardTemplates(loadedTemplates);
 
       if (loadedBranches.length > 0 && !formData.branchId) {
         setFormData((prev) => ({
@@ -726,19 +831,31 @@ export default function HrEmployeesPage() {
                   <td className="px-5 py-3 text-right">
                     <div className="flex items-center justify-end gap-1.5">
                       <button
+                        onClick={() => handleOpenPreview3dModal(emp)}
+                        title="View 3D ID Card Badge (Same as KIOSK)"
+                        className="p-1.5 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-950/40 rounded transition"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </button>
+                      <button
                         onClick={() => handleOpenEditModal(emp)}
                         title="Edit Employee & Card Status"
                         className="p-1.5 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition"
                       >
                         <Edit className="w-4 h-4" />
                       </button>
-                      <Link
-                        href={`/hr/card-designs/template-acme-cr80/designer`}
-                        title="Design / Print Card"
-                        className="p-1.5 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition"
-                      >
-                        <CreditCard className="w-4 h-4" />
-                      </Link>
+                      {(() => {
+                        const targetTplId = getAssignedTemplateId(emp);
+                        return (
+                          <Link
+                            href={`/hr/card-designs/${targetTplId}/designer?employeeNumber=${encodeURIComponent(emp.employeeNumber || emp.id)}`}
+                            title={`Design / Edit Card in Designer for ${emp.fullName}`}
+                            className="p-1.5 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition"
+                          >
+                            <CreditCard className="w-4 h-4" />
+                          </Link>
+                        );
+                      })()}
                       <button
                         onClick={() => handleDeleteEmployee(emp.id)}
                         title="Delete record"
@@ -1295,6 +1412,79 @@ export default function HrEmployeesPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* 3D ID Card Preview Modal (Rendered via Portal at document.body for true 100% full screen coverage) */}
+      {mounted && show3dPreviewModal && previewEmployee && createPortal(
+        <div className="fixed inset-0 z-[9999] bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="w-full max-w-4xl bg-[#0f172a] border border-slate-800 rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh] text-white">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-[#0b1120]">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-red-600/20 border border-red-500/30 flex items-center justify-center text-red-500">
+                  <CreditCard className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-lg font-bold text-white leading-none">{previewEmployee.fullName}</h3>
+                    <span className="font-mono text-xs text-red-400 font-semibold bg-red-500/10 px-2 py-0.5 rounded border border-red-500/20">
+                      {previewEmployee.employeeNumber}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Live 3D ID Card Geometry (Same layout as KIOSK) • {previewEmployee.departmentName} • {previewEmployee.branchName || 'Global Headquarters'}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShow3dPreviewModal(false)}
+                className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Stage Body */}
+            <div className="p-6 bg-gradient-to-b from-[#0a0f1d] via-[#070b14] to-[#04070e] flex flex-col items-center justify-center relative overflow-hidden flex-1 min-h-[440px]">
+              <div className="w-full">
+                <ThreeCardViewer
+                  key={`${previewEmployee.id}-${previewTemplate?.id || 'tpl'}`}
+                  template={previewTemplate}
+                  employeeNumber={previewEmployee.employeeNumber}
+                  employeeData={previewEmployee}
+                  autoRotate={true}
+                />
+              </div>
+            </div>
+
+            {/* Footer Summary */}
+            <div className="px-6 py-4 border-t border-slate-800 bg-[#0b1120] flex items-center justify-between text-xs">
+              <div className="flex items-center gap-4 text-slate-400">
+                <div>Job Title: <strong className="text-white">{previewEmployee.positionTitle || 'Staff'}</strong></div>
+                <div>Card Status: <strong className="text-emerald-400">{previewEmployee.cardStatus === 'PRINTED' || (previewEmployee.cardStatus as string) === 'ISSUED' ? 'ISSUED' : 'PENDING'}</strong></div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <Link
+                  href="/kiosk"
+                  target="_blank"
+                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold border border-slate-700 flex items-center gap-1.5 transition"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-red-400" />
+                  Open in KIOSK
+                </Link>
+                <button
+                  onClick={() => setShow3dPreviewModal(false)}
+                  className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white font-semibold shadow-md transition"
+                >
+                  Close Preview
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );

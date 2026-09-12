@@ -97,6 +97,11 @@ function isKioskOrPublicApi(request: NextRequest): boolean {
     return true;
   }
 
+  // Kiosk HR assistance dispatch submission
+  if (pathname.startsWith('/api/audit-logs') && method === 'POST' && isKiosk) {
+    return true;
+  }
+
   // Targeted employee lookup for Kiosk / search
   if (pathname.startsWith('/api/employees') && method === 'GET') {
     if (isKiosk || searchParams.has('employeeNumber') || searchParams.has('q') || pathname !== '/api/employees') {

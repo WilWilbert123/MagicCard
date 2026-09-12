@@ -6,6 +6,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { CardTemplateJSON, renderCardToCanvas } from '@workspace/card-engine';
 import { enterpriseStore } from '@/lib/data/enterpriseStore';
+import { RotateCcw, Play, Pause, Sun, Moon } from 'lucide-react';
 
 interface ThreeCardViewerProps {
   template: CardTemplateJSON;
@@ -358,40 +359,44 @@ export default function ThreeCardViewer({
           : 'bg-gradient-to-br from-[#111827] via-[#0a1020] to-[#060c18] border-slate-800/80 shadow-2xl'
       }`}
     >
-      {/* Controls Overlay */}
+      {/* Icon-Only Controls Overlay */}
       <div className="absolute top-4 left-4 z-10 flex items-center gap-2">
         <button
           onClick={() => setIsFlipped(!isFlipped)}
-          className={`px-3 py-1.5 rounded-lg border text-xs font-semibold backdrop-blur shadow-md transition ${
+          title={isFlipped ? 'Flip to Front (Obverse)' : 'Flip to Back (Reverse)'}
+          className={`p-2.5 rounded-xl border backdrop-blur shadow-md transition active:scale-95 flex items-center justify-center ${
             stageTheme === 'light'
               ? 'bg-white/90 hover:bg-white text-slate-800 border-slate-300'
               : 'bg-slate-900/80 hover:bg-slate-800 text-white border-slate-700'
           }`}
         >
-          {isFlipped ? 'Show Front' : 'Show Back (Flip)'}
+          <RotateCcw className="w-4 h-4" />
         </button>
+
         <button
           onClick={() => setRotating(!rotating)}
-          className={`px-3 py-1.5 rounded-lg border text-xs font-semibold backdrop-blur shadow-md transition ${
+          title={rotating ? 'Pause 3D Auto Rotation' : 'Start 3D Auto Rotation'}
+          className={`p-2.5 rounded-xl border backdrop-blur shadow-md transition active:scale-95 flex items-center justify-center ${
             rotating
-              ? 'bg-red-600 border-red-600 text-white'
+              ? 'bg-red-600 border-red-600 text-white shadow-red-600/30'
               : stageTheme === 'light'
               ? 'bg-white/90 hover:bg-white text-slate-800 border-slate-300'
               : 'bg-slate-900/80 hover:bg-slate-800 text-white border-slate-700'
           }`}
         >
-          {rotating ? 'Pause Rotation' : 'Auto Rotate'}
+          {rotating ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
         </button>
+
         <button
           onClick={() => setStageTheme(stageTheme === 'light' ? 'dark' : 'light')}
-          className={`px-3 py-1.5 rounded-lg border text-xs font-semibold backdrop-blur shadow-md transition ${
+          title={stageTheme === 'light' ? 'Switch to Dark Studio Environment' : 'Switch to Light Studio Environment'}
+          className={`p-2.5 rounded-xl border backdrop-blur shadow-md transition active:scale-95 flex items-center justify-center ${
             stageTheme === 'light'
-              ? 'bg-white/90 hover:bg-white text-slate-800 border-slate-300'
-              : 'bg-slate-900/80 hover:bg-slate-800 text-white border-slate-700'
+              ? 'bg-white/90 hover:bg-white text-amber-600 border-slate-300'
+              : 'bg-slate-900/80 hover:bg-slate-800 text-amber-400 border-slate-700'
           }`}
-          title="Toggle Studio Lighting Environment"
         >
-          {stageTheme === 'light' ? 'Showroom: Light' : 'Showroom: Dark'}
+          {stageTheme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
         </button>
       </div>
 

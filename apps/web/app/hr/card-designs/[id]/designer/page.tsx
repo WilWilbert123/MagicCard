@@ -278,6 +278,50 @@ export default function CardDesignerPage() {
     versionTag: string;
   } | null>(null);
 
+  // Optional preview employee context passed via URL
+  const [previewEmployee, setPreviewEmployee] = useState<any>(null);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const searchParams = new URLSearchParams(window.location.search);
+    const empNum = searchParams.get('employeeNumber') || searchParams.get('employeeId') || searchParams.get('emp');
+    if (empNum) {
+      fetch(`/api/employees?q=${encodeURIComponent(empNum)}`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((json) => {
+          if (json?.data && Array.isArray(json.data) && json.data.length > 0) {
+            const found = json.data.find(
+              (e: any) => e.employeeNumber === empNum || e.id === empNum
+            ) || json.data[0];
+            setPreviewEmployee(found);
+          }
+        })
+        .catch(() => {});
+    }
+  }, []);
+
+  const activeBindingMap = previewEmployee
+    ? {
+        employeeNumber: previewEmployee.employeeNumber || 'EMP-000125',
+        fullName: previewEmployee.fullName || `${previewEmployee.firstName || ''} ${previewEmployee.lastName || ''}`.trim(),
+        firstName: previewEmployee.firstName || 'Michael',
+        lastName: previewEmployee.lastName || 'Brown',
+        position: previewEmployee.positionTitle || 'Staff',
+        department: previewEmployee.departmentName || 'Global Operations',
+        branch: previewEmployee.branchName || 'SM Sorsogon City',
+      }
+    : {
+        employeeNumber: 'EMP-000125',
+        fullName: 'Michael Brown',
+        firstName: 'Michael',
+        lastName: 'Brown',
+        position: 'Staff',
+        department: 'Global Operations',
+        branch: 'West Coast Tech Campus',
+      };
+
+  const activePhotoSrc = previewEmployee?.photoUrl || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500&auto=format&fit=crop&q=80";
+
   // Load template from database on mount
   useEffect(() => {
     async function loadTemplateData() {
@@ -645,6 +689,11 @@ export default function CardDesignerPage() {
         zIndex: currentSurface.elements.length + 1,
       };
     } else if (type === 'QR_CODE') {
+      const existingQr = currentSurface.elements.find((e) => e.type === 'QR_CODE');
+      if (existingQr) {
+        setSelectedElementId(existingQr.id);
+        return;
+      }
       newEl = {
         id: newId,
         type: 'QR_CODE',
@@ -664,6 +713,11 @@ export default function CardDesignerPage() {
         zIndex: currentSurface.elements.length + 1,
       };
     } else if (type === 'BARCODE') {
+      const existingBarcode = currentSurface.elements.find((e) => e.type === 'BARCODE');
+      if (existingBarcode) {
+        setSelectedElementId(existingBarcode.id);
+        return;
+      }
       newEl = {
         id: newId,
         type: 'BARCODE',
@@ -820,6 +874,12 @@ export default function CardDesignerPage() {
             <span className={`text-[10px] font-mono px-2 py-0.5 rounded ${isDark ? 'text-slate-400 bg-slate-800' : 'text-slate-500 bg-slate-100 border border-slate-200'}`}>
               CR80 ({isVertical ? '53.98 × 85.60mm ↕' : '85.60 × 53.98mm ↔'})
             </span>
+            {previewEmployee && (
+              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-red-950/80 border border-red-800 text-red-300 flex items-center gap-1.5 shadow-xs">
+                <User className="w-3 h-3 text-red-400" />
+                <span>Editing Badge for: <strong>{previewEmployee.fullName}</strong> ({previewEmployee.employeeNumber || 'EMP'} • {previewEmployee.branchName || 'SM Sorsogon City'})</span>
+              </span>
+            )}
           </div>
         </div>
 
@@ -1181,22 +1241,14 @@ export default function CardDesignerPage() {
                       }}
                       className="w-full h-full flex items-center leading-none select-none"
                     >
-                      {resolveDataBinding(el.text, {
-                        employeeNumber: 'EMP-000125',
-                        fullName: 'Michael Brown',
-                        firstName: 'Michael',
-                        lastName: 'Brown',
-                        department: 'Global Operations',
-                        position: 'Staff',
-                        branch: 'West Coast Tech Campus',
-                      })}
+                      {resolveDataBinding(el.text, activeBindingMap)}
                     </div>
                   )}
 
                   {(el.type === 'EMPLOYEE_PHOTO' || el.type === 'IMAGE') && (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
-                      src={el.type === 'IMAGE' && el.src ? el.src : "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500&auto=format&fit=crop&q=80"}
+                      src={el.type === 'IMAGE' && el.src ? el.src : activePhotoSrc}
                       alt="Preview Avatar"
                       style={{
                         borderRadius: (el.borderRadius !== undefined && el.borderRadius !== null)
@@ -1220,7 +1272,7 @@ export default function CardDesignerPage() {
                   {el.type === 'BARCODE' && (
                     <div className="w-full h-full bg-white p-2 border border-slate-200 flex flex-col items-center justify-center rounded pointer-events-none">
                       <Barcode className="w-full h-12 text-black" />
-                      <span className="text-[10px] font-mono text-black">EMP-000123</span>
+                      <span className="text-[10px] font-mono text-black">{activeBindingMap.employeeNumber}</span>
                     </div>
                   )}
 

@@ -439,8 +439,17 @@ export default function HrAuditLogsPage() {
                       ) : null}
                     </div>
                   </td>
-                  <td className="px-5 py-3 text-slate-600 dark:text-slate-300 leading-snug max-w-md">
-                    {log.details}
+                  <td className="px-5 py-3 text-slate-600 dark:text-slate-300 leading-snug max-w-lg">
+                    {log.action === 'HR_ASSISTANCE_REQUESTED' || log.details?.includes('DISPATCH') ? (
+                      <div className="p-2.5 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/80 text-rose-900 dark:text-rose-200 text-xs space-y-1">
+                        <div className="font-semibold text-rose-700 dark:text-rose-300 flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse shrink-0" />
+                          <span>{log.details}</span>
+                        </div>
+                      </div>
+                    ) : (
+                      log.details
+                    )}
                   </td>
                 </tr>
               ))

@@ -7,6 +7,7 @@ export interface RenderCardOptions {
     showBleed?: boolean;
     showSafeMargin?: boolean;
     baseUrl?: string;
+    signal?: AbortSignal;
 }
 /**
  * Pure 2D Canvas Renderer for Card Templates.
