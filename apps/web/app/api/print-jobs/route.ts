@@ -174,6 +174,8 @@ export async function POST(request: Request) {
     if (body.employeeId) {
       // Mark employee card status as PRINTED
       await admin.from('employees').update({ card_status: 'PRINTED' }).eq('id', body.employeeId);
+    } else if (body.employeeNumber || empNum) {
+      await admin.from('employees').update({ card_status: 'PRINTED' }).eq('employee_number', body.employeeNumber || empNum);
     }
 
     await recordAuditLog({
