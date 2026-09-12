@@ -6,9 +6,6 @@ import { recordAuditLog } from '@/lib/audit/logger';
 import { DEFAULT_CR80_TEMPLATE } from '@/lib/data/enterpriseStore';
 
 export async function GET() {
-  const auth = await requireAuth();
-  if (!auth.authenticated) return auth.response;
-
   try {
     const admin = createAdminSupabaseClient();
 
