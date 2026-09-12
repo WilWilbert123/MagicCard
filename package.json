@@ -7,9 +7,9 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "concurrently -n \"web,agent\" -c \"blue,green\" \"npm run dev:web\" \"npm run dev:agent\"",
+    "dev": "concurrently --raw --kill-others-on-fail false -n \"web,agent\" -c \"blue,green\" \"npm run dev:web\" \"(npm run dev:agent || true)\"",
     "dev:web": "npm run dev --workspace=apps/web",
-    "dev:agent": "npm run dev --workspace=apps/kiosk-agent",
+    "dev:agent": "npm run dev --workspace=apps/kiosk-agent || echo 'Local .NET KioskAgent daemon skipped (dotnet CLI not installed)'",
     "build": "npm run build --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present"

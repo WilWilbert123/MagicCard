@@ -8,15 +8,21 @@ export async function GET() {
 
   try {
     const supabase = await createServerSupabaseClient();
-    const { data: kiosks, error } = await supabase
-      .from('kiosks')
-      .select('*')
-      .order('created_at', { ascending: false });
+    const [{ data: kiosks, error }, { data: branches }, { data: templateVersions }, { data: printJobs }] = await Promise.all([
+      supabase.from('kiosks').select('*').order('created_at', { ascending: false }),
+      supabase.from('branches').select('id, name'),
+      supabase.from('card_template_versions').select('id, version_number, status'),
+      supabase.from('print_jobs').select('id, kiosk_id, branch_id, status').eq('status', 'COMPLETED'),
+    ]);
 
     if (error) throw error;
 
-    const { data: branches } = await supabase.from('branches').select('id, name');
     const branchMap = new Map((branches || []).map((b) => [b.id, b.name]));
+    const templateMap = new Map((templateVersions || []).map((t) => [t.id, `v${t.version_number}.0.0`]));
+    const defaultPublishedTag =
+      (templateVersions || []).find((t) => t.status === 'PUBLISHED')
+        ? `v${(templateVersions || []).find((t) => t.status === 'PUBLISHED')?.version_number}.0.0`
+        : 'v1.0.0';
 
     const mapped = (kiosks || []).map((k: any) => {
       // Parse ribbon level % if mentioned in printer status summary e.g. "Ribbon 94%"
@@ -28,6 +34,18 @@ export async function GET() {
         }
       }
 
+      // Count completed print jobs for this kiosk
+      const kioskJobs = (printJobs || []).filter(
+        (pj) => pj.kiosk_id === k.id || (pj.branch_id && pj.branch_id === k.branch_id)
+      );
+      const cardsPrinted = kioskJobs.length;
+      const maxCardCapacity = k.max_card_capacity || 50;
+      const cardsRemaining = Math.max(0, maxCardCapacity - cardsPrinted);
+
+      const activeTag = k.active_template_version_id
+        ? templateMap.get(k.active_template_version_id) || defaultPublishedTag
+        : defaultPublishedTag;
+
       return {
         id: k.id,
         code: k.kiosk_code,
@@ -38,10 +56,13 @@ export async function GET() {
         agentVersion: k.agent_version || 'v1.4.0',
         appVersion: k.app_version || 'v2.1.0',
         ipAddress: k.ip_address || '127.0.0.1',
-        activeTemplateVersion: 'v1.0.0',
-        printerModel: 'Magicard 300 Duo',
+        activeTemplateVersion: activeTag,
+        printerModel: 'Magicard 600NEO',
         printerStatus: k.printer_status_summary || 'READY',
         ribbonLevelPct: ribbonPct,
+        cardsPrinted,
+        maxCardCapacity,
+        cardsRemaining,
         lastHeartbeat: k.last_heartbeat_at || k.created_at,
       };
     });

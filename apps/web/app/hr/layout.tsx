@@ -173,7 +173,7 @@ export default function HrLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className={`min-h-screen flex ${isDark ? 'bg-[#0b0f17] text-white' : 'bg-slate-50 text-slate-900'}`}>
       {/* Left Sidebar */}
-      <aside className="w-64 border-r border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-[#0e1424]/90 backdrop-blur-md flex flex-col justify-between shrink-0 shadow-sm z-30 transition-colors duration-300">
+      <aside className="w-64 sticky top-0 h-screen border-r border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-[#0e1424]/90 backdrop-blur-md flex flex-col justify-between shrink-0 shadow-sm z-30 transition-colors duration-300">
         <div>
           {/* Logo Header */}
           <div className="h-16 px-6 border-b border-slate-200/80 dark:border-slate-800/80 flex items-center gap-3">
