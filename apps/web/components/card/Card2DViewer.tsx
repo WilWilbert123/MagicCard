@@ -42,21 +42,38 @@ export default function Card2DViewer({
     const canvas = canvasRef.current;
     if (!canvas) return;
 
+    const controller = new AbortController();
+
     const employee =
       employeeData ||
       (employeeNumber ? enterpriseStore.findEmployeeByNumber(employeeNumber) : null) ||
       fallbackEmployee;
 
-    renderCardToCanvas(canvas, template, side, employee, { scale: 2 }).catch((err) =>
-      console.warn(`Card2DViewer error rendering ${side}:`, err)
-    );
+    renderCardToCanvas(canvas, template, side, employee, {
+      scale: 2,
+      signal: controller.signal,
+    }).catch((err) => {
+      if (err?.name !== 'AbortError') {
+        console.warn(`Card2DViewer error rendering ${side}:`, err);
+      }
+    });
+
+    return () => {
+      controller.abort();
+    };
   }, [template, side, employeeData, employeeNumber]);
 
+  const isVertical =
+    template?.card?.orientation === 'vertical' ||
+    (template?.card?.height > template?.card?.width);
+
   return (
-    <div className={`relative flex items-center justify-center ${className}`}>
+    <div className={`relative flex items-center justify-center p-2 ${className}`}>
       <canvas
         ref={canvasRef}
-        className="w-full h-auto max-w-[520px] rounded-[20px] shadow-[0_25px_60px_-15px_rgba(0,0,0,0.5)] border border-slate-700/80 block"
+        className={`rounded-[18px] shadow-[0_20px_50px_-10px_rgba(0,0,0,0.6)] border border-slate-700/80 block object-contain ${
+          isVertical ? 'max-h-[350px] max-w-[230px]' : 'max-h-[260px] max-w-[420px]'
+        }`}
       />
     </div>
   );

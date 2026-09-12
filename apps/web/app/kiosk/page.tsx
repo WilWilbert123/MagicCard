@@ -13,6 +13,10 @@ import {
   RefreshCw, 
   Check,
   User,
+  HelpCircle,
+  X,
+  Send,
+  Building2,
 } from 'lucide-react';
 import { enterpriseStore, Employee, DEFAULT_CR80_TEMPLATE } from '@/lib/data/enterpriseStore';
 import { toast } from '@/components/ui/Toast';
@@ -88,6 +92,55 @@ export default function KioskMainPage() {
   const [kioskTimeoutSeconds, setKioskTimeoutSeconds] = useState(45);
   const [allowSelfServiceReprint, setAllowSelfServiceReprint] = useState(true);
 
+  // HR Operations Desk Dispatch Modal state
+  const [showHrDispatchModal, setShowHrDispatchModal] = useState(false);
+  const [dispatchCategory, setDispatchCategory] = useState('Printer Hardware Offline / Not Found');
+  const [dispatchNotes, setDispatchNotes] = useState('');
+  const [isSubmittingDispatch, setIsSubmittingDispatch] = useState(false);
+
+  const dispatchSuggestions = [
+    'Printer Hardware Offline / Not Found',
+    'Card Jammed or Ejection Error',
+    'Employee Record Missing / Card Error',
+    'Reprint / Badge Replacement Request',
+    'General HR Assistance Request',
+  ];
+
+  const handleSendHrDispatch = async () => {
+    try {
+      setIsSubmittingDispatch(true);
+      const res = await fetch('/api/audit-logs', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-kiosk-request': 'true',
+        },
+        body: JSON.stringify({
+          action: 'HR_ASSISTANCE_REQUESTED',
+          branchName: 'SM Sorsogon City',
+          kioskCode: 'KIOSK-SOR-01',
+          category: dispatchCategory,
+          userNotes: dispatchNotes.trim() || 'No additional details provided.',
+          employeeId: foundEmployee?.employeeNumber || foundEmployee?.id || undefined,
+          employeeName: foundEmployee ? `${foundEmployee.firstName} ${foundEmployee.lastName}` : undefined,
+        }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || 'Failed to submit dispatch ticket.');
+      }
+
+      toast.success('HR Operations Desk notified! Alert sent to HR Header Notifications.');
+      setShowHrDispatchModal(false);
+      setDispatchNotes('');
+    } catch (err: any) {
+      toast.error(err.message || 'Error contacting HR Operations Desk.');
+    } finally {
+      setIsSubmittingDispatch(false);
+    }
+  };
+
   useEffect(() => {
     fetch('/api/settings')
       .then((r) => r.json())
@@ -104,6 +157,33 @@ export default function KioskMainPage() {
       .catch(() => {});
   }, []);
 
+  const [hardwarePrinterOnline, setHardwarePrinterOnline] = useState<boolean>(false);
+  const [printerMode, setPrinterMode] = useState<'HARDWARE' | 'SIMULATION'>('HARDWARE');
+
+  // Check hardware printer connectivity on localhost port 7125
+  useEffect(() => {
+    const checkPrinterHardware = async () => {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 1500);
+        const agentBaseUrl = process.env.NEXT_PUBLIC_KIOSK_AGENT_URL || 'http://127.0.0.1:7125';
+        const res = await fetch(`${agentBaseUrl}/api/status`, { signal: controller.signal });
+        clearTimeout(timeoutId);
+        if (res.ok) {
+          setHardwarePrinterOnline(true);
+        } else {
+          setHardwarePrinterOnline(false);
+        }
+      } catch {
+        setHardwarePrinterOnline(false);
+      }
+    };
+
+    checkPrinterHardware();
+    const interval = setInterval(checkPrinterHardware, 8000);
+    return () => clearInterval(interval);
+  }, []);
+
   // Send real-time heartbeat to Supabase database every 15 seconds
   useEffect(() => {
     const sendHeartbeat = async () => {
@@ -113,7 +193,7 @@ export default function KioskMainPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             kioskCode: 'KIOSK-SOR-01',
-            printerStatus: 'READY - Magicard 600NEO (Ribbon 100%)',
+            printerStatus: hardwarePrinterOnline ? 'READY - Magicard 600NEO (Ribbon 100%)' : 'OFFLINE - No Physical Printer Detected',
             agentVersion: 'v1.4.0',
             ipAddress: '127.0.0.1',
           }),
@@ -124,7 +204,7 @@ export default function KioskMainPage() {
     sendHeartbeat();
     const interval = setInterval(sendHeartbeat, 15000);
     return () => clearInterval(interval);
-  }, []);
+  }, [hardwarePrinterOnline]);
 
 
   // Inactivity timeout back to Screensaver on SEARCH screen
@@ -223,11 +303,17 @@ export default function KioskMainPage() {
         return;
       }
 
-      if (!allowSelfServiceReprint && (emp.cardStatus === 'PRINTED' || emp.cardStatus === 'ISSUED')) {
-        setErrorMessage(`Self-service badge re-issuance is currently disabled at this terminal. Please contact Human Resources to request a replacement badge.`);
-        setStep('ERROR');
-        return;
-      }
+      // Check print job history in Supabase to accurately reflect card issuance status
+      try {
+        const pjRes = await fetch(`/api/print-jobs?q=${encodeURIComponent(emp.employeeNumber)}`, { headers: kioskHeaders });
+        const pjJson = pjRes.ok ? await pjRes.json() : null;
+        if (pjJson?.data && Array.isArray(pjJson.data) && pjJson.data.length > 0) {
+          const hasCompletedJob = pjJson.data.some((j: any) => j.status === 'COMPLETED');
+          if (hasCompletedJob) {
+            emp.cardStatus = 'ISSUED';
+          }
+        }
+      } catch {}
 
       setFoundEmployee(emp);
 
@@ -274,21 +360,29 @@ export default function KioskMainPage() {
   const handleStartPrint = async () => {
     if (!foundEmployee) return;
 
+    // Security check: Prevent spam re-printing if card is already printed/issued
+    if (foundEmployee.cardStatus === 'ISSUED' || foundEmployee.cardStatus === 'PRINTED') {
+      toast.error('Card already issued for this employee. Contact HR for replacements.');
+      return;
+    }
+
     setStep('PRINTING');
     setCurrentPrintStepIndex(0);
 
     const idempotencyKey = `idem-kiosk-${Date.now()}`;
 
-    // Step-by-step visual progression
-    for (let i = 0; i < printSteps.length; i++) {
+    // Step-by-step visual progression up to Agent Handshake (Step 5)
+    for (let i = 0; i < 5; i++) {
       setCurrentPrintStepIndex(i);
       await new Promise((resolve) => setTimeout(resolve, 350));
     }
 
     // Attempt local hardware agent communication on port 7125 (/api/print)
     const agentBaseUrl = process.env.NEXT_PUBLIC_KIOSK_AGENT_URL || 'http://127.0.0.1:7125';
+    let agentSuccess = false;
+
     try {
-      await fetch(`${agentBaseUrl}/api/print`, {
+      const agentRes = await fetch(`${agentBaseUrl}/api/print`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -307,8 +401,24 @@ export default function KioskMainPage() {
           },
         }),
       });
+      if (agentRes.ok) {
+        agentSuccess = true;
+      }
     } catch {
-      // Local agent execution handled cleanly
+      agentSuccess = false;
+    }
+
+    // HARDWARE PRINTER ENFORCEMENT: If in Hardware mode and no physical printer agent responded
+    if (!agentSuccess && printerMode === 'HARDWARE') {
+      setErrorMessage(`No Physical Card Printer Connected: Unable to communicate with the local Magicard 600NEO print engine agent on http://127.0.0.1:7125. Please verify your Magicard 600NEO USB cable or launch the local KIOSK Print Service.`);
+      setStep('ERROR');
+      return;
+    }
+
+    // Finish remaining print pipeline steps (6..9)
+    for (let i = 5; i < printSteps.length; i++) {
+      setCurrentPrintStepIndex(i);
+      await new Promise((resolve) => setTimeout(resolve, 350));
     }
 
     // Register completed job in Supabase
@@ -339,6 +449,10 @@ export default function KioskMainPage() {
     } catch {
       // Graceful fallback
     }
+
+    // Immediately mark employee as ISSUED in state & store
+    setFoundEmployee((prev) => (prev ? { ...prev, cardStatus: 'ISSUED' } : null));
+    enterpriseStore.updateEmployee(foundEmployee.id, { cardStatus: 'ISSUED' });
 
     setAssignedJobNumber(generatedJobNum);
     setStep('SUCCESS');
@@ -603,19 +717,19 @@ export default function KioskMainPage() {
             <div className="flex bg-slate-900 p-1 rounded-xl border border-slate-800">
               <button
                 onClick={() => setPreviewMode('2D')}
-                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition ${
+                className={`px-4 py-1.5 rounded-lg text-xs font-extrabold transition ${
                   previewMode === '2D' ? 'bg-red-600 text-white' : 'text-slate-400 hover:text-white'
                 }`}
               >
-                2D Canvas
+                2D
               </button>
               <button
                 onClick={() => setPreviewMode('3D')}
-                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition ${
+                className={`px-4 py-1.5 rounded-lg text-xs font-extrabold transition ${
                   previewMode === '3D' ? 'bg-red-600 text-white' : 'text-slate-400 hover:text-white'
                 }`}
               >
-                3D WebGL Card
+                3D
               </button>
             </div>
           </div>
@@ -655,22 +769,41 @@ export default function KioskMainPage() {
           </div>
 
           {/* Action Row */}
-          <div className="flex items-center justify-between p-4 rounded-xl bg-slate-900 border border-slate-800">
-            <div>
-              <div className="text-sm font-bold text-white">{foundEmployee.fullName}</div>
-              <div className="text-xs text-slate-400">
-                Ready for physical production • Magicard 600NEO YMCKO
-              </div>
-            </div>
+          {(() => {
+            const isAlreadyPrinted = foundEmployee.cardStatus === 'ISSUED' || foundEmployee.cardStatus === 'PRINTED';
+            return (
+              <div className="flex flex-col sm:flex-row items-center justify-between p-4 rounded-xl bg-slate-900 border border-slate-800 gap-4">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <div className="text-sm font-bold text-white">{foundEmployee.fullName}</div>
+                    {isAlreadyPrinted && (
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                        Card Issued
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-xs text-slate-400 mt-0.5">
+                    {isAlreadyPrinted
+                      ? 'Card status: ISSUED • Re-printing disabled to prevent duplicate cards'
+                      : 'Ready for physical production • Magicard 600NEO YMCKO'}
+                  </div>
+                </div>
 
-            <button
-              onClick={handleStartPrint}
-              className="px-8 py-3.5 rounded-xl bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-bold text-base shadow-xl shadow-red-600/30 flex items-center gap-2 transition"
-            >
-              <Printer className="w-5 h-5" />
-              <span>PRINT CARD</span>
-            </button>
-          </div>
+                <button
+                  onClick={handleStartPrint}
+                  disabled={isAlreadyPrinted}
+                  className={`px-8 py-3.5 rounded-xl font-bold text-base flex items-center gap-2 transition ${
+                    isAlreadyPrinted
+                      ? 'bg-[#1e293b] text-slate-500 border border-slate-700/80 cursor-not-allowed shadow-none'
+                      : 'bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white shadow-xl shadow-red-600/30'
+                  }`}
+                >
+                  <Printer className={`w-5 h-5 ${isAlreadyPrinted ? 'text-slate-500 opacity-40' : ''}`} />
+                  <span>{isAlreadyPrinted ? 'CARD ALREADY PRINTED' : 'PRINT CARD'}</span>
+                </button>
+              </div>
+            );
+          })()}
         </div>
       )}
 
@@ -772,6 +905,18 @@ export default function KioskMainPage() {
           </div>
 
           <div className="space-y-2 pt-2">
+            {errorMessage.includes('Printer') && (
+              <button
+                onClick={() => {
+                  setPrinterMode('SIMULATION');
+                  toast.info('Switched to Demo / Simulation Mode for testing.');
+                  setStep('PREVIEW');
+                }}
+                className="w-full py-3 rounded-xl bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 font-semibold border border-amber-500/30 text-xs transition"
+              >
+                Switch to Demo / Simulation Mode for Testing
+              </button>
+            )}
             <button
               onClick={handleResetToHome}
               className="w-full py-3.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-sm font-semibold transition"
@@ -779,11 +924,130 @@ export default function KioskMainPage() {
               Try Again
             </button>
             <button
-              onClick={() => toast.info('HR Security Dispatch has been notified. Please wait for assistance.')}
-              className="w-full py-3 rounded-xl border border-slate-700 hover:bg-slate-800 text-slate-300 text-xs"
+              onClick={() => setShowHrDispatchModal(true)}
+              className="w-full py-3.5 rounded-xl border border-rose-800/80 bg-rose-950/40 hover:bg-rose-900/60 text-rose-200 font-semibold text-xs transition flex items-center justify-center gap-2 shadow-lg"
             >
+              <HelpCircle className="w-4 h-4 text-rose-400" />
               Contact HR Operations Desk
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* HR OPERATIONS DESK SUPPORT DISPATCH MODAL                */}
+      {/* ======================================================== */}
+      {showHrDispatchModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="w-full max-w-lg bg-[#0d1322] border border-slate-700/80 rounded-2xl p-6 text-white shadow-2xl space-y-5 relative">
+            {/* Close Button */}
+            <button
+              onClick={() => setShowHrDispatchModal(false)}
+              className="absolute top-4 right-4 p-2 text-slate-400 hover:text-white rounded-lg bg-slate-800/60 transition"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            {/* Header */}
+            <div className="flex items-start gap-3.5">
+              <div className="w-12 h-12 rounded-xl bg-red-950 border border-red-800 text-red-400 flex items-center justify-center shrink-0">
+                <HelpCircle className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                  Contact HR Operations Desk
+                </h3>
+                <p className="text-xs text-slate-400 mt-1">
+                  Send a real-time dispatch notification directly to HR Administrators.
+                </p>
+              </div>
+            </div>
+
+            {/* Terminal & Location Info Bar */}
+            <div className="flex items-center justify-between p-3 rounded-xl bg-slate-900 border border-slate-800 text-xs font-mono">
+              <div className="flex items-center gap-2 text-slate-300">
+                <Building2 className="w-3.5 h-3.5 text-red-400" />
+                <span>Branch: <strong>SM Sorsogon City</strong></span>
+              </div>
+              <div className="px-2 py-0.5 rounded bg-red-950/80 border border-red-800 text-red-300 text-[11px] font-bold">
+                KIOSK-SOR-01
+              </div>
+            </div>
+
+            {/* Suggested Topics / Description Chips */}
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                Select Issue Category:
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {dispatchSuggestions.map((topic) => {
+                  const isSelected = dispatchCategory === topic;
+                  return (
+                    <button
+                      key={topic}
+                      type="button"
+                      onClick={() => {
+                        setDispatchCategory(topic);
+                        if (!dispatchNotes) {
+                          setDispatchNotes(`Reporting issue: ${topic}`);
+                        }
+                      }}
+                      className={`px-3 py-1.5 rounded-lg text-xs transition border ${
+                        isSelected
+                          ? 'bg-red-600 text-white font-semibold border-red-500 shadow-md shadow-red-950/50'
+                          : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border-slate-800'
+                      }`}
+                    >
+                      {topic}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Additional Description Textarea */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider flex items-center justify-between">
+                <span>Detailed Description / What happened:</span>
+                <span className="text-[10px] text-slate-500 font-normal">Optional / Editable</span>
+              </label>
+              <textarea
+                rows={3}
+                value={dispatchNotes}
+                onChange={(e) => setDispatchNotes(e.target.value)}
+                placeholder="Type custom details or instructions for HR (e.g., 'Printer is offline, card issue for EMP-000125')..."
+                className="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl p-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-red-500 transition resize-none"
+              />
+            </div>
+
+            {/* Footer Buttons */}
+            <div className="flex items-center justify-end gap-3 pt-2 border-t border-slate-800">
+              <button
+                type="button"
+                onClick={() => setShowHrDispatchModal(false)}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isSubmittingDispatch}
+                onClick={handleSendHrDispatch}
+                className="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white text-xs font-bold transition flex items-center gap-2 shadow-lg shadow-red-950/50"
+              >
+                {isSubmittingDispatch ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Dispatching...</span>
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-3.5 h-3.5" />
+                    <span>Notify HR Operations</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}

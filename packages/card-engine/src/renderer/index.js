@@ -23,7 +23,13 @@ export async function renderCardToCanvas(canvas, template, side, employee, optio
         ctx.fillRect(0, 0, baseWidth, baseHeight);
     }
     // 2. Draw Elements in order of z-index / array sequence
+    let hasRenderedQR = false;
+    let hasRenderedBarcode = false;
     for (const el of surface.elements) {
+        if (options.signal?.aborted) {
+            ctx.restore();
+            return canvas;
+        }
         if (el.isHidden)
             continue;
         ctx.save();
@@ -49,16 +55,22 @@ export async function renderCardToCanvas(canvas, template, side, employee, optio
                 drawText(ctx, el, employee, options.baseUrl);
                 break;
             case 'EMPLOYEE_PHOTO':
-                await drawPhoto(ctx, el, employee);
+                await drawPhoto(ctx, el, employee, options.signal);
                 break;
             case 'IMAGE':
-                await drawImage(ctx, el);
+                await drawImage(ctx, el, options.signal);
                 break;
             case 'QR_CODE':
-                await drawQRCode(ctx, el, employee, options.baseUrl);
+                if (!hasRenderedQR) {
+                    await drawQRCode(ctx, el, employee, options.baseUrl, options.signal);
+                    hasRenderedQR = true;
+                }
                 break;
             case 'BARCODE':
-                await drawBarcode(ctx, el, employee);
+                if (!hasRenderedBarcode) {
+                    await drawBarcode(ctx, el, employee, options.signal);
+                    hasRenderedBarcode = true;
+                }
                 break;
         }
         ctx.restore();
@@ -217,7 +229,7 @@ function drawText(ctx, el, employee, baseUrl) {
         ctx.fillText(lines[i], drawX, startY + i * lineHeight);
     }
 }
-async function drawPhoto(ctx, el, employee) {
+async function drawPhoto(ctx, el, employee, signal) {
     const photoUrl = employee.photoUrl || el.fallbackSrc;
     if (!photoUrl) {
         // Render placeholder avatar silhouette
@@ -230,14 +242,14 @@ async function drawPhoto(ctx, el, employee) {
         ctx.fillText('PHOTO', el.x + el.width / 2, el.y + el.height / 2);
         return;
     }
-    await drawImageFromUrl(ctx, photoUrl, el.x, el.y, el.width, el.height, el.borderRadius, el.borderWidth, el.borderColor);
+    await drawImageFromUrl(ctx, photoUrl, el.x, el.y, el.width, el.height, el.borderRadius, el.borderWidth, el.borderColor, signal);
 }
-async function drawImage(ctx, el) {
+async function drawImage(ctx, el, signal) {
     if (!el.src)
         return;
-    await drawImageFromUrl(ctx, el.src, el.x, el.y, el.width, el.height, el.borderRadius, el.borderWidth, el.borderColor);
+    await drawImageFromUrl(ctx, el.src, el.x, el.y, el.width, el.height, el.borderRadius, el.borderWidth, el.borderColor, signal);
 }
-async function drawQRCode(ctx, el, employee, baseUrl) {
+async function drawQRCode(ctx, el, employee, baseUrl, signal) {
     const resolvedData = resolveDataBinding(el.data, employee, baseUrl);
     const dataUrl = await generateQRCodeDataUrl(resolvedData, {
         width: el.width,
@@ -247,9 +259,9 @@ async function drawQRCode(ctx, el, employee, baseUrl) {
         },
         errorCorrectionLevel: el.errorCorrectionLevel || 'M',
     });
-    await drawImageFromUrl(ctx, dataUrl, el.x, el.y, el.width, el.height);
+    await drawImageFromUrl(ctx, dataUrl, el.x, el.y, el.width, el.height, 0, 0, 'transparent', signal);
 }
-async function drawBarcode(ctx, el, employee) {
+async function drawBarcode(ctx, el, employee, signal) {
     const resolvedValue = resolveDataBinding(el.data, employee);
     const svg = generateBarcodeSvg(resolvedValue, {
         format: el.format || 'CODE128',
@@ -261,15 +273,23 @@ async function drawBarcode(ctx, el, employee) {
         height: el.height,
     });
     const svgDataUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
-    await drawImageFromUrl(ctx, svgDataUrl, el.x, el.y, el.width, el.height);
+    await drawImageFromUrl(ctx, svgDataUrl, el.x, el.y, el.width, el.height, 0, 0, 'transparent', signal);
 }
-function drawImageFromUrl(ctx, src, x, y, width, height, borderRadius = 0, borderWidth = 0, borderColor = 'transparent') {
+function drawImageFromUrl(ctx, src, x, y, width, height, borderRadius = 0, borderWidth = 0, borderColor = 'transparent', signal) {
     return new Promise((resolve) => {
+        if (signal?.aborted) {
+            resolve();
+            return;
+        }
         // If running in browser environment
         if (typeof window !== 'undefined' && typeof Image !== 'undefined') {
             const img = new Image();
             img.crossOrigin = 'anonymous';
             img.onload = () => {
+                if (signal?.aborted) {
+                    resolve();
+                    return;
+                }
                 ctx.save();
                 if (borderRadius > 0) {
                     drawRoundedRect(ctx, x, y, width, height, borderRadius);
@@ -293,8 +313,10 @@ function drawImageFromUrl(ctx, src, x, y, width, height, borderRadius = 0, borde
                 resolve();
             };
             img.onerror = () => {
-                ctx.fillStyle = '#fee2e2';
-                ctx.fillRect(x, y, width, height);
+                if (!signal?.aborted) {
+                    ctx.fillStyle = '#fee2e2';
+                    ctx.fillRect(x, y, width, height);
+                }
                 resolve();
             };
             img.src = src;

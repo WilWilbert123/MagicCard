@@ -41,7 +41,7 @@ export interface Employee {
   contactNumber: string;
   photoUrl: string;
   employmentStatus: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
-  cardStatus: 'NOT_ISSUED' | 'PRINTED' | 'REPRINT_REQUESTED';
+  cardStatus: 'NOT_ISSUED' | 'PRINTED' | 'ISSUED' | 'REPRINT_REQUESTED';
   dateHired: string;
   createdAt: string;
 }

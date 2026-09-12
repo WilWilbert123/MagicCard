@@ -9,6 +9,7 @@ export interface RenderCardOptions {
   showBleed?: boolean;
   showSafeMargin?: boolean;
   baseUrl?: string;
+  signal?: AbortSignal;
 }
 
 /**
@@ -46,7 +47,13 @@ export async function renderCardToCanvas(
   }
 
   // 2. Draw Elements in order of z-index / array sequence
+  let hasRenderedQR = false;
+  let hasRenderedBarcode = false;
   for (const el of surface.elements) {
+    if (options.signal?.aborted) {
+      ctx.restore();
+      return canvas;
+    }
     if (el.isHidden) continue;
 
     ctx.save();
@@ -74,16 +81,22 @@ export async function renderCardToCanvas(
         drawText(ctx, el, employee, options.baseUrl);
         break;
       case 'EMPLOYEE_PHOTO':
-        await drawPhoto(ctx, el, employee);
+        await drawPhoto(ctx, el, employee, options.signal);
         break;
       case 'IMAGE':
-        await drawImage(ctx, el);
+        await drawImage(ctx, el, options.signal);
         break;
       case 'QR_CODE':
-        await drawQRCode(ctx, el, employee, options.baseUrl);
+        if (!hasRenderedQR) {
+          await drawQRCode(ctx, el, employee, options.baseUrl, options.signal);
+          hasRenderedQR = true;
+        }
         break;
       case 'BARCODE':
-        await drawBarcode(ctx, el, employee);
+        if (!hasRenderedBarcode) {
+          await drawBarcode(ctx, el, employee, options.signal);
+          hasRenderedBarcode = true;
+        }
         break;
     }
 
@@ -254,7 +267,8 @@ function drawText(
 async function drawPhoto(
   ctx: CanvasRenderingContext2D,
   el: Extract<CardElement, { type: 'EMPLOYEE_PHOTO' }>,
-  employee: EmployeeResolutionContext
+  employee: EmployeeResolutionContext,
+  signal?: AbortSignal
 ) {
   const photoUrl = employee.photoUrl || el.fallbackSrc;
   if (!photoUrl) {
@@ -269,22 +283,24 @@ async function drawPhoto(
     return;
   }
 
-  await drawImageFromUrl(ctx, photoUrl, el.x, el.y, el.width, el.height, el.borderRadius, el.borderWidth, el.borderColor);
+  await drawImageFromUrl(ctx, photoUrl, el.x, el.y, el.width, el.height, el.borderRadius, el.borderWidth, el.borderColor, signal);
 }
 
 async function drawImage(
   ctx: CanvasRenderingContext2D,
-  el: Extract<CardElement, { type: 'IMAGE' }>
+  el: Extract<CardElement, { type: 'IMAGE' }>,
+  signal?: AbortSignal
 ) {
   if (!el.src) return;
-  await drawImageFromUrl(ctx, el.src, el.x, el.y, el.width, el.height, el.borderRadius, el.borderWidth, el.borderColor);
+  await drawImageFromUrl(ctx, el.src, el.x, el.y, el.width, el.height, el.borderRadius, el.borderWidth, el.borderColor, signal);
 }
 
 async function drawQRCode(
   ctx: CanvasRenderingContext2D,
   el: Extract<CardElement, { type: 'QR_CODE' }>,
   employee: EmployeeResolutionContext,
-  baseUrl?: string
+  baseUrl?: string,
+  signal?: AbortSignal
 ) {
   const resolvedData = resolveDataBinding(el.data, employee, baseUrl);
   const dataUrl = await generateQRCodeDataUrl(resolvedData, {
@@ -296,13 +312,14 @@ async function drawQRCode(
     errorCorrectionLevel: el.errorCorrectionLevel || 'M',
   });
 
-  await drawImageFromUrl(ctx, dataUrl, el.x, el.y, el.width, el.height);
+  await drawImageFromUrl(ctx, dataUrl, el.x, el.y, el.width, el.height, 0, 0, 'transparent', signal);
 }
 
 async function drawBarcode(
   ctx: CanvasRenderingContext2D,
   el: Extract<CardElement, { type: 'BARCODE' }>,
-  employee: EmployeeResolutionContext
+  employee: EmployeeResolutionContext,
+  signal?: AbortSignal
 ) {
   const resolvedValue = resolveDataBinding(el.data, employee);
   const svg = generateBarcodeSvg(resolvedValue, {
@@ -316,7 +333,7 @@ async function drawBarcode(
   });
 
   const svgDataUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
-  await drawImageFromUrl(ctx, svgDataUrl, el.x, el.y, el.width, el.height);
+  await drawImageFromUrl(ctx, svgDataUrl, el.x, el.y, el.width, el.height, 0, 0, 'transparent', signal);
 }
 
 function drawImageFromUrl(
@@ -328,14 +345,23 @@ function drawImageFromUrl(
   height: number,
   borderRadius = 0,
   borderWidth = 0,
-  borderColor = 'transparent'
+  borderColor = 'transparent',
+  signal?: AbortSignal
 ): Promise<void> {
   return new Promise((resolve) => {
+    if (signal?.aborted) {
+      resolve();
+      return;
+    }
     // If running in browser environment
     if (typeof window !== 'undefined' && typeof Image !== 'undefined') {
       const img = new Image();
       img.crossOrigin = 'anonymous';
       img.onload = () => {
+        if (signal?.aborted) {
+          resolve();
+          return;
+        }
         ctx.save();
         if (borderRadius > 0) {
           drawRoundedRect(ctx, x, y, width, height, borderRadius);
@@ -359,8 +385,10 @@ function drawImageFromUrl(
         resolve();
       };
       img.onerror = () => {
-        ctx.fillStyle = '#fee2e2';
-        ctx.fillRect(x, y, width, height);
+        if (!signal?.aborted) {
+          ctx.fillStyle = '#fee2e2';
+          ctx.fillRect(x, y, width, height);
+        }
         resolve();
       };
       img.src = src;

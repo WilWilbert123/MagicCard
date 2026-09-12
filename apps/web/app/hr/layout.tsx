@@ -82,7 +82,9 @@ export default function HrLayout({ children }: { children: React.ReactNode }) {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [notificationsError, setNotificationsError] = useState(false);
 
-  // Fetch real KIOSK fleet count and branches from Supabase
+  const [auditDispatches, setAuditDispatches] = useState<any[]>([]);
+
+  // Fetch real KIOSK fleet count, print jobs, and support dispatch audit logs
   useEffect(() => {
     if (isLoginPage) return;
 
@@ -111,15 +113,52 @@ export default function HrLayout({ children }: { children: React.ReactNode }) {
       .then((printJobJson) => setPrintJobs(printJobJson.data ?? []))
       .catch(() => setNotificationsError(true));
 
+    fetch('/api/audit-logs', { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((json) => {
+        if (json?.data) {
+          const supportRequests = json.data.filter(
+            (log: any) => log.action === 'HR_ASSISTANCE_REQUESTED' || (log.actorType === 'KIOSK' && log.details?.includes('HR ASSISTANCE'))
+          );
+          setAuditDispatches(supportRequests);
+        }
+      })
+      .catch(() => {});
+
     fetch('/api/branches')
       .then((r) => r.json())
       .then((json) => {
         setBranches(json.data ?? []);
       })
       .catch(() => {});
+
+    // Poll support dispatches every 8 seconds for real-time alerts
+    const pollInterval = setInterval(() => {
+      fetch('/api/audit-logs', { cache: 'no-store' })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((json) => {
+          if (json?.data) {
+            const supportRequests = json.data.filter(
+              (log: any) => log.action === 'HR_ASSISTANCE_REQUESTED' || (log.actorType === 'KIOSK' && log.details?.includes('HR ASSISTANCE'))
+            );
+            setAuditDispatches(supportRequests);
+          }
+        })
+        .catch(() => {});
+    }, 8000);
+
+    return () => clearInterval(pollInterval);
   }, [isLoginPage]);
 
   const notifications: HeaderNotification[] = [
+    ...auditDispatches.map((log: any) => ({
+      id: `audit-${log.id}`,
+      title: `🚨 ${log.actor || 'KIOSK'} Dispatch Report`,
+      description: `${log.branchName ? `${log.branchName} • ` : ''}${log.details || 'Assistance requested'}`,
+      href: '/hr/audit-logs',
+      timestamp: log.timestamp,
+      severity: 'error' as const,
+    })),
     ...kiosks
       .filter((kiosk) => kiosk.status !== 'ONLINE')
       .map((kiosk) => ({
