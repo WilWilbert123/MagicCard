@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createServerSupabaseClient, createAdminSupabaseClient } from '@/lib/supabase/server';
 import { requireAuth } from '@/lib/auth/require-auth';
+import { recordAuditLog } from '@/lib/audit/logger';
 
 export async function GET() {
   const auth = await requireAuth();
@@ -60,13 +61,26 @@ export async function POST(request: Request) {
       );
     }
 
+    const name = body.name.trim();
+    const code = body.code.trim().toUpperCase();
+
     const { data, error } = await admin
       .from('departments')
-      .insert([{ company_id: companyId, name: body.name, code: body.code }])
+      .insert([{ company_id: companyId, name, code }])
       .select()
       .single();
 
     if (error) throw error;
+
+    await recordAuditLog({
+      actorId: auth.user.id,
+      actorEmail: auth.user.email,
+      action: 'CREATE_DEPARTMENT',
+      entityType: 'Department',
+      entityId: data.id,
+      entityName: `${name} (${code})`,
+      details: `Created new corporate department "${name}" with code "${code}".`,
+    });
 
     return NextResponse.json({ data }, { status: 201 });
   } catch (err: any) {
@@ -83,10 +97,23 @@ export async function DELETE(request: Request) {
     const id = searchParams.get('id');
     if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
 
-    const supabase = await createServerSupabaseClient();
-    const { error } = await supabase.from('departments').delete().eq('id', id);
+    const admin = createAdminSupabaseClient();
+    const { data: existing } = await admin.from('departments').select('name, code').eq('id', id).maybeSingle();
 
+    const { error } = await admin.from('departments').delete().eq('id', id);
     if (error) throw error;
+
+    await recordAuditLog({
+      actorId: auth.user.id,
+      actorEmail: auth.user.email,
+      action: 'DELETE_DEPARTMENT',
+      entityType: 'Department',
+      entityId: id,
+      entityName: existing ? `${existing.name} (${existing.code})` : 'Department',
+      details: existing
+        ? `Removed department "${existing.name}" (${existing.code}).`
+        : `Removed department record.`,
+    });
 
     return NextResponse.json({ success: true });
   } catch (err: any) {
@@ -105,9 +132,14 @@ export async function PUT(request: Request) {
     }
 
     const admin = createAdminSupabaseClient();
+    const name = body.name.trim();
+    const code = body.code.trim().toUpperCase();
+
+    const { data: oldDept } = await admin.from('departments').select('name, code').eq('id', body.id).maybeSingle();
+
     const updateRecord = {
-      name: body.name.trim(),
-      code: body.code.trim().toUpperCase(),
+      name,
+      code,
     };
 
     const { data, error } = await admin
@@ -118,6 +150,20 @@ export async function PUT(request: Request) {
       .single();
 
     if (error) throw error;
+
+    const changeMsg = oldDept
+      ? `Updated department from "${oldDept.name}" (${oldDept.code}) to "${name}" (${code}).`
+      : `Updated department details for "${name}" (${code}).`;
+
+    await recordAuditLog({
+      actorId: auth.user.id,
+      actorEmail: auth.user.email,
+      action: 'UPDATE_DEPARTMENT',
+      entityType: 'Department',
+      entityId: body.id,
+      entityName: `${name} (${code})`,
+      details: changeMsg,
+    });
 
     return NextResponse.json({ data });
   } catch (err: any) {
