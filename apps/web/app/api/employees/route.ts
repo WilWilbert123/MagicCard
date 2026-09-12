@@ -194,3 +194,54 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
+
+export async function PUT(request: Request) {
+  const auth = await requireAuth();
+  if (!auth.authenticated) return auth.response;
+
+  try {
+    const body = await request.json();
+    const { id, ...updateFields } = body;
+    if (!id) {
+      return NextResponse.json({ error: 'Employee id parameter is required' }, { status: 400 });
+    }
+
+    const admin = createAdminSupabaseClient();
+
+    const updateRecord: any = {};
+    if (updateFields.employeeNumber !== undefined) updateRecord.employee_number = updateFields.employeeNumber.trim().toUpperCase();
+    if (updateFields.firstName !== undefined) updateRecord.first_name = updateFields.firstName.trim();
+    if (updateFields.lastName !== undefined) updateRecord.last_name = updateFields.lastName.trim();
+    if (updateFields.middleName !== undefined) updateRecord.middle_name = updateFields.middleName?.trim() || null;
+    if (updateFields.suffix !== undefined) updateRecord.suffix = updateFields.suffix?.trim() || null;
+    if (updateFields.email !== undefined) updateRecord.email = updateFields.email?.trim() || null;
+    if (updateFields.contactNumber !== undefined) updateRecord.contact_number = updateFields.contactNumber?.trim() || null;
+    if (updateFields.photoUrl !== undefined) updateRecord.photo_url = updateFields.photoUrl || null;
+    if (updateFields.employmentStatus !== undefined) updateRecord.employment_status = updateFields.employmentStatus;
+    if (updateFields.cardStatus !== undefined) updateRecord.card_status = updateFields.cardStatus;
+    if (updateFields.dateHired !== undefined) updateRecord.date_hired = updateFields.dateHired;
+    if (updateFields.branchId !== undefined) updateRecord.branch_id = updateFields.branchId || null;
+    if (updateFields.departmentId !== undefined) updateRecord.department_id = updateFields.departmentId || null;
+    if (updateFields.positionId !== undefined) updateRecord.position_id = updateFields.positionId || null;
+    if (updateFields.positionTitle !== undefined) {
+      updateRecord.metadata = { positionTitle: updateFields.positionTitle || 'Staff' };
+    }
+
+    const { data, error } = await admin
+      .from('employees')
+      .update(updateRecord)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return NextResponse.json({
+      success: true,
+      data,
+    });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}
+
