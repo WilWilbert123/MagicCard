@@ -180,7 +180,6 @@ function drawText(ctx, el, employee, baseUrl) {
     const fontFamily = el.fontFamily || 'Inter, sans-serif';
     ctx.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
     ctx.fillStyle = el.color || '#000000';
-    ctx.textBaseline = 'top';
     let drawX = el.x;
     if (el.textAlign === 'center') {
         ctx.textAlign = 'center';
@@ -192,25 +191,31 @@ function drawText(ctx, el, employee, baseUrl) {
     }
     else {
         ctx.textAlign = 'left';
+        drawX = el.x;
     }
-    // Handle multi-line wrapping
+    // Handle multi-line wrapping with flex items-center vertical centering
     const words = resolved.split(' ');
-    let line = '';
-    let currentY = el.y;
+    const lines = [];
+    let currentLine = '';
     const lineHeight = fontSize * (el.lineHeight || 1.2);
     for (let n = 0; n < words.length; n++) {
-        const testLine = line + words[n] + ' ';
+        const testLine = currentLine ? currentLine + ' ' + words[n] : words[n];
         const metrics = ctx.measureText(testLine);
         if (metrics.width > el.width && n > 0) {
-            ctx.fillText(line, drawX, currentY);
-            line = words[n] + ' ';
-            currentY += lineHeight;
+            lines.push(currentLine);
+            currentLine = words[n];
         }
         else {
-            line = testLine;
+            currentLine = testLine;
         }
     }
-    ctx.fillText(line, drawX, currentY);
+    lines.push(currentLine);
+    const totalHeight = lines.length * lineHeight;
+    const startY = el.y + (el.height - totalHeight) / 2 + lineHeight / 2;
+    ctx.textBaseline = 'middle';
+    for (let i = 0; i < lines.length; i++) {
+        ctx.fillText(lines[i], drawX, startY + i * lineHeight);
+    }
 }
 async function drawPhoto(ctx, el, employee) {
     const photoUrl = employee.photoUrl || el.fallbackSrc;
@@ -271,8 +276,8 @@ function drawImageFromUrl(ctx, src, x, y, width, height, borderRadius = 0, borde
                     ctx.clip();
                 }
                 ctx.drawImage(img, x, y, width, height);
-                if (borderWidth > 0 && borderColor !== 'transparent') {
-                    ctx.restore();
+                ctx.restore();
+                if (borderWidth > 0 && borderColor && borderColor !== 'transparent') {
                     ctx.save();
                     ctx.strokeStyle = borderColor;
                     ctx.lineWidth = borderWidth;
@@ -283,8 +288,8 @@ function drawImageFromUrl(ctx, src, x, y, width, height, borderRadius = 0, borde
                     else {
                         ctx.strokeRect(x, y, width, height);
                     }
+                    ctx.restore();
                 }
-                ctx.restore();
                 resolve();
             };
             img.onerror = () => {
@@ -300,7 +305,14 @@ function drawImageFromUrl(ctx, src, x, y, width, height, borderRadius = 0, borde
     });
 }
 function drawRoundedRect(ctx, x, y, width, height, radius) {
-    const r = Math.min(radius, width / 2, height / 2);
+    const maxR = Math.min(width, height) / 2;
+    if (radius >= maxR && Math.abs(width - height) < 1) {
+        ctx.beginPath();
+        ctx.arc(x + width / 2, y + height / 2, maxR, 0, Math.PI * 2);
+        ctx.closePath();
+        return;
+    }
+    const r = Math.min(radius, maxR);
     ctx.beginPath();
     ctx.moveTo(x + r, y);
     ctx.arcTo(x + width, y, x + width, y + height, r);
