@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { createAdminSupabaseClient, createServerSupabaseClient } from '@/lib/supabase/server';
+import { recordAuditLog } from '@/lib/audit/logger';
 
 function jsonError(message: string, status = 400) {
   return NextResponse.json({ error: message }, { status });
@@ -83,6 +84,21 @@ export async function PATCH(request: Request) {
     updated_at: new Date().toISOString(),
   }, { onConflict: 'id' });
   if (profileError) return jsonError('Account changed, but the profile could not be synchronized.', 500);
+
+  const desc = newPassword
+    ? `Updated HR Admin account display name to "${displayName}" and updated security password.`
+    : `Updated HR Admin account display name to "${displayName}".`;
+
+  await recordAuditLog({
+    actorId: user.id,
+    actorEmail: user.email,
+    actorName: displayName,
+    action: newPassword ? 'PASSWORD_CHANGED' : 'PROFILE_UPDATED',
+    entityType: 'User',
+    entityId: user.id,
+    entityName: `${displayName} (${user.email})`,
+    details: desc,
+  });
 
   return NextResponse.json({
     data: {

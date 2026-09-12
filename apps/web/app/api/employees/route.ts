@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createServerSupabaseClient, createAdminSupabaseClient } from '@/lib/supabase/server';
 import { requireAuth } from '@/lib/auth/require-auth';
+import { recordAuditLog } from '@/lib/audit/logger';
 
 
 export async function GET(request: Request) {
@@ -122,10 +123,14 @@ export async function POST(request: Request) {
       companyId = comp?.id;
     }
 
+    const empNum = body.employeeNumber.trim().toUpperCase();
+    const fName = body.firstName.trim();
+    const lName = body.lastName.trim();
+
     const newRecord: any = {
-      employee_number: body.employeeNumber.trim().toUpperCase(),
-      first_name: body.firstName.trim(),
-      last_name: body.lastName.trim(),
+      employee_number: empNum,
+      first_name: fName,
+      last_name: lName,
       middle_name: body.middleName?.trim() || null,
       suffix: body.suffix?.trim() || null,
       email: body.email?.trim() || null,
@@ -151,6 +156,16 @@ export async function POST(request: Request) {
       .single();
 
     if (error) throw error;
+
+    await recordAuditLog({
+      actorId: auth.user.id,
+      actorEmail: auth.user.email,
+      action: 'CREATE_EMPLOYEE',
+      entityType: 'Employee',
+      entityId: data.id,
+      entityName: `${fName} ${lName} (${empNum})`,
+      details: `Added new corporate employee record for "${fName} ${lName}" (Employee ID: ${empNum}).`,
+    });
 
     return NextResponse.json({
       data: {
@@ -185,9 +200,27 @@ export async function DELETE(request: Request) {
     if (!id) return NextResponse.json({ error: 'id parameter is required' }, { status: 400 });
 
     const admin = createAdminSupabaseClient();
+    const { data: existing } = await admin
+      .from('employees')
+      .select('first_name, last_name, employee_number')
+      .eq('id', id)
+      .maybeSingle();
+
     const { error } = await admin.from('employees').delete().eq('id', id);
 
     if (error) throw error;
+
+    await recordAuditLog({
+      actorId: auth.user.id,
+      actorEmail: auth.user.email,
+      action: 'DELETE_EMPLOYEE',
+      entityType: 'Employee',
+      entityId: id,
+      entityName: existing ? `${existing.first_name} ${existing.last_name} (${existing.employee_number})` : 'Employee',
+      details: existing
+        ? `Removed employee record for "${existing.first_name} ${existing.last_name}" (ID: ${existing.employee_number}).`
+        : `Removed employee record.`,
+    });
 
     return NextResponse.json({ success: true });
   } catch (err: any) {
@@ -235,6 +268,17 @@ export async function PUT(request: Request) {
       .single();
 
     if (error) throw error;
+
+    const empName = `${data.first_name} ${data.last_name}`.trim();
+    await recordAuditLog({
+      actorId: auth.user.id,
+      actorEmail: auth.user.email,
+      action: 'UPDATE_EMPLOYEE',
+      entityType: 'Employee',
+      entityId: id,
+      entityName: `${empName} (${data.employee_number})`,
+      details: `Updated corporate employee profile details for "${empName}" (ID: ${data.employee_number}).`,
+    });
 
     return NextResponse.json({
       success: true,

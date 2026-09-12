@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createAdminSupabaseClient } from '@/lib/supabase/server';
 import { requireAuth } from '@/lib/auth/require-auth';
+import { recordAuditLog } from '@/lib/audit/logger';
 
 export async function GET() {
   const auth = await requireAuth();
@@ -164,6 +165,16 @@ export async function POST(request: Request) {
       );
     }
 
+    await recordAuditLog({
+      actorId: auth.user.id,
+      actorEmail: auth.user.email,
+      action: 'CREATE_USER',
+      entityType: 'User',
+      entityId: userId,
+      entityName: `${displayName} (${email})`,
+      details: `Created new HR Admin account for "${displayName}" (${email}).`,
+    });
+
     return NextResponse.json(
       {
         data: {
@@ -198,6 +209,7 @@ export async function DELETE(request: Request) {
     }
 
     const admin = createAdminSupabaseClient();
+    const { data: targetProfile } = await admin.from('profiles').select('email, full_name').eq('id', id).maybeSingle();
 
     // Delete from auth.users
     const { error: authErr } = await admin.auth.admin.deleteUser(id);
@@ -205,6 +217,18 @@ export async function DELETE(request: Request) {
 
     // Delete from profiles
     await admin.from('profiles').delete().eq('id', id);
+
+    await recordAuditLog({
+      actorId: auth.user.id,
+      actorEmail: auth.user.email,
+      action: 'DELETE_USER',
+      entityType: 'User',
+      entityId: id,
+      entityName: targetProfile ? `${targetProfile.full_name} (${targetProfile.email})` : 'User Account',
+      details: targetProfile
+        ? `Deleted HR Admin user account "${targetProfile.full_name}" (${targetProfile.email}).`
+        : `Deleted HR Admin user account ID "${id}".`,
+    });
 
     return NextResponse.json({ success: true });
   } catch (err: any) {

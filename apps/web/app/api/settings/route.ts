@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createAdminSupabaseClient, createServerSupabaseClient } from '@/lib/supabase/server';
 import { requireAuth } from '@/lib/auth/require-auth';
+import { recordAuditLog } from '@/lib/audit/logger';
 
 const DEFAULT_SETTINGS = {
   allowSelfServiceReprint: true,
@@ -76,6 +77,15 @@ export async function POST(request: Request) {
         // Fallback silently if system_settings RLS/schema differs
       }
     }
+
+    await recordAuditLog({
+      actorId: auth.user.id,
+      actorEmail: auth.user.email,
+      action: 'UPDATE_SETTINGS',
+      entityType: 'SystemSettings',
+      entityName: 'KIOSK & Hardware Policies',
+      details: `Updated system settings: Self-service reprint: ${newSettings.allowSelfServiceReprint ? 'ENABLED' : 'DISABLED'}, Inactivity timeout: ${newSettings.kioskInactivityTimeoutSeconds}s, Safe margin: ${newSettings.defaultSafeMarginMm}mm, Bleed: ${newSettings.defaultBleedMm}mm.`,
+    });
 
     return NextResponse.json({ success: true, data: newSettings });
   } catch (err: any) {

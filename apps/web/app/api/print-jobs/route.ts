@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { requireAuth } from '@/lib/auth/require-auth';
+import { recordAuditLog } from '@/lib/audit/logger';
 
 export async function GET() {
   const auth = await requireAuth();
@@ -51,14 +52,18 @@ export async function POST(request: Request) {
       companyId = comp?.id;
     }
 
+    const empName = body.employeeName || 'Employee';
+    const empNum = body.employeeNumber || '';
+    const branch = body.branchName || 'Terminal Site';
+
     const newRecord: any = {
       job_number: `PRINT-${Date.now()}`,
       idempotency_key: body.idempotencyKey || `idem-${Date.now()}`,
       status: body.status || 'COMPLETED',
       metadata: {
-        employeeName: body.employeeName,
-        employeeNumber: body.employeeNumber,
-        branchName: body.branchName,
+        employeeName: empName,
+        employeeNumber: empNum,
+        branchName: branch,
       },
       started_at: new Date().toISOString(),
       completed_at: new Date().toISOString(),
@@ -73,6 +78,17 @@ export async function POST(request: Request) {
       .insert([newRecord])
       .select()
       .single();
+
+    await recordAuditLog({
+      actorType: 'KIOSK',
+      actorName: `KIOSK Terminal (${branch})`,
+      action: 'PRINT_ID_CARD',
+      entityType: 'PrintJob',
+      entityId: data?.id || newRecord.job_number,
+      entityName: `${empName} (${empNum || 'EMP'})`,
+      branchId: body.branchId || null,
+      details: `Self-service ID card badge printed for employee "${empName}" (${empNum}) at terminal "${branch}".`,
+    });
 
     if (error) {
       // If schema constraints, gracefully return success with payload
