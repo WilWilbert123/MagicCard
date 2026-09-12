@@ -84,15 +84,34 @@ export default function KioskMainPage() {
     'Finalize Security Audit Log',
   ];
 
+  const [kioskTimeoutSeconds, setKioskTimeoutSeconds] = useState(45);
+  const [allowSelfServiceReprint, setAllowSelfServiceReprint] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/settings')
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.data) {
+          if (typeof json.data.allowSelfServiceReprint === 'boolean') {
+            setAllowSelfServiceReprint(json.data.allowSelfServiceReprint);
+          }
+          if (json.data.kioskInactivityTimeoutSeconds) {
+            setKioskTimeoutSeconds(json.data.kioskInactivityTimeoutSeconds);
+          }
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   // Inactivity timeout back to Screensaver on SEARCH screen
   useEffect(() => {
     if (step !== 'SEARCH') return;
     const timeout = setTimeout(() => {
       setStep('SCREENSAVER');
       setEmployeeInput('');
-    }, 45000); // 45 seconds idle
+    }, kioskTimeoutSeconds * 1000);
     return () => clearTimeout(timeout);
-  }, [step, employeeInput]);
+  }, [step, employeeInput, kioskTimeoutSeconds]);
 
   // Keypad Handlers
   const handleKeypadPress = (val: string) => {
@@ -140,6 +159,12 @@ export default function KioskMainPage() {
 
       if (emp.employmentStatus !== 'ACTIVE') {
         setErrorMessage(`Employee record for ${emp.fullName} (${emp.employeeNumber}) is currently ${emp.employmentStatus}. Please see HR.`);
+        setStep('ERROR');
+        return;
+      }
+
+      if (!allowSelfServiceReprint && emp.cardStatus === 'PRINTED') {
+        setErrorMessage(`Self-service badge re-issuance is currently disabled at this terminal. Please contact Human Resources to request a replacement badge.`);
         setStep('ERROR');
         return;
       }

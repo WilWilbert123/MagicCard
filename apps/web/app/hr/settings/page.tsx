@@ -38,6 +38,7 @@ export default function HrSettingsPage() {
   const [kioskInactivityTimeoutSeconds, setKioskInactivityTimeoutSeconds] = useState(45);
   const [defaultBleedMm, setDefaultBleedMm] = useState(1.5);
   const [defaultSafeMarginMm, setDefaultSafeMarginMm] = useState(3.0);
+  const [policiesSaving, setPoliciesSaving] = useState(false);
 
   // Branches States
   const [branches, setBranches] = useState<Branch[]>([]);
@@ -110,12 +111,44 @@ export default function HrSettingsPage() {
       })
       .catch(() => toast.error('Failed to load departments.'))
       .finally(() => setDeptsLoading(false));
+    fetch('/api/settings', { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.data) {
+          setAllowSelfServiceReprint(json.data.allowSelfServiceReprint ?? true);
+          setKioskInactivityTimeoutSeconds(json.data.kioskInactivityTimeoutSeconds ?? 45);
+          setDefaultBleedMm(json.data.defaultBleedMm ?? 1.5);
+          setDefaultSafeMarginMm(json.data.defaultSafeMarginMm ?? 3.0);
+        }
+      })
+      .catch(() => toast.error('Failed to load system settings.'));
   }, []);
 
-  const handleSavePolicies = (e: React.FormEvent) => {
+  const handleSavePolicies = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+    setPoliciesSaving(true);
+    try {
+      const res = await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          allowSelfServiceReprint,
+          kioskInactivityTimeoutSeconds,
+          defaultBleedMm,
+          defaultSafeMarginMm,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Failed to save configuration');
+
+      setSaved(true);
+      toast.success('Configuration saved and persisted to Supabase.');
+      setTimeout(() => setSaved(false), 2500);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to save settings.');
+    } finally {
+      setPoliciesSaving(false);
+    }
   };
 
   const handleSaveAccount = async (e: React.FormEvent) => {
@@ -481,9 +514,10 @@ export default function HrSettingsPage() {
           <div className="flex justify-end">
             <button
               type="submit"
-              className="px-5 py-2.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-semibold shadow-md shadow-red-600/30 transition"
+              disabled={policiesSaving}
+              className="px-5 py-2.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-semibold shadow-md shadow-red-600/30 transition disabled:opacity-50"
             >
-              Save Configuration
+              {policiesSaving ? 'Saving Configuration...' : 'Save Configuration'}
             </button>
           </div>
         </form>
