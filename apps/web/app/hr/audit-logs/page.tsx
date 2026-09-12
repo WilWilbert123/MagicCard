@@ -122,6 +122,8 @@ export default function HrAuditLogsPage() {
 
   const getActionBadgeColor = (action: string) => {
     const act = action.toUpperCase();
+    if (act.includes('FAILED_LOGIN')) return 'bg-rose-100 text-rose-800 dark:bg-rose-950/80 dark:text-rose-300 border-rose-200 dark:border-rose-800';
+    if (act.includes('LOGIN')) return 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950/80 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800';
     if (act.includes('CREATE')) return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800';
     if (act.includes('UPDATE')) return 'bg-blue-100 text-blue-800 dark:bg-blue-950/80 dark:text-blue-300 border-blue-200 dark:border-blue-800';
     if (act.includes('DELETE') || act.includes('REMOVE')) return 'bg-red-100 text-red-800 dark:bg-red-950/80 dark:text-red-300 border-red-200 dark:border-red-800';
