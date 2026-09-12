@@ -137,14 +137,16 @@ export async function POST(request: Request) {
       user_metadata: { full_name: displayName },
     });
 
-    if (!createError && createdAuth?.user) {
-      userId = createdAuth.user.id;
-      createdAt = createdAuth.user.created_at || createdAt;
-    } else {
-      console.warn('Supabase Auth createUser notice:', createError?.message);
-      // Generate a valid profile ID if Auth trigger fails but email is unique
-      userId = crypto.randomUUID();
+    if (createError || !createdAuth?.user) {
+      console.error('Supabase Auth createUser error:', createError);
+      return NextResponse.json(
+        { error: createError?.message || 'Failed to create user login credentials in Auth system. Passwords must be at least 6 characters.' },
+        { status: 400 }
+      );
     }
+
+    userId = createdAuth.user.id;
+    createdAt = createdAuth.user.created_at || createdAt;
 
     // 5. Upsert into profiles table
     const { error: profileErr } = await admin.from('profiles').upsert({
