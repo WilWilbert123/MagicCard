@@ -22,6 +22,8 @@ export declare const BaseElementSchema: z.ZodObject<{
     width: z.ZodNumber;
     height: z.ZodNumber;
     rotation: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
+    flipX: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
+    flipY: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
     opacity: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
     isLocked: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
     isHidden: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
@@ -34,6 +36,8 @@ export declare const BaseElementSchema: z.ZodObject<{
     height: number;
     name?: string | undefined;
     rotation?: number | undefined;
+    flipX?: boolean | undefined;
+    flipY?: boolean | undefined;
     opacity?: number | undefined;
     isLocked?: boolean | undefined;
     isHidden?: boolean | undefined;
@@ -46,6 +50,8 @@ export declare const BaseElementSchema: z.ZodObject<{
     height: number;
     name?: string | undefined;
     rotation?: number | undefined;
+    flipX?: boolean | undefined;
+    flipY?: boolean | undefined;
     opacity?: number | undefined;
     isLocked?: boolean | undefined;
     isHidden?: boolean | undefined;
@@ -59,6 +65,8 @@ export declare const TextElementSchema: z.ZodObject<{
     width: z.ZodNumber;
     height: z.ZodNumber;
     rotation: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
+    flipX: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
+    flipY: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
     opacity: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
     isLocked: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
     isHidden: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
@@ -85,6 +93,8 @@ export declare const TextElementSchema: z.ZodObject<{
     text: string;
     name?: string | undefined;
     rotation?: number | undefined;
+    flipX?: boolean | undefined;
+    flipY?: boolean | undefined;
     opacity?: number | undefined;
     isLocked?: boolean | undefined;
     isHidden?: boolean | undefined;
@@ -108,6 +118,8 @@ export declare const TextElementSchema: z.ZodObject<{
     text: string;
     name?: string | undefined;
     rotation?: number | undefined;
+    flipX?: boolean | undefined;
+    flipY?: boolean | undefined;
     opacity?: number | undefined;
     isLocked?: boolean | undefined;
     isHidden?: boolean | undefined;
@@ -130,6 +142,8 @@ export declare const EmployeePhotoElementSchema: z.ZodObject<{
     width: z.ZodNumber;
     height: z.ZodNumber;
     rotation: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
+    flipX: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
+    flipY: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
     opacity: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
     isLocked: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
     isHidden: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
@@ -150,6 +164,8 @@ export declare const EmployeePhotoElementSchema: z.ZodObject<{
     type: "EMPLOYEE_PHOTO";
     name?: string | undefined;
     rotation?: number | undefined;
+    flipX?: boolean | undefined;
+    flipY?: boolean | undefined;
     opacity?: number | undefined;
     isLocked?: boolean | undefined;
     isHidden?: boolean | undefined;
@@ -168,6 +184,8 @@ export declare const EmployeePhotoElementSchema: z.ZodObject<{
     type: "EMPLOYEE_PHOTO";
     name?: string | undefined;
     rotation?: number | undefined;
+    flipX?: boolean | undefined;
+    flipY?: boolean | undefined;
     opacity?: number | undefined;
     isLocked?: boolean | undefined;
     isHidden?: boolean | undefined;
@@ -186,6 +204,8 @@ export declare const ImageElementSchema: z.ZodObject<{
     width: z.ZodNumber;
     height: z.ZodNumber;
     rotation: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
+    flipX: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
+    flipY: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
     opacity: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
     isLocked: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
     isHidden: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
@@ -207,6 +227,8 @@ export declare const ImageElementSchema: z.ZodObject<{
     src: string;
     name?: string | undefined;
     rotation?: number | undefined;
+    flipX?: boolean | undefined;
+    flipY?: boolean | undefined;
     opacity?: number | undefined;
     isLocked?: boolean | undefined;
     isHidden?: boolean | undefined;
@@ -225,6 +247,8 @@ export declare const ImageElementSchema: z.ZodObject<{
     src: string;
     name?: string | undefined;
     rotation?: number | undefined;
+    flipX?: boolean | undefined;
+    flipY?: boolean | undefined;
     opacity?: number | undefined;
     isLocked?: boolean | undefined;
     isHidden?: boolean | undefined;
@@ -242,6 +266,8 @@ export declare const QRCodeElementSchema: z.ZodObject<{
     width: z.ZodNumber;
     height: z.ZodNumber;
     rotation: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
+    flipX: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
+    flipY: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
     opacity: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
     isLocked: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
     isHidden: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
@@ -263,6 +289,8 @@ export declare const QRCodeElementSchema: z.ZodObject<{
     data: string;
     name?: string | undefined;
     rotation?: number | undefined;
+    flipX?: boolean | undefined;
+    flipY?: boolean | undefined;
     opacity?: number | undefined;
     isLocked?: boolean | undefined;
     isHidden?: boolean | undefined;
@@ -281,6 +309,8 @@ export declare const QRCodeElementSchema: z.ZodObject<{
     data: string;
     name?: string | undefined;
     rotation?: number | undefined;
+    flipX?: boolean | undefined;
+    flipY?: boolean | undefined;
     opacity?: number | undefined;
     isLocked?: boolean | undefined;
     isHidden?: boolean | undefined;
@@ -298,6 +328,8 @@ export declare const BarcodeElementSchema: z.ZodObject<{
     width: z.ZodNumber;
     height: z.ZodNumber;
     rotation: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
+    flipX: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
+    flipY: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
     opacity: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
     isLocked: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
     isHidden: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
@@ -320,6 +352,8 @@ export declare const BarcodeElementSchema: z.ZodObject<{
     data: string;
     name?: string | undefined;
     rotation?: number | undefined;
+    flipX?: boolean | undefined;
+    flipY?: boolean | undefined;
     opacity?: number | undefined;
     isLocked?: boolean | undefined;
     isHidden?: boolean | undefined;
@@ -339,6 +373,8 @@ export declare const BarcodeElementSchema: z.ZodObject<{
     data: string;
     name?: string | undefined;
     rotation?: number | undefined;
+    flipX?: boolean | undefined;
+    flipY?: boolean | undefined;
     opacity?: number | undefined;
     isLocked?: boolean | undefined;
     isHidden?: boolean | undefined;
@@ -357,6 +393,8 @@ export declare const ShapeElementSchema: z.ZodObject<{
     width: z.ZodNumber;
     height: z.ZodNumber;
     rotation: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
+    flipX: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
+    flipY: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
     opacity: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
     isLocked: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
     isHidden: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
@@ -378,6 +416,8 @@ export declare const ShapeElementSchema: z.ZodObject<{
     shapeType: "RECTANGLE" | "CIRCLE" | "LINE" | "TRIANGLE" | "DIAGONAL" | "SMOKE" | "SIGNATURE_LINE" | "LOGO";
     name?: string | undefined;
     rotation?: number | undefined;
+    flipX?: boolean | undefined;
+    flipY?: boolean | undefined;
     opacity?: number | undefined;
     isLocked?: boolean | undefined;
     isHidden?: boolean | undefined;
@@ -396,6 +436,8 @@ export declare const ShapeElementSchema: z.ZodObject<{
     shapeType: "RECTANGLE" | "CIRCLE" | "LINE" | "TRIANGLE" | "DIAGONAL" | "SMOKE" | "SIGNATURE_LINE" | "LOGO";
     name?: string | undefined;
     rotation?: number | undefined;
+    flipX?: boolean | undefined;
+    flipY?: boolean | undefined;
     opacity?: number | undefined;
     isLocked?: boolean | undefined;
     isHidden?: boolean | undefined;
@@ -413,6 +455,8 @@ export declare const CardElementSchema: z.ZodDiscriminatedUnion<"type", [z.ZodOb
     width: z.ZodNumber;
     height: z.ZodNumber;
     rotation: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
+    flipX: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
+    flipY: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
     opacity: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
     isLocked: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
     isHidden: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
@@ -439,6 +483,8 @@ export declare const CardElementSchema: z.ZodDiscriminatedUnion<"type", [z.ZodOb
     text: string;
     name?: string | undefined;
     rotation?: number | undefined;
+    flipX?: boolean | undefined;
+    flipY?: boolean | undefined;
     opacity?: number | undefined;
     isLocked?: boolean | undefined;
     isHidden?: boolean | undefined;
@@ -462,6 +508,8 @@ export declare const CardElementSchema: z.ZodDiscriminatedUnion<"type", [z.ZodOb
     text: string;
     name?: string | undefined;
     rotation?: number | undefined;
+    flipX?: boolean | undefined;
+    flipY?: boolean | undefined;
     opacity?: number | undefined;
     isLocked?: boolean | undefined;
     isHidden?: boolean | undefined;
@@ -483,6 +531,8 @@ export declare const CardElementSchema: z.ZodDiscriminatedUnion<"type", [z.ZodOb
     width: z.ZodNumber;
     height: z.ZodNumber;
     rotation: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
+    flipX: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
+    flipY: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
     opacity: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
     isLocked: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
     isHidden: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
@@ -503,6 +553,8 @@ export declare const CardElementSchema: z.ZodDiscriminatedUnion<"type", [z.ZodOb
     type: "EMPLOYEE_PHOTO";
     name?: string | undefined;
     rotation?: number | undefined;
+    flipX?: boolean | undefined;
+    flipY?: boolean | undefined;
     opacity?: number | undefined;
     isLocked?: boolean | undefined;
     isHidden?: boolean | undefined;
@@ -521,6 +573,8 @@ export declare const CardElementSchema: z.ZodDiscriminatedUnion<"type", [z.ZodOb
     type: "EMPLOYEE_PHOTO";
     name?: string | undefined;
     rotation?: number | undefined;
+    flipX?: boolean | undefined;
+    flipY?: boolean | undefined;
     opacity?: number | undefined;
     isLocked?: boolean | undefined;
     isHidden?: boolean | undefined;
@@ -538,6 +592,8 @@ export declare const CardElementSchema: z.ZodDiscriminatedUnion<"type", [z.ZodOb
     width: z.ZodNumber;
     height: z.ZodNumber;
     rotation: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
+    flipX: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
+    flipY: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
     opacity: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
     isLocked: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
     isHidden: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
@@ -559,6 +615,8 @@ export declare const CardElementSchema: z.ZodDiscriminatedUnion<"type", [z.ZodOb
     src: string;
     name?: string | undefined;
     rotation?: number | undefined;
+    flipX?: boolean | undefined;
+    flipY?: boolean | undefined;
     opacity?: number | undefined;
     isLocked?: boolean | undefined;
     isHidden?: boolean | undefined;
@@ -577,6 +635,8 @@ export declare const CardElementSchema: z.ZodDiscriminatedUnion<"type", [z.ZodOb
     src: string;
     name?: string | undefined;
     rotation?: number | undefined;
+    flipX?: boolean | undefined;
+    flipY?: boolean | undefined;
     opacity?: number | undefined;
     isLocked?: boolean | undefined;
     isHidden?: boolean | undefined;
@@ -593,6 +653,8 @@ export declare const CardElementSchema: z.ZodDiscriminatedUnion<"type", [z.ZodOb
     width: z.ZodNumber;
     height: z.ZodNumber;
     rotation: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
+    flipX: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
+    flipY: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
     opacity: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
     isLocked: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
     isHidden: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
@@ -614,6 +676,8 @@ export declare const CardElementSchema: z.ZodDiscriminatedUnion<"type", [z.ZodOb
     data: string;
     name?: string | undefined;
     rotation?: number | undefined;
+    flipX?: boolean | undefined;
+    flipY?: boolean | undefined;
     opacity?: number | undefined;
     isLocked?: boolean | undefined;
     isHidden?: boolean | undefined;
@@ -632,6 +696,8 @@ export declare const CardElementSchema: z.ZodDiscriminatedUnion<"type", [z.ZodOb
     data: string;
     name?: string | undefined;
     rotation?: number | undefined;
+    flipX?: boolean | undefined;
+    flipY?: boolean | undefined;
     opacity?: number | undefined;
     isLocked?: boolean | undefined;
     isHidden?: boolean | undefined;
@@ -648,6 +714,8 @@ export declare const CardElementSchema: z.ZodDiscriminatedUnion<"type", [z.ZodOb
     width: z.ZodNumber;
     height: z.ZodNumber;
     rotation: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
+    flipX: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
+    flipY: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
     opacity: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
     isLocked: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
     isHidden: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
@@ -670,6 +738,8 @@ export declare const CardElementSchema: z.ZodDiscriminatedUnion<"type", [z.ZodOb
     data: string;
     name?: string | undefined;
     rotation?: number | undefined;
+    flipX?: boolean | undefined;
+    flipY?: boolean | undefined;
     opacity?: number | undefined;
     isLocked?: boolean | undefined;
     isHidden?: boolean | undefined;
@@ -689,6 +759,8 @@ export declare const CardElementSchema: z.ZodDiscriminatedUnion<"type", [z.ZodOb
     data: string;
     name?: string | undefined;
     rotation?: number | undefined;
+    flipX?: boolean | undefined;
+    flipY?: boolean | undefined;
     opacity?: number | undefined;
     isLocked?: boolean | undefined;
     isHidden?: boolean | undefined;
@@ -706,6 +778,8 @@ export declare const CardElementSchema: z.ZodDiscriminatedUnion<"type", [z.ZodOb
     width: z.ZodNumber;
     height: z.ZodNumber;
     rotation: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
+    flipX: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
+    flipY: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
     opacity: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
     isLocked: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
     isHidden: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
@@ -727,6 +801,8 @@ export declare const CardElementSchema: z.ZodDiscriminatedUnion<"type", [z.ZodOb
     shapeType: "RECTANGLE" | "CIRCLE" | "LINE" | "TRIANGLE" | "DIAGONAL" | "SMOKE" | "SIGNATURE_LINE" | "LOGO";
     name?: string | undefined;
     rotation?: number | undefined;
+    flipX?: boolean | undefined;
+    flipY?: boolean | undefined;
     opacity?: number | undefined;
     isLocked?: boolean | undefined;
     isHidden?: boolean | undefined;
@@ -745,6 +821,8 @@ export declare const CardElementSchema: z.ZodDiscriminatedUnion<"type", [z.ZodOb
     shapeType: "RECTANGLE" | "CIRCLE" | "LINE" | "TRIANGLE" | "DIAGONAL" | "SMOKE" | "SIGNATURE_LINE" | "LOGO";
     name?: string | undefined;
     rotation?: number | undefined;
+    flipX?: boolean | undefined;
+    flipY?: boolean | undefined;
     opacity?: number | undefined;
     isLocked?: boolean | undefined;
     isHidden?: boolean | undefined;
@@ -824,6 +902,8 @@ export declare const CardSurfaceSchema: z.ZodObject<{
         width: z.ZodNumber;
         height: z.ZodNumber;
         rotation: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
+        flipX: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
+        flipY: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
         opacity: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
         isLocked: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
         isHidden: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
@@ -850,6 +930,8 @@ export declare const CardSurfaceSchema: z.ZodObject<{
         text: string;
         name?: string | undefined;
         rotation?: number | undefined;
+        flipX?: boolean | undefined;
+        flipY?: boolean | undefined;
         opacity?: number | undefined;
         isLocked?: boolean | undefined;
         isHidden?: boolean | undefined;
@@ -873,6 +955,8 @@ export declare const CardSurfaceSchema: z.ZodObject<{
         text: string;
         name?: string | undefined;
         rotation?: number | undefined;
+        flipX?: boolean | undefined;
+        flipY?: boolean | undefined;
         opacity?: number | undefined;
         isLocked?: boolean | undefined;
         isHidden?: boolean | undefined;
@@ -894,6 +978,8 @@ export declare const CardSurfaceSchema: z.ZodObject<{
         width: z.ZodNumber;
         height: z.ZodNumber;
         rotation: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
+        flipX: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
+        flipY: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
         opacity: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
         isLocked: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
         isHidden: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
@@ -914,6 +1000,8 @@ export declare const CardSurfaceSchema: z.ZodObject<{
         type: "EMPLOYEE_PHOTO";
         name?: string | undefined;
         rotation?: number | undefined;
+        flipX?: boolean | undefined;
+        flipY?: boolean | undefined;
         opacity?: number | undefined;
         isLocked?: boolean | undefined;
         isHidden?: boolean | undefined;
@@ -932,6 +1020,8 @@ export declare const CardSurfaceSchema: z.ZodObject<{
         type: "EMPLOYEE_PHOTO";
         name?: string | undefined;
         rotation?: number | undefined;
+        flipX?: boolean | undefined;
+        flipY?: boolean | undefined;
         opacity?: number | undefined;
         isLocked?: boolean | undefined;
         isHidden?: boolean | undefined;
@@ -949,6 +1039,8 @@ export declare const CardSurfaceSchema: z.ZodObject<{
         width: z.ZodNumber;
         height: z.ZodNumber;
         rotation: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
+        flipX: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
+        flipY: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
         opacity: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
         isLocked: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
         isHidden: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
@@ -970,6 +1062,8 @@ export declare const CardSurfaceSchema: z.ZodObject<{
         src: string;
         name?: string | undefined;
         rotation?: number | undefined;
+        flipX?: boolean | undefined;
+        flipY?: boolean | undefined;
         opacity?: number | undefined;
         isLocked?: boolean | undefined;
         isHidden?: boolean | undefined;
@@ -988,6 +1082,8 @@ export declare const CardSurfaceSchema: z.ZodObject<{
         src: string;
         name?: string | undefined;
         rotation?: number | undefined;
+        flipX?: boolean | undefined;
+        flipY?: boolean | undefined;
         opacity?: number | undefined;
         isLocked?: boolean | undefined;
         isHidden?: boolean | undefined;
@@ -1004,6 +1100,8 @@ export declare const CardSurfaceSchema: z.ZodObject<{
         width: z.ZodNumber;
         height: z.ZodNumber;
         rotation: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
+        flipX: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
+        flipY: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
         opacity: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
         isLocked: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
         isHidden: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
@@ -1025,6 +1123,8 @@ export declare const CardSurfaceSchema: z.ZodObject<{
         data: string;
         name?: string | undefined;
         rotation?: number | undefined;
+        flipX?: boolean | undefined;
+        flipY?: boolean | undefined;
         opacity?: number | undefined;
         isLocked?: boolean | undefined;
         isHidden?: boolean | undefined;
@@ -1043,6 +1143,8 @@ export declare const CardSurfaceSchema: z.ZodObject<{
         data: string;
         name?: string | undefined;
         rotation?: number | undefined;
+        flipX?: boolean | undefined;
+        flipY?: boolean | undefined;
         opacity?: number | undefined;
         isLocked?: boolean | undefined;
         isHidden?: boolean | undefined;
@@ -1059,6 +1161,8 @@ export declare const CardSurfaceSchema: z.ZodObject<{
         width: z.ZodNumber;
         height: z.ZodNumber;
         rotation: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
+        flipX: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
+        flipY: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
         opacity: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
         isLocked: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
         isHidden: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
@@ -1081,6 +1185,8 @@ export declare const CardSurfaceSchema: z.ZodObject<{
         data: string;
         name?: string | undefined;
         rotation?: number | undefined;
+        flipX?: boolean | undefined;
+        flipY?: boolean | undefined;
         opacity?: number | undefined;
         isLocked?: boolean | undefined;
         isHidden?: boolean | undefined;
@@ -1100,6 +1206,8 @@ export declare const CardSurfaceSchema: z.ZodObject<{
         data: string;
         name?: string | undefined;
         rotation?: number | undefined;
+        flipX?: boolean | undefined;
+        flipY?: boolean | undefined;
         opacity?: number | undefined;
         isLocked?: boolean | undefined;
         isHidden?: boolean | undefined;
@@ -1117,6 +1225,8 @@ export declare const CardSurfaceSchema: z.ZodObject<{
         width: z.ZodNumber;
         height: z.ZodNumber;
         rotation: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
+        flipX: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
+        flipY: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
         opacity: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
         isLocked: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
         isHidden: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
@@ -1138,6 +1248,8 @@ export declare const CardSurfaceSchema: z.ZodObject<{
         shapeType: "RECTANGLE" | "CIRCLE" | "LINE" | "TRIANGLE" | "DIAGONAL" | "SMOKE" | "SIGNATURE_LINE" | "LOGO";
         name?: string | undefined;
         rotation?: number | undefined;
+        flipX?: boolean | undefined;
+        flipY?: boolean | undefined;
         opacity?: number | undefined;
         isLocked?: boolean | undefined;
         isHidden?: boolean | undefined;
@@ -1156,6 +1268,8 @@ export declare const CardSurfaceSchema: z.ZodObject<{
         shapeType: "RECTANGLE" | "CIRCLE" | "LINE" | "TRIANGLE" | "DIAGONAL" | "SMOKE" | "SIGNATURE_LINE" | "LOGO";
         name?: string | undefined;
         rotation?: number | undefined;
+        flipX?: boolean | undefined;
+        flipY?: boolean | undefined;
         opacity?: number | undefined;
         isLocked?: boolean | undefined;
         isHidden?: boolean | undefined;
@@ -1188,6 +1302,8 @@ export declare const CardSurfaceSchema: z.ZodObject<{
         text: string;
         name?: string | undefined;
         rotation?: number | undefined;
+        flipX?: boolean | undefined;
+        flipY?: boolean | undefined;
         opacity?: number | undefined;
         isLocked?: boolean | undefined;
         isHidden?: boolean | undefined;
@@ -1210,6 +1326,8 @@ export declare const CardSurfaceSchema: z.ZodObject<{
         type: "EMPLOYEE_PHOTO";
         name?: string | undefined;
         rotation?: number | undefined;
+        flipX?: boolean | undefined;
+        flipY?: boolean | undefined;
         opacity?: number | undefined;
         isLocked?: boolean | undefined;
         isHidden?: boolean | undefined;
@@ -1229,6 +1347,8 @@ export declare const CardSurfaceSchema: z.ZodObject<{
         src: string;
         name?: string | undefined;
         rotation?: number | undefined;
+        flipX?: boolean | undefined;
+        flipY?: boolean | undefined;
         opacity?: number | undefined;
         isLocked?: boolean | undefined;
         isHidden?: boolean | undefined;
@@ -1247,6 +1367,8 @@ export declare const CardSurfaceSchema: z.ZodObject<{
         data: string;
         name?: string | undefined;
         rotation?: number | undefined;
+        flipX?: boolean | undefined;
+        flipY?: boolean | undefined;
         opacity?: number | undefined;
         isLocked?: boolean | undefined;
         isHidden?: boolean | undefined;
@@ -1265,6 +1387,8 @@ export declare const CardSurfaceSchema: z.ZodObject<{
         data: string;
         name?: string | undefined;
         rotation?: number | undefined;
+        flipX?: boolean | undefined;
+        flipY?: boolean | undefined;
         opacity?: number | undefined;
         isLocked?: boolean | undefined;
         isHidden?: boolean | undefined;
@@ -1284,6 +1408,8 @@ export declare const CardSurfaceSchema: z.ZodObject<{
         shapeType: "RECTANGLE" | "CIRCLE" | "LINE" | "TRIANGLE" | "DIAGONAL" | "SMOKE" | "SIGNATURE_LINE" | "LOGO";
         name?: string | undefined;
         rotation?: number | undefined;
+        flipX?: boolean | undefined;
+        flipY?: boolean | undefined;
         opacity?: number | undefined;
         isLocked?: boolean | undefined;
         isHidden?: boolean | undefined;
@@ -1316,6 +1442,8 @@ export declare const CardSurfaceSchema: z.ZodObject<{
         text: string;
         name?: string | undefined;
         rotation?: number | undefined;
+        flipX?: boolean | undefined;
+        flipY?: boolean | undefined;
         opacity?: number | undefined;
         isLocked?: boolean | undefined;
         isHidden?: boolean | undefined;
@@ -1338,6 +1466,8 @@ export declare const CardSurfaceSchema: z.ZodObject<{
         type: "EMPLOYEE_PHOTO";
         name?: string | undefined;
         rotation?: number | undefined;
+        flipX?: boolean | undefined;
+        flipY?: boolean | undefined;
         opacity?: number | undefined;
         isLocked?: boolean | undefined;
         isHidden?: boolean | undefined;
@@ -1357,6 +1487,8 @@ export declare const CardSurfaceSchema: z.ZodObject<{
         src: string;
         name?: string | undefined;
         rotation?: number | undefined;
+        flipX?: boolean | undefined;
+        flipY?: boolean | undefined;
         opacity?: number | undefined;
         isLocked?: boolean | undefined;
         isHidden?: boolean | undefined;
@@ -1375,6 +1507,8 @@ export declare const CardSurfaceSchema: z.ZodObject<{
         data: string;
         name?: string | undefined;
         rotation?: number | undefined;
+        flipX?: boolean | undefined;
+        flipY?: boolean | undefined;
         opacity?: number | undefined;
         isLocked?: boolean | undefined;
         isHidden?: boolean | undefined;
@@ -1393,6 +1527,8 @@ export declare const CardSurfaceSchema: z.ZodObject<{
         data: string;
         name?: string | undefined;
         rotation?: number | undefined;
+        flipX?: boolean | undefined;
+        flipY?: boolean | undefined;
         opacity?: number | undefined;
         isLocked?: boolean | undefined;
         isHidden?: boolean | undefined;
@@ -1412,6 +1548,8 @@ export declare const CardSurfaceSchema: z.ZodObject<{
         shapeType: "RECTANGLE" | "CIRCLE" | "LINE" | "TRIANGLE" | "DIAGONAL" | "SMOKE" | "SIGNATURE_LINE" | "LOGO";
         name?: string | undefined;
         rotation?: number | undefined;
+        flipX?: boolean | undefined;
+        flipY?: boolean | undefined;
         opacity?: number | undefined;
         isLocked?: boolean | undefined;
         isHidden?: boolean | undefined;
@@ -1567,6 +1705,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             width: z.ZodNumber;
             height: z.ZodNumber;
             rotation: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
+            flipX: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
+            flipY: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
             opacity: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
             isLocked: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
             isHidden: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
@@ -1593,6 +1733,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             text: string;
             name?: string | undefined;
             rotation?: number | undefined;
+            flipX?: boolean | undefined;
+            flipY?: boolean | undefined;
             opacity?: number | undefined;
             isLocked?: boolean | undefined;
             isHidden?: boolean | undefined;
@@ -1616,6 +1758,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             text: string;
             name?: string | undefined;
             rotation?: number | undefined;
+            flipX?: boolean | undefined;
+            flipY?: boolean | undefined;
             opacity?: number | undefined;
             isLocked?: boolean | undefined;
             isHidden?: boolean | undefined;
@@ -1637,6 +1781,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             width: z.ZodNumber;
             height: z.ZodNumber;
             rotation: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
+            flipX: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
+            flipY: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
             opacity: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
             isLocked: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
             isHidden: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
@@ -1657,6 +1803,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             type: "EMPLOYEE_PHOTO";
             name?: string | undefined;
             rotation?: number | undefined;
+            flipX?: boolean | undefined;
+            flipY?: boolean | undefined;
             opacity?: number | undefined;
             isLocked?: boolean | undefined;
             isHidden?: boolean | undefined;
@@ -1675,6 +1823,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             type: "EMPLOYEE_PHOTO";
             name?: string | undefined;
             rotation?: number | undefined;
+            flipX?: boolean | undefined;
+            flipY?: boolean | undefined;
             opacity?: number | undefined;
             isLocked?: boolean | undefined;
             isHidden?: boolean | undefined;
@@ -1692,6 +1842,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             width: z.ZodNumber;
             height: z.ZodNumber;
             rotation: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
+            flipX: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
+            flipY: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
             opacity: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
             isLocked: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
             isHidden: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
@@ -1713,6 +1865,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             src: string;
             name?: string | undefined;
             rotation?: number | undefined;
+            flipX?: boolean | undefined;
+            flipY?: boolean | undefined;
             opacity?: number | undefined;
             isLocked?: boolean | undefined;
             isHidden?: boolean | undefined;
@@ -1731,6 +1885,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             src: string;
             name?: string | undefined;
             rotation?: number | undefined;
+            flipX?: boolean | undefined;
+            flipY?: boolean | undefined;
             opacity?: number | undefined;
             isLocked?: boolean | undefined;
             isHidden?: boolean | undefined;
@@ -1747,6 +1903,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             width: z.ZodNumber;
             height: z.ZodNumber;
             rotation: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
+            flipX: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
+            flipY: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
             opacity: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
             isLocked: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
             isHidden: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
@@ -1768,6 +1926,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             data: string;
             name?: string | undefined;
             rotation?: number | undefined;
+            flipX?: boolean | undefined;
+            flipY?: boolean | undefined;
             opacity?: number | undefined;
             isLocked?: boolean | undefined;
             isHidden?: boolean | undefined;
@@ -1786,6 +1946,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             data: string;
             name?: string | undefined;
             rotation?: number | undefined;
+            flipX?: boolean | undefined;
+            flipY?: boolean | undefined;
             opacity?: number | undefined;
             isLocked?: boolean | undefined;
             isHidden?: boolean | undefined;
@@ -1802,6 +1964,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             width: z.ZodNumber;
             height: z.ZodNumber;
             rotation: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
+            flipX: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
+            flipY: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
             opacity: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
             isLocked: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
             isHidden: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
@@ -1824,6 +1988,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             data: string;
             name?: string | undefined;
             rotation?: number | undefined;
+            flipX?: boolean | undefined;
+            flipY?: boolean | undefined;
             opacity?: number | undefined;
             isLocked?: boolean | undefined;
             isHidden?: boolean | undefined;
@@ -1843,6 +2009,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             data: string;
             name?: string | undefined;
             rotation?: number | undefined;
+            flipX?: boolean | undefined;
+            flipY?: boolean | undefined;
             opacity?: number | undefined;
             isLocked?: boolean | undefined;
             isHidden?: boolean | undefined;
@@ -1860,6 +2028,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             width: z.ZodNumber;
             height: z.ZodNumber;
             rotation: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
+            flipX: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
+            flipY: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
             opacity: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
             isLocked: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
             isHidden: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
@@ -1881,6 +2051,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             shapeType: "RECTANGLE" | "CIRCLE" | "LINE" | "TRIANGLE" | "DIAGONAL" | "SMOKE" | "SIGNATURE_LINE" | "LOGO";
             name?: string | undefined;
             rotation?: number | undefined;
+            flipX?: boolean | undefined;
+            flipY?: boolean | undefined;
             opacity?: number | undefined;
             isLocked?: boolean | undefined;
             isHidden?: boolean | undefined;
@@ -1899,6 +2071,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             shapeType: "RECTANGLE" | "CIRCLE" | "LINE" | "TRIANGLE" | "DIAGONAL" | "SMOKE" | "SIGNATURE_LINE" | "LOGO";
             name?: string | undefined;
             rotation?: number | undefined;
+            flipX?: boolean | undefined;
+            flipY?: boolean | undefined;
             opacity?: number | undefined;
             isLocked?: boolean | undefined;
             isHidden?: boolean | undefined;
@@ -1931,6 +2105,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             text: string;
             name?: string | undefined;
             rotation?: number | undefined;
+            flipX?: boolean | undefined;
+            flipY?: boolean | undefined;
             opacity?: number | undefined;
             isLocked?: boolean | undefined;
             isHidden?: boolean | undefined;
@@ -1953,6 +2129,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             type: "EMPLOYEE_PHOTO";
             name?: string | undefined;
             rotation?: number | undefined;
+            flipX?: boolean | undefined;
+            flipY?: boolean | undefined;
             opacity?: number | undefined;
             isLocked?: boolean | undefined;
             isHidden?: boolean | undefined;
@@ -1972,6 +2150,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             src: string;
             name?: string | undefined;
             rotation?: number | undefined;
+            flipX?: boolean | undefined;
+            flipY?: boolean | undefined;
             opacity?: number | undefined;
             isLocked?: boolean | undefined;
             isHidden?: boolean | undefined;
@@ -1990,6 +2170,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             data: string;
             name?: string | undefined;
             rotation?: number | undefined;
+            flipX?: boolean | undefined;
+            flipY?: boolean | undefined;
             opacity?: number | undefined;
             isLocked?: boolean | undefined;
             isHidden?: boolean | undefined;
@@ -2008,6 +2190,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             data: string;
             name?: string | undefined;
             rotation?: number | undefined;
+            flipX?: boolean | undefined;
+            flipY?: boolean | undefined;
             opacity?: number | undefined;
             isLocked?: boolean | undefined;
             isHidden?: boolean | undefined;
@@ -2027,6 +2211,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             shapeType: "RECTANGLE" | "CIRCLE" | "LINE" | "TRIANGLE" | "DIAGONAL" | "SMOKE" | "SIGNATURE_LINE" | "LOGO";
             name?: string | undefined;
             rotation?: number | undefined;
+            flipX?: boolean | undefined;
+            flipY?: boolean | undefined;
             opacity?: number | undefined;
             isLocked?: boolean | undefined;
             isHidden?: boolean | undefined;
@@ -2059,6 +2245,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             text: string;
             name?: string | undefined;
             rotation?: number | undefined;
+            flipX?: boolean | undefined;
+            flipY?: boolean | undefined;
             opacity?: number | undefined;
             isLocked?: boolean | undefined;
             isHidden?: boolean | undefined;
@@ -2081,6 +2269,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             type: "EMPLOYEE_PHOTO";
             name?: string | undefined;
             rotation?: number | undefined;
+            flipX?: boolean | undefined;
+            flipY?: boolean | undefined;
             opacity?: number | undefined;
             isLocked?: boolean | undefined;
             isHidden?: boolean | undefined;
@@ -2100,6 +2290,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             src: string;
             name?: string | undefined;
             rotation?: number | undefined;
+            flipX?: boolean | undefined;
+            flipY?: boolean | undefined;
             opacity?: number | undefined;
             isLocked?: boolean | undefined;
             isHidden?: boolean | undefined;
@@ -2118,6 +2310,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             data: string;
             name?: string | undefined;
             rotation?: number | undefined;
+            flipX?: boolean | undefined;
+            flipY?: boolean | undefined;
             opacity?: number | undefined;
             isLocked?: boolean | undefined;
             isHidden?: boolean | undefined;
@@ -2136,6 +2330,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             data: string;
             name?: string | undefined;
             rotation?: number | undefined;
+            flipX?: boolean | undefined;
+            flipY?: boolean | undefined;
             opacity?: number | undefined;
             isLocked?: boolean | undefined;
             isHidden?: boolean | undefined;
@@ -2155,6 +2351,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             shapeType: "RECTANGLE" | "CIRCLE" | "LINE" | "TRIANGLE" | "DIAGONAL" | "SMOKE" | "SIGNATURE_LINE" | "LOGO";
             name?: string | undefined;
             rotation?: number | undefined;
+            flipX?: boolean | undefined;
+            flipY?: boolean | undefined;
             opacity?: number | undefined;
             isLocked?: boolean | undefined;
             isHidden?: boolean | undefined;
@@ -2228,6 +2426,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             width: z.ZodNumber;
             height: z.ZodNumber;
             rotation: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
+            flipX: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
+            flipY: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
             opacity: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
             isLocked: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
             isHidden: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
@@ -2254,6 +2454,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             text: string;
             name?: string | undefined;
             rotation?: number | undefined;
+            flipX?: boolean | undefined;
+            flipY?: boolean | undefined;
             opacity?: number | undefined;
             isLocked?: boolean | undefined;
             isHidden?: boolean | undefined;
@@ -2277,6 +2479,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             text: string;
             name?: string | undefined;
             rotation?: number | undefined;
+            flipX?: boolean | undefined;
+            flipY?: boolean | undefined;
             opacity?: number | undefined;
             isLocked?: boolean | undefined;
             isHidden?: boolean | undefined;
@@ -2298,6 +2502,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             width: z.ZodNumber;
             height: z.ZodNumber;
             rotation: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
+            flipX: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
+            flipY: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
             opacity: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
             isLocked: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
             isHidden: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
@@ -2318,6 +2524,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             type: "EMPLOYEE_PHOTO";
             name?: string | undefined;
             rotation?: number | undefined;
+            flipX?: boolean | undefined;
+            flipY?: boolean | undefined;
             opacity?: number | undefined;
             isLocked?: boolean | undefined;
             isHidden?: boolean | undefined;
@@ -2336,6 +2544,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             type: "EMPLOYEE_PHOTO";
             name?: string | undefined;
             rotation?: number | undefined;
+            flipX?: boolean | undefined;
+            flipY?: boolean | undefined;
             opacity?: number | undefined;
             isLocked?: boolean | undefined;
             isHidden?: boolean | undefined;
@@ -2353,6 +2563,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             width: z.ZodNumber;
             height: z.ZodNumber;
             rotation: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
+            flipX: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
+            flipY: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
             opacity: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
             isLocked: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
             isHidden: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
@@ -2374,6 +2586,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             src: string;
             name?: string | undefined;
             rotation?: number | undefined;
+            flipX?: boolean | undefined;
+            flipY?: boolean | undefined;
             opacity?: number | undefined;
             isLocked?: boolean | undefined;
             isHidden?: boolean | undefined;
@@ -2392,6 +2606,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             src: string;
             name?: string | undefined;
             rotation?: number | undefined;
+            flipX?: boolean | undefined;
+            flipY?: boolean | undefined;
             opacity?: number | undefined;
             isLocked?: boolean | undefined;
             isHidden?: boolean | undefined;
@@ -2408,6 +2624,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             width: z.ZodNumber;
             height: z.ZodNumber;
             rotation: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
+            flipX: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
+            flipY: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
             opacity: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
             isLocked: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
             isHidden: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
@@ -2429,6 +2647,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             data: string;
             name?: string | undefined;
             rotation?: number | undefined;
+            flipX?: boolean | undefined;
+            flipY?: boolean | undefined;
             opacity?: number | undefined;
             isLocked?: boolean | undefined;
             isHidden?: boolean | undefined;
@@ -2447,6 +2667,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             data: string;
             name?: string | undefined;
             rotation?: number | undefined;
+            flipX?: boolean | undefined;
+            flipY?: boolean | undefined;
             opacity?: number | undefined;
             isLocked?: boolean | undefined;
             isHidden?: boolean | undefined;
@@ -2463,6 +2685,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             width: z.ZodNumber;
             height: z.ZodNumber;
             rotation: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
+            flipX: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
+            flipY: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
             opacity: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
             isLocked: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
             isHidden: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
@@ -2485,6 +2709,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             data: string;
             name?: string | undefined;
             rotation?: number | undefined;
+            flipX?: boolean | undefined;
+            flipY?: boolean | undefined;
             opacity?: number | undefined;
             isLocked?: boolean | undefined;
             isHidden?: boolean | undefined;
@@ -2504,6 +2730,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             data: string;
             name?: string | undefined;
             rotation?: number | undefined;
+            flipX?: boolean | undefined;
+            flipY?: boolean | undefined;
             opacity?: number | undefined;
             isLocked?: boolean | undefined;
             isHidden?: boolean | undefined;
@@ -2521,6 +2749,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             width: z.ZodNumber;
             height: z.ZodNumber;
             rotation: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
+            flipX: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
+            flipY: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
             opacity: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
             isLocked: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
             isHidden: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
@@ -2542,6 +2772,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             shapeType: "RECTANGLE" | "CIRCLE" | "LINE" | "TRIANGLE" | "DIAGONAL" | "SMOKE" | "SIGNATURE_LINE" | "LOGO";
             name?: string | undefined;
             rotation?: number | undefined;
+            flipX?: boolean | undefined;
+            flipY?: boolean | undefined;
             opacity?: number | undefined;
             isLocked?: boolean | undefined;
             isHidden?: boolean | undefined;
@@ -2560,6 +2792,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             shapeType: "RECTANGLE" | "CIRCLE" | "LINE" | "TRIANGLE" | "DIAGONAL" | "SMOKE" | "SIGNATURE_LINE" | "LOGO";
             name?: string | undefined;
             rotation?: number | undefined;
+            flipX?: boolean | undefined;
+            flipY?: boolean | undefined;
             opacity?: number | undefined;
             isLocked?: boolean | undefined;
             isHidden?: boolean | undefined;
@@ -2592,6 +2826,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             text: string;
             name?: string | undefined;
             rotation?: number | undefined;
+            flipX?: boolean | undefined;
+            flipY?: boolean | undefined;
             opacity?: number | undefined;
             isLocked?: boolean | undefined;
             isHidden?: boolean | undefined;
@@ -2614,6 +2850,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             type: "EMPLOYEE_PHOTO";
             name?: string | undefined;
             rotation?: number | undefined;
+            flipX?: boolean | undefined;
+            flipY?: boolean | undefined;
             opacity?: number | undefined;
             isLocked?: boolean | undefined;
             isHidden?: boolean | undefined;
@@ -2633,6 +2871,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             src: string;
             name?: string | undefined;
             rotation?: number | undefined;
+            flipX?: boolean | undefined;
+            flipY?: boolean | undefined;
             opacity?: number | undefined;
             isLocked?: boolean | undefined;
             isHidden?: boolean | undefined;
@@ -2651,6 +2891,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             data: string;
             name?: string | undefined;
             rotation?: number | undefined;
+            flipX?: boolean | undefined;
+            flipY?: boolean | undefined;
             opacity?: number | undefined;
             isLocked?: boolean | undefined;
             isHidden?: boolean | undefined;
@@ -2669,6 +2911,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             data: string;
             name?: string | undefined;
             rotation?: number | undefined;
+            flipX?: boolean | undefined;
+            flipY?: boolean | undefined;
             opacity?: number | undefined;
             isLocked?: boolean | undefined;
             isHidden?: boolean | undefined;
@@ -2688,6 +2932,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             shapeType: "RECTANGLE" | "CIRCLE" | "LINE" | "TRIANGLE" | "DIAGONAL" | "SMOKE" | "SIGNATURE_LINE" | "LOGO";
             name?: string | undefined;
             rotation?: number | undefined;
+            flipX?: boolean | undefined;
+            flipY?: boolean | undefined;
             opacity?: number | undefined;
             isLocked?: boolean | undefined;
             isHidden?: boolean | undefined;
@@ -2720,6 +2966,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             text: string;
             name?: string | undefined;
             rotation?: number | undefined;
+            flipX?: boolean | undefined;
+            flipY?: boolean | undefined;
             opacity?: number | undefined;
             isLocked?: boolean | undefined;
             isHidden?: boolean | undefined;
@@ -2742,6 +2990,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             type: "EMPLOYEE_PHOTO";
             name?: string | undefined;
             rotation?: number | undefined;
+            flipX?: boolean | undefined;
+            flipY?: boolean | undefined;
             opacity?: number | undefined;
             isLocked?: boolean | undefined;
             isHidden?: boolean | undefined;
@@ -2761,6 +3011,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             src: string;
             name?: string | undefined;
             rotation?: number | undefined;
+            flipX?: boolean | undefined;
+            flipY?: boolean | undefined;
             opacity?: number | undefined;
             isLocked?: boolean | undefined;
             isHidden?: boolean | undefined;
@@ -2779,6 +3031,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             data: string;
             name?: string | undefined;
             rotation?: number | undefined;
+            flipX?: boolean | undefined;
+            flipY?: boolean | undefined;
             opacity?: number | undefined;
             isLocked?: boolean | undefined;
             isHidden?: boolean | undefined;
@@ -2797,6 +3051,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             data: string;
             name?: string | undefined;
             rotation?: number | undefined;
+            flipX?: boolean | undefined;
+            flipY?: boolean | undefined;
             opacity?: number | undefined;
             isLocked?: boolean | undefined;
             isHidden?: boolean | undefined;
@@ -2816,6 +3072,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             shapeType: "RECTANGLE" | "CIRCLE" | "LINE" | "TRIANGLE" | "DIAGONAL" | "SMOKE" | "SIGNATURE_LINE" | "LOGO";
             name?: string | undefined;
             rotation?: number | undefined;
+            flipX?: boolean | undefined;
+            flipY?: boolean | undefined;
             opacity?: number | undefined;
             isLocked?: boolean | undefined;
             isHidden?: boolean | undefined;
@@ -2865,6 +3123,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             text: string;
             name?: string | undefined;
             rotation?: number | undefined;
+            flipX?: boolean | undefined;
+            flipY?: boolean | undefined;
             opacity?: number | undefined;
             isLocked?: boolean | undefined;
             isHidden?: boolean | undefined;
@@ -2887,6 +3147,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             type: "EMPLOYEE_PHOTO";
             name?: string | undefined;
             rotation?: number | undefined;
+            flipX?: boolean | undefined;
+            flipY?: boolean | undefined;
             opacity?: number | undefined;
             isLocked?: boolean | undefined;
             isHidden?: boolean | undefined;
@@ -2906,6 +3168,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             src: string;
             name?: string | undefined;
             rotation?: number | undefined;
+            flipX?: boolean | undefined;
+            flipY?: boolean | undefined;
             opacity?: number | undefined;
             isLocked?: boolean | undefined;
             isHidden?: boolean | undefined;
@@ -2924,6 +3188,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             data: string;
             name?: string | undefined;
             rotation?: number | undefined;
+            flipX?: boolean | undefined;
+            flipY?: boolean | undefined;
             opacity?: number | undefined;
             isLocked?: boolean | undefined;
             isHidden?: boolean | undefined;
@@ -2942,6 +3208,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             data: string;
             name?: string | undefined;
             rotation?: number | undefined;
+            flipX?: boolean | undefined;
+            flipY?: boolean | undefined;
             opacity?: number | undefined;
             isLocked?: boolean | undefined;
             isHidden?: boolean | undefined;
@@ -2961,6 +3229,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             shapeType: "RECTANGLE" | "CIRCLE" | "LINE" | "TRIANGLE" | "DIAGONAL" | "SMOKE" | "SIGNATURE_LINE" | "LOGO";
             name?: string | undefined;
             rotation?: number | undefined;
+            flipX?: boolean | undefined;
+            flipY?: boolean | undefined;
             opacity?: number | undefined;
             isLocked?: boolean | undefined;
             isHidden?: boolean | undefined;
@@ -2994,6 +3264,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             text: string;
             name?: string | undefined;
             rotation?: number | undefined;
+            flipX?: boolean | undefined;
+            flipY?: boolean | undefined;
             opacity?: number | undefined;
             isLocked?: boolean | undefined;
             isHidden?: boolean | undefined;
@@ -3016,6 +3288,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             type: "EMPLOYEE_PHOTO";
             name?: string | undefined;
             rotation?: number | undefined;
+            flipX?: boolean | undefined;
+            flipY?: boolean | undefined;
             opacity?: number | undefined;
             isLocked?: boolean | undefined;
             isHidden?: boolean | undefined;
@@ -3035,6 +3309,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             src: string;
             name?: string | undefined;
             rotation?: number | undefined;
+            flipX?: boolean | undefined;
+            flipY?: boolean | undefined;
             opacity?: number | undefined;
             isLocked?: boolean | undefined;
             isHidden?: boolean | undefined;
@@ -3053,6 +3329,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             data: string;
             name?: string | undefined;
             rotation?: number | undefined;
+            flipX?: boolean | undefined;
+            flipY?: boolean | undefined;
             opacity?: number | undefined;
             isLocked?: boolean | undefined;
             isHidden?: boolean | undefined;
@@ -3071,6 +3349,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             data: string;
             name?: string | undefined;
             rotation?: number | undefined;
+            flipX?: boolean | undefined;
+            flipY?: boolean | undefined;
             opacity?: number | undefined;
             isLocked?: boolean | undefined;
             isHidden?: boolean | undefined;
@@ -3090,6 +3370,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             shapeType: "RECTANGLE" | "CIRCLE" | "LINE" | "TRIANGLE" | "DIAGONAL" | "SMOKE" | "SIGNATURE_LINE" | "LOGO";
             name?: string | undefined;
             rotation?: number | undefined;
+            flipX?: boolean | undefined;
+            flipY?: boolean | undefined;
             opacity?: number | undefined;
             isLocked?: boolean | undefined;
             isHidden?: boolean | undefined;
@@ -3140,6 +3422,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             text: string;
             name?: string | undefined;
             rotation?: number | undefined;
+            flipX?: boolean | undefined;
+            flipY?: boolean | undefined;
             opacity?: number | undefined;
             isLocked?: boolean | undefined;
             isHidden?: boolean | undefined;
@@ -3162,6 +3446,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             type: "EMPLOYEE_PHOTO";
             name?: string | undefined;
             rotation?: number | undefined;
+            flipX?: boolean | undefined;
+            flipY?: boolean | undefined;
             opacity?: number | undefined;
             isLocked?: boolean | undefined;
             isHidden?: boolean | undefined;
@@ -3181,6 +3467,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             src: string;
             name?: string | undefined;
             rotation?: number | undefined;
+            flipX?: boolean | undefined;
+            flipY?: boolean | undefined;
             opacity?: number | undefined;
             isLocked?: boolean | undefined;
             isHidden?: boolean | undefined;
@@ -3199,6 +3487,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             data: string;
             name?: string | undefined;
             rotation?: number | undefined;
+            flipX?: boolean | undefined;
+            flipY?: boolean | undefined;
             opacity?: number | undefined;
             isLocked?: boolean | undefined;
             isHidden?: boolean | undefined;
@@ -3217,6 +3507,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             data: string;
             name?: string | undefined;
             rotation?: number | undefined;
+            flipX?: boolean | undefined;
+            flipY?: boolean | undefined;
             opacity?: number | undefined;
             isLocked?: boolean | undefined;
             isHidden?: boolean | undefined;
@@ -3236,6 +3528,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             shapeType: "RECTANGLE" | "CIRCLE" | "LINE" | "TRIANGLE" | "DIAGONAL" | "SMOKE" | "SIGNATURE_LINE" | "LOGO";
             name?: string | undefined;
             rotation?: number | undefined;
+            flipX?: boolean | undefined;
+            flipY?: boolean | undefined;
             opacity?: number | undefined;
             isLocked?: boolean | undefined;
             isHidden?: boolean | undefined;
@@ -3269,6 +3563,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             text: string;
             name?: string | undefined;
             rotation?: number | undefined;
+            flipX?: boolean | undefined;
+            flipY?: boolean | undefined;
             opacity?: number | undefined;
             isLocked?: boolean | undefined;
             isHidden?: boolean | undefined;
@@ -3291,6 +3587,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             type: "EMPLOYEE_PHOTO";
             name?: string | undefined;
             rotation?: number | undefined;
+            flipX?: boolean | undefined;
+            flipY?: boolean | undefined;
             opacity?: number | undefined;
             isLocked?: boolean | undefined;
             isHidden?: boolean | undefined;
@@ -3310,6 +3608,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             src: string;
             name?: string | undefined;
             rotation?: number | undefined;
+            flipX?: boolean | undefined;
+            flipY?: boolean | undefined;
             opacity?: number | undefined;
             isLocked?: boolean | undefined;
             isHidden?: boolean | undefined;
@@ -3328,6 +3628,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             data: string;
             name?: string | undefined;
             rotation?: number | undefined;
+            flipX?: boolean | undefined;
+            flipY?: boolean | undefined;
             opacity?: number | undefined;
             isLocked?: boolean | undefined;
             isHidden?: boolean | undefined;
@@ -3346,6 +3648,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             data: string;
             name?: string | undefined;
             rotation?: number | undefined;
+            flipX?: boolean | undefined;
+            flipY?: boolean | undefined;
             opacity?: number | undefined;
             isLocked?: boolean | undefined;
             isHidden?: boolean | undefined;
@@ -3365,6 +3669,8 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             shapeType: "RECTANGLE" | "CIRCLE" | "LINE" | "TRIANGLE" | "DIAGONAL" | "SMOKE" | "SIGNATURE_LINE" | "LOGO";
             name?: string | undefined;
             rotation?: number | undefined;
+            flipX?: boolean | undefined;
+            flipY?: boolean | undefined;
             opacity?: number | undefined;
             isLocked?: boolean | undefined;
             isHidden?: boolean | undefined;

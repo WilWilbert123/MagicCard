@@ -52,12 +52,17 @@ export async function renderCardToCanvas(
     ctx.save();
     ctx.globalAlpha = el.opacity ?? 1;
 
-    // Apply rotation around element center if specified
-    if (el.rotation && el.rotation !== 0) {
+    // Apply rotation & flips around element center
+    if ((el.rotation && el.rotation !== 0) || el.flipX || el.flipY) {
       const centerX = el.x + el.width / 2;
       const centerY = el.y + el.height / 2;
       ctx.translate(centerX, centerY);
-      ctx.rotate((el.rotation * Math.PI) / 180);
+      if (el.rotation && el.rotation !== 0) {
+        ctx.rotate((el.rotation * Math.PI) / 180);
+      }
+      if (el.flipX || el.flipY) {
+        ctx.scale(el.flipX ? -1 : 1, el.flipY ? -1 : 1);
+      }
       ctx.translate(-centerX, -centerY);
     }
 
@@ -206,7 +211,6 @@ function drawText(
 
   ctx.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
   ctx.fillStyle = el.color || '#000000';
-  ctx.textBaseline = 'top';
 
   let drawX = el.x;
   if (el.textAlign === 'center') {
@@ -217,26 +221,34 @@ function drawText(
     drawX = el.x + el.width;
   } else {
     ctx.textAlign = 'left';
+    drawX = el.x;
   }
 
-  // Handle multi-line wrapping
+  // Handle multi-line wrapping with flex items-center vertical centering
   const words = resolved.split(' ');
-  let line = '';
-  let currentY = el.y;
+  const lines: string[] = [];
+  let currentLine = '';
   const lineHeight = fontSize * (el.lineHeight || 1.2);
 
   for (let n = 0; n < words.length; n++) {
-    const testLine = line + words[n] + ' ';
+    const testLine = currentLine ? currentLine + ' ' + words[n] : words[n];
     const metrics = ctx.measureText(testLine);
     if (metrics.width > el.width && n > 0) {
-      ctx.fillText(line, drawX, currentY);
-      line = words[n] + ' ';
-      currentY += lineHeight;
+      lines.push(currentLine);
+      currentLine = words[n];
     } else {
-      line = testLine;
+      currentLine = testLine;
     }
   }
-  ctx.fillText(line, drawX, currentY);
+  lines.push(currentLine);
+
+  const totalHeight = lines.length * lineHeight;
+  const startY = el.y + (el.height - totalHeight) / 2 + lineHeight / 2;
+  ctx.textBaseline = 'middle';
+
+  for (let i = 0; i < lines.length; i++) {
+    ctx.fillText(lines[i], drawX, startY + i * lineHeight);
+  }
 }
 
 async function drawPhoto(
@@ -330,9 +342,9 @@ function drawImageFromUrl(
           ctx.clip();
         }
         ctx.drawImage(img, x, y, width, height);
+        ctx.restore();
 
-        if (borderWidth > 0 && borderColor !== 'transparent') {
-          ctx.restore();
+        if (borderWidth > 0 && borderColor && borderColor !== 'transparent') {
           ctx.save();
           ctx.strokeStyle = borderColor;
           ctx.lineWidth = borderWidth;
@@ -342,8 +354,8 @@ function drawImageFromUrl(
           } else {
             ctx.strokeRect(x, y, width, height);
           }
+          ctx.restore();
         }
-        ctx.restore();
         resolve();
       };
       img.onerror = () => {
@@ -366,7 +378,14 @@ function drawRoundedRect(
   height: number,
   radius: number
 ) {
-  const r = Math.min(radius, width / 2, height / 2);
+  const maxR = Math.min(width, height) / 2;
+  if (radius >= maxR && Math.abs(width - height) < 1) {
+    ctx.beginPath();
+    ctx.arc(x + width / 2, y + height / 2, maxR, 0, Math.PI * 2);
+    ctx.closePath();
+    return;
+  }
+  const r = Math.min(radius, maxR);
   ctx.beginPath();
   ctx.moveTo(x + r, y);
   ctx.arcTo(x + width, y, x + width, y + height, r);

@@ -37,6 +37,8 @@ export const BaseElementSchema = z.object({
     width: z.number(),
     height: z.number(),
     rotation: z.number().default(0).optional(),
+    flipX: z.boolean().default(false).optional(),
+    flipY: z.boolean().default(false).optional(),
     opacity: z.number().min(0).max(1).default(1).optional(),
     isLocked: z.boolean().default(false).optional(),
     isHidden: z.boolean().default(false).optional(),
