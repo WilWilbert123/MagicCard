@@ -9,9 +9,6 @@ export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = await requireAuth();
-  if (!auth.authenticated) return auth.response;
-
   try {
     const { id } = await params;
     const admin = createAdminSupabaseClient();

@@ -126,11 +126,16 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const auth = await requireAuth();
-  if (!auth.authenticated) return auth.response;
-
   try {
     const body = await request.json();
+    const isKioskHeader = request.headers.get('x-kiosk-request') === 'true';
+
+    // Verify auth unless it's a kiosk self-service print dispatch
+    if (!isKioskHeader && !body.employeeNumber && !body.employeeId) {
+      const auth = await requireAuth();
+      if (!auth.authenticated) return auth.response;
+    }
+
     const admin = createAdminSupabaseClient();
 
     let companyId = body.companyId;

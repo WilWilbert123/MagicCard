@@ -77,10 +77,40 @@ export async function middleware(request: NextRequest) {
     );
   }
 
+function isKioskOrPublicApi(request: NextRequest): boolean {
+  const { pathname, searchParams } = request.nextUrl;
+  const method = request.method;
+  const isKiosk = request.headers.get('x-kiosk-request') === 'true';
+
+  // Card templates GET is public (reading template layouts)
+  if (pathname.startsWith('/api/card-templates') && method === 'GET') {
+    return true;
+  }
+
+  // Settings GET is public (reading app/kiosk configs)
+  if (pathname.startsWith('/api/settings') && method === 'GET') {
+    return true;
+  }
+
+  // Kiosk print job submission
+  if (pathname.startsWith('/api/print-jobs') && method === 'POST' && isKiosk) {
+    return true;
+  }
+
+  // Targeted employee lookup for Kiosk / search
+  if (pathname.startsWith('/api/employees') && method === 'GET') {
+    if (isKiosk || searchParams.has('employeeNumber') || searchParams.has('q') || pathname !== '/api/employees') {
+      return true;
+    }
+  }
+
+  return false;
+}
+
   // ------------------------------------------------------------------
   // Guard: protected API routes — return 401 JSON, not a redirect
   // ------------------------------------------------------------------
-  if (isProtectedApi(pathname) && !isAuthenticated) {
+  if (isProtectedApi(pathname) && !isAuthenticated && !isKioskOrPublicApi(request)) {
     return applySecurityHeaders(
       NextResponse.json(
         { error: 'UNAUTHORIZED', message: 'A valid session is required to access this resource.' },

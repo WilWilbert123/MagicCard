@@ -163,31 +163,67 @@ export default function KioskMainPage() {
     setErrorMessage('');
 
     try {
-      // 1. First try matching by exact employee number
-      let res = await fetch(`/api/employees?employeeNumber=${encodeURIComponent(term)}`);
-      let json = await res.json();
-      let emp = json.data?.[0];
+      const kioskHeaders = { 'x-kiosk-request': 'true' };
 
-      // 2. If not found, try broad query search (e.g. partial number or name)
+      // 1. Try matching by exact employee number via API
+      let res = await fetch(`/api/employees?employeeNumber=${encodeURIComponent(term)}`, { headers: kioskHeaders });
+      let json = res.ok ? await res.json() : null;
+      let emp = json?.data?.[0];
+
+      // 2. If not found, try broad query search (partial number or name) via API
       if (!emp) {
-        res = await fetch(`/api/employees?q=${encodeURIComponent(term)}`);
-        json = await res.json();
-        emp = json.data?.[0];
+        res = await fetch(`/api/employees?q=${encodeURIComponent(term)}`, { headers: kioskHeaders });
+        json = res.ok ? await res.json() : null;
+        emp = json?.data?.[0];
+      }
+
+      // 3. If not found, try direct employee number route
+      if (!emp) {
+        res = await fetch(`/api/employees/${encodeURIComponent(term)}`, { headers: kioskHeaders });
+        json = res.ok ? await res.json() : null;
+        if (json?.data) {
+          emp = json.data;
+        }
+      }
+
+      // 4. Fallback search in enterpriseStore local state if network or API lookup returned nothing
+      if (!emp) {
+        const localEmp = enterpriseStore.findEmployeeByNumber(term) || enterpriseStore.employees.find(e =>
+          e.employeeNumber.toLowerCase() === term.toLowerCase() ||
+          e.fullName.toLowerCase().includes(term.toLowerCase())
+        );
+        if (localEmp) {
+          emp = {
+            id: localEmp.id,
+            employeeNumber: localEmp.employeeNumber,
+            fullName: localEmp.fullName,
+            firstName: localEmp.firstName,
+            lastName: localEmp.lastName,
+            departmentName: localEmp.departmentName,
+            departmentId: localEmp.departmentId,
+            positionTitle: localEmp.positionTitle,
+            branchName: localEmp.branchName,
+            branchId: localEmp.branchId,
+            photoUrl: localEmp.photoUrl,
+            employmentStatus: localEmp.employmentStatus,
+            cardStatus: localEmp.cardStatus,
+          };
+        }
       }
 
       if (!emp) {
-        setErrorMessage(`Employee ID "${term}" was not found in the database. Please verify your Employee ID or contact HR.`);
+        setErrorMessage(`Employee ID or Name "${term}" was not found in the directory. Please verify your Employee ID or contact HR.`);
         setStep('ERROR');
         return;
       }
 
-      if (emp.employmentStatus !== 'ACTIVE') {
+      if (emp.employmentStatus && emp.employmentStatus !== 'ACTIVE') {
         setErrorMessage(`Employee record for ${emp.fullName} (${emp.employeeNumber}) is currently ${emp.employmentStatus}. Please see HR.`);
         setStep('ERROR');
         return;
       }
 
-      if (!allowSelfServiceReprint && emp.cardStatus === 'PRINTED') {
+      if (!allowSelfServiceReprint && (emp.cardStatus === 'PRINTED' || emp.cardStatus === 'ISSUED')) {
         setErrorMessage(`Self-service badge re-issuance is currently disabled at this terminal. Please contact Human Resources to request a replacement badge.`);
         setStep('ERROR');
         return;
@@ -197,9 +233,9 @@ export default function KioskMainPage() {
 
       // Fetch dynamic active published card template for employee's branch or global default
       try {
-        const tplRes = await fetch('/api/card-templates');
-        const tplJson = await tplRes.json();
-        if (tplRes.ok && Array.isArray(tplJson.data)) {
+        const tplRes = await fetch('/api/card-templates', { headers: kioskHeaders });
+        const tplJson = tplRes.ok ? await tplRes.json() : null;
+        if (tplJson?.data && Array.isArray(tplJson.data)) {
           const templates = tplJson.data;
           const matchingBranchTpl = templates.find(
             (t: any) =>
@@ -212,9 +248,9 @@ export default function KioskMainPage() {
           const targetTpl = matchingBranchTpl || defaultTpl;
 
           if (targetTpl) {
-            const detailRes = await fetch(`/api/card-templates/${targetTpl.id}`);
-            const detailJson = await detailRes.json();
-            if (detailRes.ok && detailJson.data?.layout) {
+            const detailRes = await fetch(`/api/card-templates/${targetTpl.id}`, { headers: kioskHeaders });
+            const detailJson = detailRes.ok ? await detailRes.json() : null;
+            if (detailJson?.data?.layout) {
               setKioskTemplate(detailJson.data.layout);
             } else if (targetTpl.layout) {
               setKioskTemplate(targetTpl.layout);
@@ -280,7 +316,10 @@ export default function KioskMainPage() {
     try {
       const res = await fetch('/api/print-jobs', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-kiosk-request': 'true',
+        },
         body: JSON.stringify({
           employeeId: foundEmployee.id,
           employeeNumber: foundEmployee.employeeNumber,

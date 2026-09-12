@@ -5,16 +5,20 @@ import { recordAuditLog } from '@/lib/audit/logger';
 
 
 export async function GET(request: Request) {
-  const auth = await requireAuth();
-  if (!auth.authenticated) return auth.response;
+  const { searchParams } = new URL(request.url);
+  const branchId = searchParams.get('branchId');
+  const deptId = searchParams.get('departmentId');
+  const query = searchParams.get('q');
+  const employeeNumber = searchParams.get('employeeNumber');
+  const isKioskHeader = request.headers.get('x-kiosk-request') === 'true';
+
+  // Require admin session ONLY for general un-queried employee listings (protecting bulk dumps)
+  if (!employeeNumber && !query && !isKioskHeader) {
+    const auth = await requireAuth();
+    if (!auth.authenticated) return auth.response;
+  }
 
   try {
-    const { searchParams } = new URL(request.url);
-    const branchId = searchParams.get('branchId');
-    const deptId = searchParams.get('departmentId');
-    const query = searchParams.get('q');
-    const employeeNumber = searchParams.get('employeeNumber');
-
     const admin = createAdminSupabaseClient();
     const supabase = await createServerSupabaseClient();
 
