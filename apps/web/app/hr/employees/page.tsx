@@ -36,6 +36,7 @@ export default function HrEmployeesPage() {
 
   // Modals
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [importResult, setImportResult] = useState<{ total: number; valid: number; imported: number } | null>(null);
   const [parsedPreview, setParsedPreview] = useState<any[]>([]);
@@ -55,6 +56,64 @@ export default function HrEmployeesPage() {
     positionTitle: 'Software Engineer',
     photoUrl: '',
   });
+
+  // Edit Employee Form state
+  const [editFormData, setEditFormData] = useState({
+    id: '',
+    employeeNumber: '',
+    firstName: '',
+    middleName: '',
+    lastName: '',
+    suffix: '',
+    email: '',
+    contactNumber: '',
+    branchId: '',
+    departmentId: '',
+    positionTitle: '',
+    photoUrl: '',
+    employmentStatus: 'ACTIVE' as 'ACTIVE' | 'INACTIVE' | 'SUSPENDED',
+    cardStatus: 'NOT_ISSUED' as 'NOT_ISSUED' | 'PRINTED' | 'REPRINT_REQUESTED',
+  });
+
+  const handleOpenEditModal = (emp: Employee) => {
+    setEditFormData({
+      id: emp.id,
+      employeeNumber: emp.employeeNumber || '',
+      firstName: emp.firstName || '',
+      middleName: emp.middleName || '',
+      lastName: emp.lastName || '',
+      suffix: emp.suffix || '',
+      email: emp.email || '',
+      contactNumber: emp.contactNumber || '',
+      branchId: emp.branchId || branches[0]?.id || '',
+      departmentId: emp.departmentId || departments[0]?.id || '',
+      positionTitle: emp.positionTitle || '',
+      photoUrl: emp.photoUrl || '',
+      employmentStatus: emp.employmentStatus || 'ACTIVE',
+      cardStatus: emp.cardStatus || 'NOT_ISSUED',
+    });
+    setShowEditModal(true);
+  };
+
+  const handleUpdateEmployee = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const res = await fetch('/api/employees', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editFormData),
+      });
+
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Failed to update employee');
+
+      toast.success('Employee updated successfully.');
+      setShowEditModal(false);
+      loadData();
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
 
   const loadData = async () => {
     setIsLoading(true);
@@ -524,6 +583,13 @@ export default function HrEmployeesPage() {
                   </td>
                   <td className="px-5 py-3 text-right">
                     <div className="flex items-center justify-end gap-1.5">
+                      <button
+                        onClick={() => handleOpenEditModal(emp)}
+                        title="Edit Employee"
+                        className="p-1.5 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
                       <Link
                         href={`/hr/card-designs/template-acme-cr80/designer`}
                         title="Design / Print Card"
@@ -682,6 +748,175 @@ export default function HrEmployeesPage() {
                   className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white font-semibold shadow-md shadow-red-600/30 transition"
                 >
                   Save Employee
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Employee Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-lg rounded-2xl bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 p-6 shadow-2xl transition-colors duration-200">
+            <div className="flex items-center justify-between mb-4 border-b border-slate-200 dark:border-slate-800 pb-3">
+              <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <Edit className="w-5 h-5 text-red-500" />
+                Edit Employee Details
+              </h2>
+              <button onClick={() => setShowEditModal(false)} className="text-slate-400 hover:text-slate-700 dark:hover:text-white transition">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateEmployee} className="space-y-4 text-xs">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">First Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editFormData.firstName}
+                    onChange={(e) => setEditFormData({ ...editFormData, firstName: e.target.value })}
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Last Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editFormData.lastName}
+                    onChange={(e) => setEditFormData({ ...editFormData, lastName: e.target.value })}
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Employee ID *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editFormData.employeeNumber}
+                    onChange={(e) => setEditFormData({ ...editFormData, employeeNumber: e.target.value })}
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white font-mono placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Corporate Email *</label>
+                  <input
+                    type="email"
+                    required
+                    value={editFormData.email}
+                    onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Branch</label>
+                  <select
+                    value={editFormData.branchId}
+                    onChange={(e) => setEditFormData({ ...editFormData, branchId: e.target.value })}
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition"
+                  >
+                    {branches.map((b) => (
+                      <option key={b.id} value={b.id} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">{b.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Department</label>
+                  <select
+                    value={editFormData.departmentId}
+                    onChange={(e) => setEditFormData({ ...editFormData, departmentId: e.target.value })}
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition"
+                  >
+                    {departments.map((d) => (
+                      <option key={d.id} value={d.id} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">{d.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Job Title</label>
+                  <input
+                    type="text"
+                    required
+                    value={editFormData.positionTitle}
+                    onChange={(e) => setEditFormData({ ...editFormData, positionTitle: e.target.value })}
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Contact Phone</label>
+                  <input
+                    type="text"
+                    placeholder="+1 (555) 000-0000"
+                    value={editFormData.contactNumber}
+                    onChange={(e) => setEditFormData({ ...editFormData, contactNumber: e.target.value })}
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Employment Status</label>
+                  <select
+                    value={editFormData.employmentStatus}
+                    onChange={(e) => setEditFormData({ ...editFormData, employmentStatus: e.target.value as any })}
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition"
+                  >
+                    <option value="ACTIVE" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">Active</option>
+                    <option value="INACTIVE" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">Inactive</option>
+                    <option value="SUSPENDED" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">Suspended</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Card Status</label>
+                  <select
+                    value={editFormData.cardStatus}
+                    onChange={(e) => setEditFormData({ ...editFormData, cardStatus: e.target.value as any })}
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition"
+                  >
+                    <option value="NOT_ISSUED" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">Pending / Not Issued</option>
+                    <option value="PRINTED" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">Issued / Printed</option>
+                    <option value="REPRINT_REQUESTED" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">Reprint Requested</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Photo URL (Optional)</label>
+                <input
+                  type="text"
+                  placeholder="https://..."
+                  value={editFormData.photoUrl}
+                  onChange={(e) => setEditFormData({ ...editFormData, photoUrl: e.target.value })}
+                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition text-[11px]"
+                />
+              </div>
+
+              <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowEditModal(false)}
+                  className="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white font-semibold shadow-md shadow-red-600/30 transition"
+                >
+                  Update Employee
                 </button>
               </div>
             </form>
