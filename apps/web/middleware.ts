@@ -35,6 +35,7 @@ const PROTECTED_API_PREFIXES = [
   '/api/print-jobs',
   '/api/branches',
   '/api/departments',
+  '/api/settings',
   '/api/auth/profile',   // profile requires auth
   '/api/auth/logout',    // logout requires auth (prevents CSRF-logout)
 ];

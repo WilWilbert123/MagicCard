@@ -9,6 +9,7 @@ import {
   Printer, 
   CheckCircle2, 
   Plus, 
+  Edit,
   Trash2, 
   Layers, 
   MapPin, 
@@ -38,23 +39,39 @@ export default function HrSettingsPage() {
   const [kioskInactivityTimeoutSeconds, setKioskInactivityTimeoutSeconds] = useState(45);
   const [defaultBleedMm, setDefaultBleedMm] = useState(1.5);
   const [defaultSafeMarginMm, setDefaultSafeMarginMm] = useState(3.0);
+  const [policiesSaving, setPoliciesSaving] = useState(false);
 
   // Branches States
   const [branches, setBranches] = useState<Branch[]>([]);
   const [branchesLoading, setBranchesLoading] = useState(true);
   const [showAddBranchModal, setShowAddBranchModal] = useState(false);
+  const [showEditBranchModal, setShowEditBranchModal] = useState(false);
   const [branchForm, setBranchForm] = useState({
     name: '',
     code: '',
     address: '',
     contactNumber: '',
   });
+  const [editBranchForm, setEditBranchForm] = useState({
+    id: '',
+    name: '',
+    code: '',
+    address: '',
+    contactNumber: '',
+    isActive: true,
+  });
 
   // Departments States
   const [departments, setDepartments] = useState<Department[]>([]);
   const [deptsLoading, setDeptsLoading] = useState(true);
   const [showAddDeptModal, setShowAddDeptModal] = useState(false);
+  const [showEditDeptModal, setShowEditDeptModal] = useState(false);
   const [deptForm, setDeptForm] = useState({
+    name: '',
+    code: '',
+  });
+  const [editDeptForm, setEditDeptForm] = useState({
+    id: '',
     name: '',
     code: '',
   });
@@ -110,12 +127,44 @@ export default function HrSettingsPage() {
       })
       .catch(() => toast.error('Failed to load departments.'))
       .finally(() => setDeptsLoading(false));
+    fetch('/api/settings', { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.data) {
+          setAllowSelfServiceReprint(json.data.allowSelfServiceReprint ?? true);
+          setKioskInactivityTimeoutSeconds(json.data.kioskInactivityTimeoutSeconds ?? 45);
+          setDefaultBleedMm(json.data.defaultBleedMm ?? 1.5);
+          setDefaultSafeMarginMm(json.data.defaultSafeMarginMm ?? 3.0);
+        }
+      })
+      .catch(() => toast.error('Failed to load system settings.'));
   }, []);
 
-  const handleSavePolicies = (e: React.FormEvent) => {
+  const handleSavePolicies = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+    setPoliciesSaving(true);
+    try {
+      const res = await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          allowSelfServiceReprint,
+          kioskInactivityTimeoutSeconds,
+          defaultBleedMm,
+          defaultSafeMarginMm,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Failed to save configuration');
+
+      setSaved(true);
+      toast.success('Configuration saved and persisted to Supabase.');
+      setTimeout(() => setSaved(false), 2500);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to save settings.');
+    } finally {
+      setPoliciesSaving(false);
+    }
   };
 
   const handleSaveAccount = async (e: React.FormEvent) => {
@@ -206,6 +255,60 @@ export default function HrSettingsPage() {
     }
   };
 
+  const handleOpenEditBranchModal = (branch: Branch) => {
+    setEditBranchForm({
+      id: branch.id,
+      name: branch.name,
+      code: branch.code,
+      address: branch.address ?? '',
+      contactNumber: branch.contactNumber ?? '',
+      isActive: branch.isActive ?? true,
+    });
+    setShowEditBranchModal(true);
+  };
+
+  const handleUpdateBranch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editBranchForm.name.trim() || !editBranchForm.code.trim()) return;
+
+    try {
+      const res = await fetch('/api/branches', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: editBranchForm.id,
+          name: editBranchForm.name.trim(),
+          code: editBranchForm.code.trim().toUpperCase(),
+          address: editBranchForm.address.trim(),
+          contactNumber: editBranchForm.contactNumber.trim(),
+          isActive: editBranchForm.isActive,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Failed to update branch');
+
+      const updated = json.data;
+      setBranches((prev) =>
+        prev.map((b) =>
+          b.id === updated.id
+            ? {
+                ...b,
+                name: updated.name,
+                code: updated.code,
+                address: updated.address ?? '',
+                contactNumber: updated.contact_number ?? updated.contactNumber ?? '',
+                isActive: updated.is_active ?? true,
+              }
+            : b
+        )
+      );
+      setShowEditBranchModal(false);
+      toast.success('Branch updated successfully.');
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
+
   const handleCreateDepartment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!deptForm.name.trim() || !deptForm.code.trim()) return;
@@ -239,6 +342,43 @@ export default function HrSettingsPage() {
       if (!res.ok) throw new Error(json.error || 'Failed to delete department');
       setDepartments((prev) => prev.filter((d) => d.id !== id));
       toast.success('Department removed successfully.');
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
+
+  const handleOpenEditDeptModal = (dept: Department) => {
+    setEditDeptForm({
+      id: dept.id,
+      name: dept.name,
+      code: dept.code,
+    });
+    setShowEditDeptModal(true);
+  };
+
+  const handleUpdateDepartment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editDeptForm.name.trim() || !editDeptForm.code.trim()) return;
+
+    try {
+      const res = await fetch('/api/departments', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: editDeptForm.id,
+          name: editDeptForm.name.trim(),
+          code: editDeptForm.code.trim().toUpperCase(),
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Failed to update department');
+
+      const updated = json.data;
+      setDepartments((prev) =>
+        prev.map((d) => (d.id === updated.id ? { ...d, name: updated.name, code: updated.code } : d))
+      );
+      setShowEditDeptModal(false);
+      toast.success('Department updated successfully.');
     } catch (err: any) {
       toast.error(err.message);
     }
@@ -481,9 +621,10 @@ export default function HrSettingsPage() {
           <div className="flex justify-end">
             <button
               type="submit"
-              className="px-5 py-2.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-semibold shadow-md shadow-red-600/30 transition"
+              disabled={policiesSaving}
+              className="px-5 py-2.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-semibold shadow-md shadow-red-600/30 transition disabled:opacity-50"
             >
-              Save Configuration
+              {policiesSaving ? 'Saving Configuration...' : 'Save Configuration'}
             </button>
           </div>
         </form>
@@ -556,13 +697,22 @@ export default function HrSettingsPage() {
                         </span>
                       </td>
                       <td className="px-5 py-3 text-right">
-                        <button
-                          onClick={() => handleDeleteBranch(b.id)}
-                          className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition"
-                          title="Delete branch"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={() => handleOpenEditBranchModal(b)}
+                            className="p-1.5 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition"
+                            title="Edit branch"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteBranch(b.id)}
+                            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition"
+                            title="Delete branch"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -622,13 +772,22 @@ export default function HrSettingsPage() {
                     <td className="px-5 py-3 font-mono font-bold text-red-600 dark:text-red-400">{d.code}</td>
                     <td className="px-5 py-3 font-semibold text-slate-900 dark:text-white">{d.name}</td>
                     <td className="px-5 py-3 text-right">
-                      <button
-                        onClick={() => handleDeleteDepartment(d.id)}
-                        className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition"
-                        title="Delete department"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          onClick={() => handleOpenEditDeptModal(d)}
+                          className="p-1.5 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition"
+                          title="Edit department"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteDepartment(d.id)}
+                          className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition"
+                          title="Delete department"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                   ))
@@ -720,6 +879,87 @@ export default function HrSettingsPage() {
         </div>
       )}
 
+      {/* EDIT BRANCH MODAL */}
+      {showEditBranchModal && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 p-6 shadow-2xl">
+            <div className="flex items-center justify-between mb-4 border-b border-slate-200 dark:border-slate-800 pb-3">
+              <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <Edit className="w-5 h-5 text-red-500" />
+                Edit Corporate Branch
+              </h3>
+              <button onClick={() => setShowEditBranchModal(false)} className="text-slate-400 hover:text-slate-700 dark:hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateBranch} className="space-y-4 text-xs">
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Branch Name *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. London Regional Office"
+                  value={editBranchForm.name}
+                  onChange={(e) => setEditBranchForm({ ...editBranchForm, name: e.target.value })}
+                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Branch Code *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. BR-LON-01"
+                  value={editBranchForm.code}
+                  onChange={(e) => setEditBranchForm({ ...editBranchForm, code: e.target.value })}
+                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white uppercase font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 mb-1">Physical Address</label>
+                <input
+                  type="text"
+                  placeholder="e.g. 100 Bishopsgate, London EC2N 4AG"
+                  value={editBranchForm.address}
+                  onChange={(e) => setEditBranchForm({ ...editBranchForm, address: e.target.value })}
+                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 mb-1">Contact Phone</label>
+                <input
+                  type="text"
+                  placeholder="e.g. +44 20 7946 0991"
+                  value={editBranchForm.contactNumber}
+                  onChange={(e) => setEditBranchForm({ ...editBranchForm, contactNumber: e.target.value })}
+                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white"
+                />
+              </div>
+
+              <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowEditBranchModal(false)}
+                  className="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white font-semibold shadow-md shadow-red-600/30"
+                >
+                  Update Branch
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* ADD DEPARTMENT MODAL */}
       {showAddDeptModal && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
@@ -772,6 +1012,65 @@ export default function HrSettingsPage() {
                   className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white font-semibold shadow-md shadow-red-600/30"
                 >
                   Save Department
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT DEPARTMENT MODAL */}
+      {showEditDeptModal && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 p-6 shadow-2xl">
+            <div className="flex items-center justify-between mb-4 border-b border-slate-200 dark:border-slate-800 pb-3">
+              <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <Edit className="w-5 h-5 text-red-500" />
+                Edit Department
+              </h3>
+              <button onClick={() => setShowEditDeptModal(false)} className="text-slate-400 hover:text-slate-700 dark:hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateDepartment} className="space-y-4 text-xs">
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Department Name *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Quality Assurance & Auditing"
+                  value={editDeptForm.name}
+                  onChange={(e) => setEditDeptForm({ ...editDeptForm, name: e.target.value })}
+                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Department Code *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. QA"
+                  value={editDeptForm.code}
+                  onChange={(e) => setEditDeptForm({ ...editDeptForm, code: e.target.value })}
+                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white uppercase font-mono"
+                />
+              </div>
+
+              <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowEditDeptModal(false)}
+                  className="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white font-semibold shadow-md shadow-red-600/30"
+                >
+                  Update Department
                 </button>
               </div>
             </form>

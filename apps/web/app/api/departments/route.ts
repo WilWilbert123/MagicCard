@@ -93,3 +93,35 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
+
+export async function PUT(request: Request) {
+  const auth = await requireAuth();
+  if (!auth.authenticated) return auth.response;
+
+  try {
+    const body = await request.json();
+    if (!body.id || !body.name || !body.code) {
+      return NextResponse.json({ error: 'id, name, and code are required' }, { status: 400 });
+    }
+
+    const admin = createAdminSupabaseClient();
+    const updateRecord = {
+      name: body.name.trim(),
+      code: body.code.trim().toUpperCase(),
+    };
+
+    const { data, error } = await admin
+      .from('departments')
+      .update(updateRecord)
+      .eq('id', body.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return NextResponse.json({ data });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}
+
