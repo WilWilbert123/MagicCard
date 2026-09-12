@@ -90,7 +90,7 @@ export const BarcodeElementSchema = BaseElementSchema.extend({
 });
 export const ShapeElementSchema = BaseElementSchema.extend({
     type: z.literal('SHAPE'),
-    shapeType: z.enum(['RECTANGLE', 'CIRCLE', 'LINE']),
+    shapeType: z.enum(['RECTANGLE', 'CIRCLE', 'LINE', 'TRIANGLE', 'DIAGONAL', 'SMOKE', 'SIGNATURE_LINE', 'LOGO']),
     fill: z.string().default('#dc2626').optional(),
     stroke: z.string().optional(),
     strokeWidth: z.number().default(0).optional(),
@@ -127,6 +127,8 @@ export const CardTemplateDimensionsSchema = z.object({
     cornerRound: z.number().default(CR80_DIMENSIONS.cornerRoundMm),
     bleedMm: z.number().default(CR80_DIMENSIONS.bleedMm),
     safeMarginMm: z.number().default(CR80_DIMENSIONS.safeMarginMm),
+    /** Card layout orientation: 'horizontal' (landscape, default) or 'vertical' (portrait) */
+    orientation: z.enum(['horizontal', 'vertical']).default('horizontal').optional(),
 });
 export const CardTemplateJSONSchema = z.object({
     version: z.literal(1).default(1),

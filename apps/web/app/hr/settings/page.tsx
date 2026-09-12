@@ -18,7 +18,11 @@ import {
   Briefcase,
   User,
   Mail,
-  LockKeyhole
+  LockKeyhole,
+  UserPlus,
+  AlertCircle,
+  HelpCircle,
+  ShieldCheck
 } from 'lucide-react';
 import { Branch, Department } from '@/lib/data/enterpriseStore';
 
@@ -33,6 +37,19 @@ export default function HrSettingsPage() {
     newPassword: '',
     confirmPassword: '',
   });
+
+  // Account & Users state
+  const [passwordError, setPasswordError] = useState('');
+  const [showForgotPasswordHelp, setShowForgotPasswordHelp] = useState(false);
+  const [adminUsers, setAdminUsers] = useState<any[]>([]);
+  const [usersLoading, setUsersLoading] = useState(true);
+  const [showAddUserModal, setShowAddUserModal] = useState(false);
+  const [userForm, setUserForm] = useState({
+    displayName: '',
+    email: '',
+    password: '',
+  });
+  const [userCreating, setUserCreating] = useState(false);
 
   // Policy States
   const [allowSelfServiceReprint, setAllowSelfServiceReprint] = useState(true);
@@ -138,7 +155,24 @@ export default function HrSettingsPage() {
         }
       })
       .catch(() => toast.error('Failed to load system settings.'));
+
+    loadUsers();
   }, []);
+
+  const loadUsers = async () => {
+    setUsersLoading(true);
+    try {
+      const res = await fetch('/api/auth/users', { cache: 'no-store' });
+      const json = await res.json();
+      if (json.data) {
+        setAdminUsers(json.data);
+      }
+    } catch {
+      toast.error('Failed to load HR admin users.');
+    } finally {
+      setUsersLoading(false);
+    }
+  };
 
   const handleSavePolicies = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -169,9 +203,24 @@ export default function HrSettingsPage() {
 
   const handleSaveAccount = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (accountForm.newPassword && accountForm.newPassword !== accountForm.confirmPassword) {
-      toast.error('New password confirmation does not match.');
-      return;
+    setPasswordError('');
+
+    if (accountForm.newPassword) {
+      if (!accountForm.currentPassword) {
+        setPasswordError('Current password is required to save your new password.');
+        toast.error('Current password is required to change password.');
+        return;
+      }
+      if (accountForm.newPassword.length < 12) {
+        setPasswordError('New password must be at least 12 characters long.');
+        toast.error('New password must be at least 12 characters.');
+        return;
+      }
+      if (accountForm.newPassword !== accountForm.confirmPassword) {
+        setPasswordError('New password and confirmation password do not match.');
+        toast.error('New password confirmation does not match.');
+        return;
+      }
     }
 
     setAccountSaving(true);
@@ -182,7 +231,17 @@ export default function HrSettingsPage() {
         body: JSON.stringify(accountForm),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error || 'Failed to update account.');
+      if (!res.ok) {
+        const msg = json.error || 'Failed to update account.';
+        if (res.status === 403 || msg.toLowerCase().includes('current password')) {
+          setPasswordError('Current password is wrong! Please retype your exact current password.');
+          toast.error('Current password is wrong!');
+        } else {
+          setPasswordError(msg);
+          toast.error(msg);
+        }
+        return;
+      }
 
       setAccountForm((previous) => ({
         ...previous,
@@ -191,16 +250,63 @@ export default function HrSettingsPage() {
         newPassword: '',
         confirmPassword: '',
       }));
+      setPasswordError('');
       window.dispatchEvent(new Event('hr-profile-updated'));
       toast.success(
         json.emailConfirmationRequired
           ? 'Profile saved. Check your new email to confirm the address.'
-          : 'Account details updated securely.'
+          : 'Account details & password updated securely.'
       );
+      loadUsers();
     } catch (err: any) {
+      setPasswordError(err.message || 'Failed to update account.');
       toast.error(err.message || 'Failed to update account.');
     } finally {
       setAccountSaving(false);
+    }
+  };
+
+  const handleCreateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!userForm.email || !userForm.password || !userForm.displayName) return;
+    if (userForm.password.length < 12) {
+      toast.error('Password must be at least 12 characters long.');
+      return;
+    }
+
+    setUserCreating(true);
+    try {
+      const res = await fetch('/api/auth/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(userForm),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Failed to create user account.');
+
+      toast.success('New HR Admin account created in Supabase Auth!');
+      setUserForm({ displayName: '', email: '', password: '' });
+      setShowAddUserModal(false);
+      loadUsers();
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setUserCreating(false);
+    }
+  };
+
+  const handleDeleteUser = async (userId: string, userEmail: string) => {
+    if (!confirm(`Are you sure you want to delete HR Admin account "${userEmail}"?`)) return;
+
+    try {
+      const res = await fetch(`/api/auth/users?id=${userId}`, { method: 'DELETE' });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Failed to delete user account.');
+
+      toast.success('HR Admin account deleted successfully.');
+      loadUsers();
+    } catch (err: any) {
+      toast.error(err.message);
     }
   };
 
@@ -440,99 +546,247 @@ export default function HrSettingsPage() {
 
       {/* TAB 4: ACCOUNT */}
       {activeTab === 'ACCOUNT' && (
-        <form onSubmit={handleSaveAccount} className="space-y-6 max-w-2xl">
-          <div>
-            <h2 className="text-base font-bold text-slate-900 dark:text-white">Admin Account</h2>
-            <p className="text-slate-500 dark:text-slate-400 text-xs mt-1">
-              Update the identity shown in the HR header. Password changes require your current password.
-            </p>
-          </div>
-
-          <div className="rounded-xl bg-white dark:bg-[#111827]/90 border border-slate-200/80 dark:border-slate-800 p-6 space-y-5 shadow-sm">
+        <div className="space-y-8 max-w-4xl">
+          {/* Section 1: Personal Admin Credentials & Password */}
+          <form onSubmit={handleSaveAccount} className="space-y-6">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Display name</label>
-              <div className="relative">
-                <User className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-                <input
-                  type="text"
-                  required
-                  minLength={2}
-                  maxLength={100}
-                  value={accountForm.displayName}
-                  onChange={(e) => setAccountForm({ ...accountForm, displayName: e.target.value })}
-                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg pl-9 pr-3 py-2 text-sm text-slate-900 dark:text-white"
-                />
+              <h2 className="text-base font-bold text-slate-900 dark:text-white">My Admin Account & Credentials</h2>
+              <p className="text-slate-500 dark:text-slate-400 text-xs mt-1">
+                Update your personal admin profile and password. Current password is required for security verification.
+              </p>
+            </div>
+
+            {/* Profile Identity Card */}
+            <div className="rounded-xl bg-white dark:bg-[#111827]/90 border border-slate-200/80 dark:border-slate-800 p-6 space-y-5 shadow-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Display name</label>
+                  <div className="relative">
+                    <User className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                    <input
+                      type="text"
+                      required
+                      minLength={2}
+                      maxLength={100}
+                      value={accountForm.displayName}
+                      onChange={(e) => setAccountForm({ ...accountForm, displayName: e.target.value })}
+                      className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg pl-9 pr-3 py-2 text-sm text-slate-900 dark:text-white"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Login email</label>
+                  <div className="relative">
+                    <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                    <input
+                      type="email"
+                      required
+                      value={accountForm.email}
+                      onChange={(e) => setAccountForm({ ...accountForm, email: e.target.value })}
+                      className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg pl-9 pr-3 py-2 text-sm text-slate-900 dark:text-white"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Login email</label>
-              <div className="relative">
-                <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-                <input
-                  type="email"
-                  required
-                  value={accountForm.email}
-                  onChange={(e) => setAccountForm({ ...accountForm, email: e.target.value })}
-                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg pl-9 pr-3 py-2 text-sm text-slate-900 dark:text-white"
-                />
+            {/* Change Password Card */}
+            <div className="rounded-xl bg-white dark:bg-[#111827]/90 border border-slate-200/80 dark:border-slate-800 p-6 space-y-5 shadow-sm">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <LockKeyhole className="w-4 h-4 text-red-500" /> Change Password
+                  </h3>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                    Use at least 12 characters. You must enter your <strong>Current Password</strong> to retype and confirm before changes are saved.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowForgotPasswordHelp(!showForgotPasswordHelp)}
+                  className="text-xs text-red-600 dark:text-red-400 hover:underline flex items-center gap-1 font-medium"
+                >
+                  <HelpCircle className="w-3.5 h-3.5" /> Forgot current password?
+                </button>
               </div>
-              <p className="text-[10px] text-slate-500 mt-1">Changing email requires confirmation at both addresses when enabled by Supabase Auth.</p>
-            </div>
-          </div>
 
-          <div className="rounded-xl bg-white dark:bg-[#111827]/90 border border-slate-200/80 dark:border-slate-800 p-6 space-y-5 shadow-sm">
-            <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <LockKeyhole className="w-4 h-4 text-red-500" /> Change password
-            </h3>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400">Use at least 12 characters. Your current password is verified before the change.</p>
+              {showForgotPasswordHelp && (
+                <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-amber-800 dark:text-amber-300 text-xs space-y-1">
+                  <div className="font-bold flex items-center gap-1.5">
+                    <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                    Forgot Your Password?
+                  </div>
+                  <div>
+                    If you cannot remember your current password, contact your system administrator or log out to use the password recovery link on the login page.
+                  </div>
+                </div>
+              )}
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Current password</label>
-              <input
-                type="password"
-                autoComplete="current-password"
-                value={accountForm.currentPassword}
-                onChange={(e) => setAccountForm({ ...accountForm, currentPassword: e.target.value })}
-                className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white"
-              />
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {passwordError && (
+                <div className="p-3 rounded-lg bg-red-100 dark:bg-red-950/50 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-200 text-xs flex items-center gap-2 font-semibold animate-pulse">
+                  <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+                  <span>{passwordError}</span>
+                </div>
+              )}
+
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">New password</label>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                  Current Password <span className="text-red-500">* (Required to retype)</span>
+                </label>
                 <input
                   type="password"
-                  autoComplete="new-password"
-                  minLength={12}
-                  value={accountForm.newPassword}
-                  onChange={(e) => setAccountForm({ ...accountForm, newPassword: e.target.value })}
-                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white"
+                  autoComplete="current-password"
+                  placeholder="Enter your current password..."
+                  value={accountForm.currentPassword}
+                  onChange={(e) => {
+                    setAccountForm({ ...accountForm, currentPassword: e.target.value });
+                    setPasswordError('');
+                  }}
+                  className={`w-full bg-slate-50 dark:bg-slate-900 border ${
+                    passwordError ? 'border-red-500 focus:ring-red-500' : 'border-slate-200 dark:border-slate-700'
+                  } rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white transition`}
                 />
               </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Confirm new password</label>
-                <input
-                  type="password"
-                  autoComplete="new-password"
-                  minLength={12}
-                  value={accountForm.confirmPassword}
-                  onChange={(e) => setAccountForm({ ...accountForm, confirmPassword: e.target.value })}
-                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white"
-                />
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">New password</label>
+                  <input
+                    type="password"
+                    autoComplete="new-password"
+                    minLength={12}
+                    placeholder="At least 12 characters..."
+                    value={accountForm.newPassword}
+                    onChange={(e) => {
+                      setAccountForm({ ...accountForm, newPassword: e.target.value });
+                      setPasswordError('');
+                    }}
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Confirm new password</label>
+                  <input
+                    type="password"
+                    autoComplete="new-password"
+                    minLength={12}
+                    placeholder="Retype new password..."
+                    value={accountForm.confirmPassword}
+                    onChange={(e) => {
+                      setAccountForm({ ...accountForm, confirmPassword: e.target.value });
+                      setPasswordError('');
+                    }}
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white"
+                  />
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="flex justify-end">
-            <button
-              type="submit"
-              disabled={accountSaving}
-              className="px-5 py-2.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-semibold shadow-md shadow-red-600/30 transition disabled:opacity-50"
-            >
-              {accountSaving ? 'Saving securely...' : 'Save Account'}
-            </button>
+            <div className="flex justify-end">
+              <button
+                type="submit"
+                disabled={accountSaving}
+                className="px-5 py-2.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-semibold shadow-md shadow-red-600/30 transition disabled:opacity-50"
+              >
+                {accountSaving ? 'Saving Account...' : 'Save Account Details'}
+              </button>
+            </div>
+          </form>
+
+          {/* Section 2: HR Admin User Accounts Directory */}
+          <div className="pt-6 border-t border-slate-200 dark:border-slate-800 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <ShieldCheck className="w-5 h-5 text-red-500" />
+                  HR Corporate Admin Accounts (Supabase Auth)
+                </h2>
+                <p className="text-slate-500 dark:text-slate-400 text-xs mt-0.5">
+                  Manage backend HR administrator accounts authenticated via Supabase Auth.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowAddUserModal(true)}
+                className="px-3.5 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-semibold shadow-md shadow-red-600/20 transition flex items-center gap-1.5 self-start sm:self-auto"
+              >
+                <UserPlus className="w-4 h-4" /> Add HR Admin Account
+              </button>
+            </div>
+
+            <div className="rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-[#111827]/90 overflow-hidden shadow-sm">
+              <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300">
+                <thead className="bg-slate-50 dark:bg-slate-900/80 border-b border-slate-200 dark:border-slate-800 uppercase tracking-wider text-[10px] text-slate-500 dark:text-slate-400">
+                  <tr>
+                    <th className="px-5 py-3">User / Admin</th>
+                    <th className="px-5 py-3">Email Address</th>
+                    <th className="px-5 py-3">Status</th>
+                    <th className="px-5 py-3">Created Date</th>
+                    <th className="px-5 py-3 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200/80 dark:divide-slate-800/60">
+                  {usersLoading ? (
+                    <tr>
+                      <td colSpan={5} className="px-5 py-8 text-center text-slate-500 text-xs">
+                        <div className="inline-flex items-center gap-2">
+                          <div className="w-3.5 h-3.5 rounded-full border-2 border-slate-400 border-t-red-500 animate-spin" />
+                          Loading accounts from Supabase Auth...
+                        </div>
+                      </td>
+                    </tr>
+                  ) : adminUsers.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="px-5 py-8 text-center text-slate-500 text-xs">
+                        No admin accounts found. Add your first HR user above.
+                      </td>
+                    </tr>
+                  ) : (
+                    adminUsers.map((u) => (
+                      <tr key={u.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition">
+                        <td className="px-5 py-3 font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-full bg-red-100 dark:bg-red-950/60 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800/60 flex items-center justify-center font-bold text-xs shrink-0">
+                            {u.displayName?.[0] || 'A'}
+                          </div>
+                          <div>
+                            <div>{u.displayName}</div>
+                            {u.isCurrent && (
+                              <span className="text-[9px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 rounded px-1.5 py-0.2">
+                                (You / Logged In)
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-5 py-3 text-slate-600 dark:text-slate-300 font-mono text-[11px]">{u.email}</td>
+                        <td className="px-5 py-3">
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+                            ACTIVE
+                          </span>
+                        </td>
+                        <td className="px-5 py-3 text-slate-500 text-[11px]">
+                          {new Date(u.createdAt).toLocaleDateString()}
+                        </td>
+                        <td className="px-5 py-3 text-right">
+                          {u.isCurrent ? (
+                            <span className="text-[10px] text-slate-400 italic">Current Session</span>
+                          ) : (
+                            <button
+                              onClick={() => handleDeleteUser(u.id, u.email)}
+                              className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition"
+                              title="Delete user account"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </form>
+        </div>
       )}
 
       {/* TAB 1: POLICIES */}
@@ -1071,6 +1325,78 @@ export default function HrSettingsPage() {
                   className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white font-semibold shadow-md shadow-red-600/30"
                 >
                   Update Department
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {/* ADD HR ADMIN USER MODAL */}
+      {showAddUserModal && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 p-6 shadow-2xl">
+            <div className="flex items-center justify-between mb-4 border-b border-slate-200 dark:border-slate-800 pb-3">
+              <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <UserPlus className="w-5 h-5 text-red-500" />
+                Add HR Admin Account
+              </h3>
+              <button onClick={() => setShowAddUserModal(false)} className="text-slate-400 hover:text-slate-700 dark:hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateUser} className="space-y-4 text-xs">
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Full Name / Display Name *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Sarah Jenkins"
+                  value={userForm.displayName}
+                  onChange={(e) => setUserForm({ ...userForm, displayName: e.target.value })}
+                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Login Email *</label>
+                <input
+                  type="email"
+                  required
+                  placeholder="e.g. sarah.jenkins@magiccard.corp"
+                  value={userForm.email}
+                  onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
+                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Initial Password * (min 12 chars)</label>
+                <input
+                  type="password"
+                  required
+                  minLength={12}
+                  placeholder="Enter initial password..."
+                  value={userForm.password}
+                  onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
+                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white"
+                />
+              </div>
+
+              <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowAddUserModal(false)}
+                  className="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={userCreating}
+                  className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white font-semibold shadow-md shadow-red-600/30 transition disabled:opacity-50"
+                >
+                  {userCreating ? 'Creating User...' : 'Create Account'}
                 </button>
               </div>
             </form>
