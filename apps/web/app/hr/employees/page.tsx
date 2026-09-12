@@ -30,7 +30,7 @@ import {
 import dynamic from 'next/dynamic';
 import { Employee, Branch, Department, DEFAULT_CR80_TEMPLATE } from '@/lib/data/enterpriseStore';
 import { toast } from '@/components/ui/Toast';
-import Card2DViewer from '@/components/card/Card2DViewer';
+import PhotoPreviewCrop from '@/components/employee/PhotoPreviewCrop';
 
 const ThreeCardViewer = dynamic(() => import('@/components/three/ThreeCardViewer'), {
   ssr: false,
@@ -983,16 +983,10 @@ export default function HrEmployeesPage() {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Photo URL (Optional)</label>
-                <input
-                  type="text"
-                  placeholder="https://..."
-                  value={formData.photoUrl}
-                  onChange={(e) => setFormData({ ...formData, photoUrl: e.target.value })}
-                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition text-[11px]"
-                />
-              </div>
+              <PhotoPreviewCrop
+                photoUrl={formData.photoUrl}
+                onChange={(url) => setFormData({ ...formData, photoUrl: url })}
+              />
 
               <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-2">
                 <button
@@ -1152,16 +1146,10 @@ export default function HrEmployeesPage() {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Photo URL (Optional)</label>
-                <input
-                  type="text"
-                  placeholder="https://..."
-                  value={editFormData.photoUrl}
-                  onChange={(e) => setEditFormData({ ...editFormData, photoUrl: e.target.value })}
-                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition text-[11px]"
-                />
-              </div>
+              <PhotoPreviewCrop
+                photoUrl={editFormData.photoUrl}
+                onChange={(url) => setEditFormData({ ...editFormData, photoUrl: url })}
+              />
 
               <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-2">
                 <button
