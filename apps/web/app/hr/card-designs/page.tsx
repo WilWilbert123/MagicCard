@@ -19,6 +19,8 @@ import {
   QrCode,
   Barcode,
   Eye,
+  X,
+  Filter,
 } from 'lucide-react';
 import { toast } from '@/components/ui/Toast';
 import { resolveDataBinding } from '@workspace/card-engine';
@@ -70,9 +72,9 @@ function MiniCard2DPreview({ layout }: { layout?: any }) {
   const cardW = layout.card?.width || (isVertical ? 540 : 856);
   const cardH = layout.card?.height || (isVertical ? 856 : 540);
 
-  // Target preview container dimensions
-  const targetW = isVertical ? 150 : 250;
-  const targetH = isVertical ? 238 : 158;
+  // Target preview container dimensions for prominent view inside square card
+  const targetW = isVertical ? 230 : 370;
+  const targetH = isVertical ? 364 : 233;
   const scale = targetW / cardW;
 
   const surface = activeSide === 'front' ? layout.front : layout.back;
@@ -83,7 +85,7 @@ function MiniCard2DPreview({ layout }: { layout?: any }) {
   const backCount = layout.back?.elements?.length || 0;
 
   return (
-    <div className="flex flex-col items-center shrink-0" onClick={(e) => e.stopPropagation()}>
+    <div className="flex flex-col items-center shrink-0 my-1" onClick={(e) => e.stopPropagation()}>
       {/* Front / Back surface switcher pill */}
       <div className="flex items-center gap-1 mb-2 bg-slate-100 dark:bg-slate-900/90 p-1 rounded-lg border border-slate-200 dark:border-slate-800 text-[10px]">
         <button
@@ -297,6 +299,9 @@ export default function HrCardDesignsPage() {
   const [loading, setLoading] = useState(true);
   const [activeTemplateId, setActiveTemplateId] = useState<string | null>(null);
 
+  // Branch filter state
+  const [selectedBranchFilter, setSelectedBranchFilter] = useState<string>('ALL');
+
   // Modal State for New / Duplicate Template
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newTemplateName, setNewTemplateName] = useState('');
@@ -304,6 +309,9 @@ export default function HrCardDesignsPage() {
   const [newTemplateBranchId, setNewTemplateBranchId] = useState('ALL');
   const [cloneFromId, setCloneFromId] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Modal State for Version History
+  const [historyTemplate, setHistoryTemplate] = useState<CardTemplateItem | null>(null);
 
   const loadData = async () => {
     setLoading(true);
@@ -407,7 +415,11 @@ export default function HrCardDesignsPage() {
     }
   };
 
-  const activeTemplate = templates.find((t) => t.id === activeTemplateId) || templates[0];
+  const filteredTemplates = templates.filter((tpl) => {
+    if (selectedBranchFilter === 'ALL') return true;
+    if (selectedBranchFilter === 'GLOBAL_ONLY') return tpl.isDefault;
+    return tpl.branchId === selectedBranchFilter;
+  });
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
@@ -441,211 +453,281 @@ export default function HrCardDesignsPage() {
         </div>
       </div>
 
-      {/* Main Template Content */}
+      {/* Top Filter Bar for Branch Templates */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl bg-white dark:bg-[#111827]/90 border border-slate-200/80 dark:border-slate-800 shadow-xs">
+        <div className="flex items-center gap-2.5">
+          <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 shrink-0">
+            <Filter className="w-4 h-4 text-red-500" />
+            Filter by Branch:
+          </span>
+
+          <select
+            value={selectedBranchFilter}
+            onChange={(e) => setSelectedBranchFilter(e.target.value)}
+            className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700/80 rounded-lg px-3 py-1.5 text-xs text-slate-900 dark:text-white font-semibold focus:outline-none focus:border-red-500 min-w-[240px]"
+          >
+            <option value="ALL">All Branches & Templates ({templates.length})</option>
+            <option value="GLOBAL_ONLY">Global Default Only</option>
+            {branches.map((b) => {
+              const count = templates.filter((t) => t.branchId === b.id).length;
+              return (
+                <option key={b.id} value={b.id}>
+                  {b.name} ({count} {count === 1 ? 'template' : 'templates'})
+                </option>
+              );
+            })}
+          </select>
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="text-[11px] text-slate-400 font-mono">
+            Showing {filteredTemplates.length} of {templates.length} templates
+          </span>
+        </div>
+      </div>
+
+      {/* Main Template Content: 2-Column Square Grid Layout */}
       {loading ? (
         <div className="p-12 text-center text-slate-500 border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-[#111827]/90 shadow-sm">
           <div className="w-5 h-5 border-2 border-slate-400 border-t-red-500 rounded-full animate-spin mx-auto mb-2" />
           <p className="text-xs">Loading card templates from database...</p>
         </div>
+      ) : filteredTemplates.length === 0 ? (
+        <div className="p-12 text-center border border-dashed border-slate-300 dark:border-slate-800 rounded-2xl bg-white dark:bg-[#111827]/60 shadow-xs">
+          <Building2 className="w-10 h-10 text-slate-400 mx-auto mb-3 opacity-60" />
+          <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">No Branch-Specific Templates Found</h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm mx-auto">
+            There are no custom ID card templates assigned to this branch yet. You can duplicate a global default template or create a new branch layout.
+          </p>
+          <div className="mt-4 flex items-center justify-center gap-2">
+            <button
+              onClick={() => setSelectedBranchFilter('ALL')}
+              className="px-3.5 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-lg transition"
+            >
+              Show All Templates
+            </button>
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="px-3.5 py-1.5 bg-red-600 hover:bg-red-500 text-white text-xs font-semibold rounded-lg transition flex items-center gap-1"
+            >
+              <Plus className="w-3.5 h-3.5" /> Create Branch Template
+            </button>
+          </div>
+        </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Templates List & Branch Assignment Column */}
-          <div className="lg:col-span-2 space-y-4">
-            {templates.map((tpl) => {
-              const isSelected = tpl.id === activeTemplateId;
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {filteredTemplates.map((tpl) => {
+            const isSelected = tpl.id === activeTemplateId;
 
-              return (
-                <div
-                  key={tpl.id}
-                  onClick={() => setActiveTemplateId(tpl.id)}
-                  className={`rounded-xl bg-white dark:bg-[#111827]/90 border transition p-6 cursor-pointer shadow-sm hover:shadow-md ${
-                    isSelected
-                      ? 'border-red-500/80 ring-1 ring-red-500/50'
-                      : 'border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
-                  }`}
-                >
-                  {/* Top Bar Badges */}
-                  <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-                    <div className="flex items-center gap-2">
-                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-red-100 text-red-800 border border-red-200 dark:bg-red-950 dark:text-red-400 dark:border-red-800">
-                        CR80 Standard (85.60 x 53.98 mm)
+            return (
+              <div
+                key={tpl.id}
+                onClick={() => setActiveTemplateId(tpl.id)}
+                className={`rounded-2xl bg-white dark:bg-[#111827]/95 border transition-all duration-200 p-6 cursor-pointer shadow-sm hover:shadow-xl flex flex-col justify-between min-h-[620px] relative ${
+                  isSelected
+                    ? 'border-red-500/80 ring-2 ring-red-500/30 shadow-red-500/5'
+                    : 'border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+                }`}
+              >
+                {/* Top Section: Header Badges & Small History Button */}
+                <div className="space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-red-100 text-red-800 border border-red-200 dark:bg-red-950 dark:text-red-400 dark:border-red-800">
+                        CR80 Standard
                       </span>
 
                       {/* Branch Scope Badge */}
                       {tpl.isDefault ? (
-                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-sky-100 text-sky-800 border border-sky-200 dark:bg-sky-950/80 dark:text-sky-300 dark:border-sky-800 flex items-center gap-1">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-100 text-sky-800 border border-sky-200 dark:bg-sky-950/80 dark:text-sky-300 dark:border-sky-800 flex items-center gap-1">
                           <Globe className="w-3 h-3 text-sky-500" />
-                          All Branches (Global Default)
+                          All Branches
                         </span>
                       ) : (
-                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-200 dark:bg-purple-950/80 dark:text-purple-300 dark:border-purple-800 flex items-center gap-1">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-200 dark:bg-purple-950/80 dark:text-purple-300 dark:border-purple-800 flex items-center gap-1">
                           <Building2 className="w-3 h-3 text-purple-500" />
-                          Branch: {tpl.branchName}
+                          {tpl.branchName}
                         </span>
                       )}
 
-                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200 dark:bg-emerald-950 dark:text-emerald-400 dark:border-emerald-800 flex items-center gap-1">
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200 dark:bg-emerald-950 dark:text-emerald-400 dark:border-emerald-800 flex items-center gap-1">
                         <CheckCircle2 className="w-3 h-3" /> Published ({tpl.versionTag})
                       </span>
                     </div>
 
-                    <span className="text-[11px] text-slate-400 font-mono">ID: {tpl.id.substring(0, 18)}</span>
+                    {/* Small History Button */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setHistoryTemplate(tpl);
+                      }}
+                      className="px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700/80 bg-slate-50 dark:bg-slate-900/80 text-slate-700 dark:text-slate-300 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 hover:border-red-300 dark:hover:border-red-800 transition flex items-center gap-1.5 text-[11px] font-semibold shadow-xs shrink-0"
+                      title="View Version History"
+                    >
+                      <History className="w-3.5 h-3.5 text-red-500" />
+                      History
+                    </button>
                   </div>
 
-                  {/* Template Info & 2D Mini Preview */}
-                  <div className="flex flex-col md:flex-row gap-4 items-start justify-between mb-4">
-                    <div className="flex-1 space-y-3">
-                      <div>
-                        <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-1 flex items-center gap-2">
-                          {tpl.name}
-                          {tpl.isDefault && (
-                            <span className="text-[10px] font-normal text-amber-500 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 px-2 py-0.5 rounded">
-                              Fallback Template
-                            </span>
-                          )}
-                        </h2>
-                        <p className="text-slate-600 dark:text-slate-400 text-xs leading-relaxed">
-                          {tpl.description || 'Custom ID badge template for corporate personnel credentials.'}
-                        </p>
-                      </div>
-
-                      {/* Specifications Grid */}
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-                        <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800">
-                          <span className="text-slate-500 dark:text-slate-400 block text-[9px] uppercase font-semibold">Dimensions</span>
-                          <span className="font-semibold text-slate-900 dark:text-white text-[11px]">85.60 × 53.98 mm</span>
-                        </div>
-                        <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800">
-                          <span className="text-slate-500 dark:text-slate-400 block text-[9px] uppercase font-semibold">Thickness</span>
-                          <span className="font-semibold text-slate-900 dark:text-white text-[11px]">0.76 mm PVC</span>
-                        </div>
-                        <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800">
-                          <span className="text-slate-500 dark:text-slate-400 block text-[9px] uppercase font-semibold">Print Bleed</span>
-                          <span className="font-semibold text-slate-900 dark:text-white text-[11px]">1.5 mm</span>
-                        </div>
-                        <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800">
-                          <span className="text-slate-500 dark:text-slate-400 block text-[9px] uppercase font-semibold">Safe Margin</span>
-                          <span className="font-semibold text-slate-900 dark:text-white text-[11px]">3.0 mm</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* 2D Mini Card Preview */}
-                    <MiniCard2DPreview layout={tpl.layout} />
-                  </div>
-
-                  {/* Branch Assignment Selector & Action Buttons */}
-                  <div className="pt-3.5 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-                    {/* Branch Assignment Selector */}
-                    <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                      <span className="text-slate-500 font-semibold text-[11px] flex items-center gap-1">
-                        <Building2 className="w-3.5 h-3.5 text-slate-400" />
-                        Assigned Branch:
-                      </span>
-                      <select
-                        value={tpl.branchId || 'ALL'}
-                        onChange={(e) => handleBranchChange(tpl.id, e.target.value)}
-                        className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700/80 rounded-lg px-2.5 py-1 text-xs text-slate-900 dark:text-white font-medium focus:outline-none focus:border-red-500"
-                      >
-                        <option value="ALL">All Branches (Global Default)</option>
-                        {branches.map((b) => (
-                          <option key={b.id} value={b.id}>
-                            {b.name} ({b.code})
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        onClick={() => {
-                          setCloneFromId(tpl.id);
-                          setNewTemplateName(`${tpl.name} (Copy)`);
-                          setNewTemplateDesc(tpl.description);
-                          setShowCreateModal(true);
-                        }}
-                        className="px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 hover:bg-slate-100 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium text-[11px] flex items-center gap-1 transition"
-                        title="Duplicate this template for another branch"
-                      >
-                        <Copy className="w-3.5 h-3.5" /> Duplicate
-                      </button>
-
-                      {!tpl.isDefault && (
-                        <button
-                          onClick={() => handleDeleteTemplate(tpl)}
-                          className="p-1 text-slate-400 hover:text-rose-600 rounded transition"
-                          title="Delete Template"
-                        >
-                          <Trash2 className="w-4 h-4 text-rose-500" />
-                        </button>
+                  {/* Title & Description */}
+                  <div>
+                    <h2 className="text-base font-bold text-slate-900 dark:text-white mb-0.5 flex items-center gap-2">
+                      {tpl.name}
+                      {tpl.isDefault && (
+                        <span className="text-[10px] font-normal text-amber-500 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 px-2 py-0.5 rounded">
+                          Fallback
+                        </span>
                       )}
-
-                      <Link
-                        href={`/hr/card-designs/${tpl.id}/designer`}
-                        className="px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-semibold flex items-center gap-1 transition shadow-sm"
-                      >
-                        <Edit3 className="w-3.5 h-3.5" /> Launch Designer <ArrowUpRight className="w-3.5 h-3.5" />
-                      </Link>
-                    </div>
+                    </h2>
+                    <p className="text-slate-500 dark:text-slate-400 text-xs leading-relaxed line-clamp-2">
+                      {tpl.description || 'Custom ID badge template for corporate personnel credentials.'}
+                    </p>
                   </div>
                 </div>
-              );
-            })}
-          </div>
 
-          {/* Right Column: Active Template Version History */}
-          <div className="rounded-xl bg-white dark:bg-[#111827]/90 border border-slate-200/80 dark:border-slate-800 p-6 shadow-sm h-fit">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <History className="w-4 h-4 text-red-500" /> Version History
-              </h3>
-              <span className="text-[10px] text-slate-500">Immutable Records</span>
+                {/* Middle Section: Centered 2D Mini Card Preview */}
+                <div className="flex-1 flex flex-col items-center justify-center my-3">
+                  <MiniCard2DPreview layout={tpl.layout} />
+
+                  {/* Compact Specifications Pills */}
+                  <div className="flex flex-wrap items-center justify-center gap-1.5 mt-3 text-[10px] text-slate-500 dark:text-slate-400">
+                    <span className="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 font-medium">
+                      85.60 × 53.98 mm
+                    </span>
+                    <span className="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 font-medium">
+                      0.76 mm PVC
+                    </span>
+                    <span className="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 font-medium">
+                      Bleed 1.5mm
+                    </span>
+                  </div>
+                </div>
+
+                {/* Bottom Section: Branch Selector & Action Buttons */}
+                <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2 text-xs">
+                  {/* Branch Selector */}
+                  <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                    <Building2 className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                    <select
+                      value={tpl.branchId || 'ALL'}
+                      onChange={(e) => handleBranchChange(tpl.id, e.target.value)}
+                      className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700/80 rounded-lg px-2 py-1 text-[11px] text-slate-900 dark:text-white font-medium focus:outline-none focus:border-red-500 max-w-[160px] truncate"
+                    >
+                      <option value="ALL">All Branches</option>
+                      {branches.map((b) => (
+                        <option key={b.id} value={b.id}>
+                          {b.name} ({b.code})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      onClick={() => {
+                        setCloneFromId(tpl.id);
+                        setNewTemplateName(`${tpl.name} (Copy)`);
+                        setNewTemplateDesc(tpl.description);
+                        setShowCreateModal(true);
+                      }}
+                      className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 hover:bg-slate-100 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium text-[11px] flex items-center gap-1 transition"
+                      title="Duplicate Template"
+                    >
+                      <Copy className="w-3.5 h-3.5" />
+                    </button>
+
+                    {!tpl.isDefault && (
+                      <button
+                        onClick={() => handleDeleteTemplate(tpl)}
+                        className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg transition"
+                        title="Delete Template"
+                      >
+                        <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                      </button>
+                    )}
+
+                    <Link
+                      href={`/hr/card-designs/${tpl.id}/designer`}
+                      className="px-2.5 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-[11px] font-semibold flex items-center gap-1 transition shadow-xs shrink-0"
+                    >
+                      <Edit3 className="w-3 h-3" /> Designer <ArrowUpRight className="w-3 h-3" />
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Modal: Version History */}
+      {historyTemplate && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+              <div>
+                <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <History className="w-4 h-4 text-red-500" />
+                  Version History
+                </h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  Immutable records for <span className="font-semibold text-slate-700 dark:text-slate-200">{historyTemplate.name}</span>
+                </p>
+              </div>
+              <button
+                onClick={() => setHistoryTemplate(null)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
 
-            {activeTemplate ? (
-              <div className="space-y-3">
-                <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 mb-2 text-xs">
-                  <div className="font-bold text-slate-900 dark:text-white">{activeTemplate.name}</div>
-                  <div className="text-[11px] text-slate-500 mt-0.5 flex items-center gap-1">
-                    <Building2 className="w-3 h-3 text-slate-400" />
-                    {activeTemplate.branchName}
-                  </div>
-                </div>
-
-                {activeTemplate.versions && activeTemplate.versions.length > 0 ? (
-                  activeTemplate.versions.map((ver) => (
-                    <div
-                      key={ver.id}
-                      className={`p-3.5 rounded-lg border text-xs transition ${
-                        ver.status === 'PUBLISHED'
-                          ? 'bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-800/80'
-                          : 'bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                          {ver.versionTag}
-                          {ver.status === 'PUBLISHED' && (
-                            <span className="px-1.5 py-0.2 rounded text-[10px] bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 font-bold">
-                              Current
-                            </span>
-                          )}
-                        </span>
-                        <span className="text-[10px] text-slate-500 dark:text-slate-400 capitalize">{ver.status.toLowerCase()}</span>
-                      </div>
-                      <div className="text-slate-600 dark:text-slate-400 text-[11px] mb-2">{ver.changelog || 'Updated template layout'}</div>
-                      <div className="text-[10px] text-slate-500">
-                        Published: {new Date(ver.publishedAt).toLocaleDateString()}
-                      </div>
+            <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
+              {historyTemplate.versions && historyTemplate.versions.length > 0 ? (
+                historyTemplate.versions.map((ver) => (
+                  <div
+                    key={ver.id}
+                    className={`p-3.5 rounded-xl border text-xs transition ${
+                      ver.status === 'PUBLISHED'
+                        ? 'bg-red-50/60 border-red-200 dark:bg-red-950/30 dark:border-red-800/80'
+                        : 'bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="font-bold text-slate-900 dark:text-white flex items-center gap-2 text-xs">
+                        {ver.versionTag}
+                        {ver.status === 'PUBLISHED' && (
+                          <span className="px-1.5 py-0.2 rounded text-[10px] bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 font-bold">
+                            Current
+                          </span>
+                        )}
+                      </span>
+                      <span className="text-[10px] px-2 py-0.5 rounded font-mono uppercase bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                        {ver.status}
+                      </span>
                     </div>
-                  ))
-                ) : (
-                  <div className="text-center py-6 text-slate-500 text-xs">No version history records found.</div>
-                )}
-              </div>
-            ) : (
-              <div className="text-center py-6 text-slate-500 text-xs">Select a template to view version history.</div>
-            )}
+                    <div className="text-slate-600 dark:text-slate-300 text-[11px] leading-relaxed mb-2">
+                      {ver.changelog || 'Updated template layout and elements'}
+                    </div>
+                    <div className="text-[10px] text-slate-400 font-mono">
+                      Published: {new Date(ver.publishedAt).toLocaleDateString()}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-8 text-slate-500 text-xs">No version history records found.</div>
+              )}
+            </div>
+
+            <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex justify-end">
+              <button
+                onClick={() => setHistoryTemplate(null)}
+                className="px-4 py-2 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold transition"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -731,3 +813,4 @@ export default function HrCardDesignsPage() {
     </div>
   );
 }
+
