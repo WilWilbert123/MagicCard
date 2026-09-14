@@ -9,13 +9,18 @@ export async function POST(request: Request) {
     const admin = createAdminSupabaseClient();
     const now = new Date().toISOString();
 
-    const codeToSearch = kioskCode || kioskId || 'KIOSK-SOR-01';
+    const rawCode = kioskCode || kioskId || 'KIOSK-01';
+    const altCode = rawCode.includes('-00')
+      ? rawCode.replace('-00', '-0')
+      : rawCode.includes('-0')
+      ? rawCode.replace('-0', '-00')
+      : rawCode;
 
-    // 1. Fetch target kiosk from Supabase
+    // 1. Fetch target kiosk dynamically by its exact incoming code (supports KIOSK-009, KIOSK-01, KIOSK-NYC-02, etc.)
     const { data: kiosk } = await admin
       .from('kiosks')
       .select('id, kiosk_code, status')
-      .or(`kiosk_code.eq.${codeToSearch},id.eq.${codeToSearch}`)
+      .or(`kiosk_code.eq.${rawCode},kiosk_code.eq.${altCode},id.eq.${rawCode}`)
       .maybeSingle();
 
     if (kiosk) {
@@ -46,16 +51,20 @@ export async function POST(request: Request) {
       }
 
       if (!matchedBranch) {
-        const { data: defaultBranch } = await admin.from('branches').select('id').limit(1).maybeSingle();
-        matchedBranch = defaultBranch;
+        const { data: defaultBranch } = await admin
+          .from('branches')
+          .select('id')
+          .or('name.eq.BRANCH-001,code.eq.BR-001')
+          .maybeSingle();
+        matchedBranch = defaultBranch || (await admin.from('branches').select('id').limit(1).maybeSingle()).data;
       }
 
       const { data: defaultCompany } = await admin.from('companies').select('id').limit(1).maybeSingle();
 
       if (defaultCompany && matchedBranch) {
         await admin.from('kiosks').insert([{
-          kiosk_code: codeToSearch.toUpperCase(),
-          name: `Terminal (${codeToSearch})`,
+          kiosk_code: rawCode.toUpperCase(),
+          name: `Terminal (${rawCode})`,
           company_id: defaultCompany.id,
           branch_id: matchedBranch.id,
           status: 'ONLINE',

@@ -82,6 +82,11 @@ function isKioskOrPublicApi(request: NextRequest): boolean {
   const method = request.method;
   const isKiosk = request.headers.get('x-kiosk-request') === 'true';
 
+  // Kiosk heartbeat and pairing API endpoints (accessed by background KioskAgent service)
+  if (pathname === '/api/kiosks/heartbeat' || pathname === '/api/kiosks/pair') {
+    return true;
+  }
+
   // Card templates GET is public (reading template layouts)
   if (pathname.startsWith('/api/card-templates') && method === 'GET') {
     return true;
