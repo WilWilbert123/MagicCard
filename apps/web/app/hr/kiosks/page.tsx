@@ -15,6 +15,9 @@ import {
   Trash2,
   Building2,
   Search,
+  Edit3,
+  Layers,
+  X,
 } from 'lucide-react';
 import { KioskDevice, Branch } from '@/lib/data/enterpriseStore';
 import { toast } from '@/components/ui/Toast';
@@ -26,10 +29,16 @@ export default function HrKiosksPage() {
   const [showRegisterModal, setShowRegisterModal] = useState(false);
   const [newKioskCode, setNewKioskCode] = useState('KIOSK-01');
   const [newKioskName, setNewKioskName] = useState('Main Lobby Kiosk');
+  const [newKioskCapacity, setNewKioskCapacity] = useState<number>(50);
   const [selectedBranchId, setSelectedBranchId] = useState('');
 
   const [branchFilter, setBranchFilter] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Custom Tray Capacity Modal State
+  const [editTrayKiosk, setEditTrayKiosk] = useState<KioskDevice | null>(null);
+  const [customCapacityInput, setCustomCapacityInput] = useState<number | string>(50);
+  const [isUpdatingTray, setIsUpdatingTray] = useState(false);
 
   const formatHeartbeatTime = (dateStr?: string) => {
     if (!dateStr) return 'never';
@@ -79,6 +88,7 @@ export default function HrKiosksPage() {
           code: newKioskCode,
           name: newKioskName,
           branchId: selectedBranchId || branches[0]?.id,
+          maxCardCapacity: newKioskCapacity || 50,
           status: 'ONLINE',
         }),
       });
@@ -122,6 +132,51 @@ export default function HrKiosksPage() {
       toast.error(err.message || 'Failed to update kiosk status in database.');
     } finally {
       setUpdatingId(null);
+    }
+  };
+
+  const handleUpdateTrayCapacity = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editTrayKiosk) return;
+
+    const numCap = parseInt(String(customCapacityInput), 10);
+    if (isNaN(numCap) || numCap < 1) {
+      toast.error('Please enter a valid card tray capacity (minimum 1 card).');
+      return;
+    }
+
+    setIsUpdatingTray(true);
+    try {
+      const res = await fetch('/api/kiosks', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: editTrayKiosk.id,
+          maxCardCapacity: numCap,
+        }),
+      });
+
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Failed to update tray capacity');
+
+      toast.success(`Card feed tray set to ${numCap} cards for ${editTrayKiosk.code}. Saved to database!`);
+      setKiosks((prev) =>
+        prev.map((k) =>
+          k.id === editTrayKiosk.id
+            ? {
+                ...k,
+                maxCardCapacity: numCap,
+                cardsRemaining: Math.max(0, numCap - (k.cardsPrinted ?? 0)),
+              }
+            : k
+        )
+      );
+      setEditTrayKiosk(null);
+      loadKiosks();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update tray capacity in database.');
+    } finally {
+      setIsUpdatingTray(false);
     }
   };
 
@@ -266,169 +321,291 @@ export default function HrKiosksPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {filteredKiosks.map((kiosk) => {
-          const isOnline = kiosk.status === 'ONLINE';
-          const isWarning = kiosk.status === 'WARNING';
-          const isDisabled = kiosk.status === 'DISABLED';
+            const isOnline = kiosk.status === 'ONLINE';
+            const isWarning = kiosk.status === 'WARNING';
+            const isDisabled = kiosk.status === 'DISABLED';
+            const maxCap = kiosk.maxCardCapacity ?? 50;
+            const printed = kiosk.cardsPrinted ?? 0;
+            const remaining = Math.max(0, maxCap - printed);
 
-          return (
-            <div
-              key={kiosk.id}
-              className="rounded-xl bg-white dark:bg-[#111827]/90 border border-slate-200/80 dark:border-slate-800 p-6 flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow"
-            >
-              <div>
-                {/* Header Row */}
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-xs font-bold text-slate-800 dark:text-white bg-slate-100 dark:bg-slate-900 px-2.5 py-1 rounded border border-slate-200 dark:border-slate-700">
-                      {kiosk.code}
-                    </span>
-                    <span className="text-xs text-slate-500 dark:text-slate-400">{kiosk.branchName}</span>
-                  </div>
+            return (
+              <div
+                key={kiosk.id}
+                className="rounded-xl bg-white dark:bg-[#111827]/90 border border-slate-200/80 dark:border-slate-800 p-6 flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow"
+              >
+                <div>
+                  {/* Header Row */}
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-xs font-bold text-slate-800 dark:text-white bg-slate-100 dark:bg-slate-900 px-2.5 py-1 rounded border border-slate-200 dark:border-slate-700">
+                        {kiosk.code}
+                      </span>
+                      <span className="text-xs text-slate-500 dark:text-slate-400">{kiosk.branchName}</span>
+                    </div>
 
-                  {/* Status Badge */}
-                  <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold flex items-center gap-1 border ${
-                    isOnline
-                      ? 'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-400 dark:border-emerald-800'
-                      : isWarning
-                      ? 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-950 dark:text-amber-400 dark:border-amber-800'
-                      : 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'
-                  }`}>
-                    {isOnline && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />}
-                    {kiosk.status}
-                  </span>
-                </div>
-
-                <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">{kiosk.name}</h3>
-
-                {/* Specs Grid */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs mb-4">
-                  <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800">
-                    <span className="text-slate-500 block text-[10px] uppercase font-semibold">Printer Model</span>
-                    <span className="font-semibold text-slate-900 dark:text-white">{kiosk.printerModel || 'Magicard 600NEO'}</span>
-                    <span className={`block text-[11px] mt-1 font-medium ${isWarning ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
-                      {kiosk.printerStatus}
+                    {/* Status Badge */}
+                    <span
+                      className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold flex items-center gap-1 border ${
+                        isOnline
+                          ? 'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-400 dark:border-emerald-800'
+                          : isWarning
+                          ? 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-950 dark:text-amber-400 dark:border-amber-800'
+                          : 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'
+                      }`}
+                    >
+                      {isOnline && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />}
+                      {kiosk.status}
                     </span>
                   </div>
 
-                  <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800">
-                    <span className="text-slate-500 block text-[10px] uppercase font-semibold">Card Feed Tray</span>
-                    <div className="flex items-center justify-between mt-1">
-                      <span className="font-bold text-slate-900 dark:text-white">
-                        {kiosk.cardsPrinted ?? 0} / {kiosk.maxCardCapacity ?? 50} Printed
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">{kiosk.name}</h3>
+
+                  {/* Specs Grid */}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs mb-4">
+                    <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800">
+                      <span className="text-slate-500 block text-[10px] uppercase font-semibold">Printer Model</span>
+                      <span className="font-semibold text-slate-900 dark:text-white">{kiosk.printerModel || 'Magicard 600NEO'}</span>
+                      <span
+                        className={`block text-[11px] mt-1 font-medium ${
+                          isWarning ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'
+                        }`}
+                      >
+                        {kiosk.printerStatus}
                       </span>
                     </div>
-                    <div className="w-full h-1.5 bg-slate-200 dark:bg-slate-800 rounded-full mt-1.5 overflow-hidden">
-                      <div
-                        style={{ width: `${Math.min(100, (((kiosk.cardsPrinted ?? 0) / (kiosk.maxCardCapacity ?? 50)) * 100))}%` }}
-                        className="h-full rounded-full bg-blue-500"
-                      />
-                    </div>
-                    <span className="block text-[10px] text-slate-400 mt-1">
-                      {kiosk.cardsRemaining ?? 50} cards remaining
-                    </span>
-                  </div>
 
-                  <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800">
-                    <span className="text-slate-500 block text-[10px] uppercase font-semibold">Ribbon Gauge</span>
-                    <div className="flex items-center justify-between mt-1">
-                      <span className="font-bold text-slate-900 dark:text-white">{kiosk.ribbonLevelPct}%</span>
-                      <span className="text-[10px] text-slate-400">YMCKO</span>
-                    </div>
-                    <div className="w-full h-1.5 bg-slate-200 dark:bg-slate-800 rounded-full mt-1.5 overflow-hidden">
-                      <div
-                        style={{ width: `${kiosk.ribbonLevelPct}%` }}
-                        className={`h-full rounded-full ${
-                          kiosk.ribbonLevelPct > 30 ? 'bg-emerald-500' : 'bg-amber-500'
-                        }`}
-                      />
-                    </div>
-                  </div>
+                    {/* Editable Card Feed Tray Box */}
+                    <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 relative group">
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-500 block text-[10px] uppercase font-semibold">Card Feed Tray</span>
+                        <button
+                          onClick={() => {
+                            setEditTrayKiosk(kiosk);
+                            setCustomCapacityInput(maxCap);
+                          }}
+                          className="px-1.5 py-0.5 rounded text-[10px] font-semibold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 hover:bg-red-100 transition flex items-center gap-1"
+                          title="Set cards inserted into tray"
+                        >
+                          <Edit3 className="w-3 h-3" /> Set Tray
+                        </button>
+                      </div>
 
-                  <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800">
-                    <span className="text-slate-500 block text-[10px] uppercase font-semibold">Agent Version</span>
-                    <span className="font-mono text-slate-900 dark:text-white">{kiosk.agentVersion} (Daemon: 7125)</span>
-                  </div>
+                      <div className="flex items-center justify-between mt-1">
+                        <span className="font-bold text-slate-900 dark:text-white">
+                          {printed} / {maxCap} Printed
+                        </span>
+                      </div>
 
-                  <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 col-span-2 sm:col-span-1">
-                    <span className="text-slate-500 block text-[10px] uppercase font-semibold">Active Template</span>
-                    <span className="text-emerald-600 dark:text-emerald-400 font-semibold">{kiosk.activeTemplateVersion}</span>
+                      <div className="w-full h-1.5 bg-slate-200 dark:bg-slate-800 rounded-full mt-1.5 overflow-hidden">
+                        <div
+                          style={{ width: `${Math.min(100, (printed / maxCap) * 100)}%` }}
+                          className="h-full rounded-full bg-blue-500"
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between mt-1">
+                        <span className="block text-[10px] text-slate-400">
+                          {remaining} cards remaining
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800">
+                      <span className="text-slate-500 block text-[10px] uppercase font-semibold">Ribbon Gauge</span>
+                      <div className="flex items-center justify-between mt-1">
+                        <span className="font-bold text-slate-900 dark:text-white">{kiosk.ribbonLevelPct}%</span>
+                        <span className="text-[10px] text-slate-400">YMCKO</span>
+                      </div>
+                      <div className="w-full h-1.5 bg-slate-200 dark:bg-slate-800 rounded-full mt-1.5 overflow-hidden">
+                        <div
+                          style={{ width: `${kiosk.ribbonLevelPct}%` }}
+                          className={`h-full rounded-full ${
+                            kiosk.ribbonLevelPct > 30 ? 'bg-emerald-500' : 'bg-amber-500'
+                          }`}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800">
+                      <span className="text-slate-500 block text-[10px] uppercase font-semibold">Agent Version</span>
+                      <span className="font-mono text-slate-900 dark:text-white">{kiosk.agentVersion} (Daemon: 7125)</span>
+                    </div>
+
+                    <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 col-span-2 sm:col-span-1">
+                      <span className="text-slate-500 block text-[10px] uppercase font-semibold">Active Template</span>
+                      <span className="text-emerald-600 dark:text-emerald-400 font-semibold">{kiosk.activeTemplateVersion}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Bottom Row */}
-              <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs">
-                <span className="text-slate-500 text-[11px] flex items-center gap-1">
-                  <Wifi className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                  IP: {kiosk.ipAddress} • Last heartbeat: {formatHeartbeatTime(kiosk.lastHeartbeat)}
-                </span>
+                {/* Bottom Row */}
+                <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs">
+                  <span className="text-slate-500 text-[11px] flex items-center gap-1">
+                    <Wifi className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                    IP: {kiosk.ipAddress} • Last heartbeat: {formatHeartbeatTime(kiosk.lastHeartbeat)}
+                  </span>
 
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={async () => {
-                      try {
-                        const res = await fetch('/api/kiosks/pair', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ action: 'generate', kioskId: kiosk.id }),
-                        });
-                        const json = await res.json();
-                        if (json.pairingCode) {
-                          alert(`KIOSK ${kiosk.code} One-Time Pairing Code:\n\n${json.pairingCode}\n\nEnter this code in KioskAgent setup installer on host.`);
-                        } else {
-                          toast.error(json.error || 'Failed to generate code');
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={async () => {
+                        try {
+                          const res = await fetch('/api/kiosks/pair', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ action: 'generate', kioskId: kiosk.id }),
+                          });
+                          const json = await res.json();
+                          if (json.pairingCode) {
+                            alert(
+                              `KIOSK ${kiosk.code} One-Time Pairing Code:\n\n${json.pairingCode}\n\nEnter this code in KioskAgent setup installer on host.`
+                            );
+                          } else {
+                            toast.error(json.error || 'Failed to generate code');
+                          }
+                        } catch (err: any) {
+                          toast.error(err.message);
                         }
-                      } catch (err: any) {
-                        toast.error(err.message);
-                      }
-                    }}
-                    className="px-2.5 py-1.5 rounded text-xs font-semibold bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 dark:bg-red-950/40 dark:hover:bg-red-900/60 dark:text-red-400 dark:border-red-900 transition flex items-center gap-1"
-                    title="Generate 6-digit pairing code for hardware KioskAgent"
-                  >
-                    <HardDrive className="w-3.5 h-3.5" />
-                    Pair Agent
-                  </button>
+                      }}
+                      className="px-2.5 py-1.5 rounded text-xs font-semibold bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 dark:bg-red-950/40 dark:hover:bg-red-900/60 dark:text-red-400 dark:border-red-900 transition flex items-center gap-1"
+                      title="Generate 6-digit pairing code for hardware KioskAgent"
+                    >
+                      <HardDrive className="w-3.5 h-3.5" />
+                      Pair Agent
+                    </button>
 
-                  <button
-                    onClick={() => handleDeleteKiosk(kiosk)}
-                    className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition"
-                    title="Delete Terminal"
-                  >
-                    <Trash2 className="w-4 h-4 text-rose-500" />
-                  </button>
+                    <button
+                      onClick={() => handleDeleteKiosk(kiosk)}
+                      className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition"
+                      title="Delete Terminal"
+                    >
+                      <Trash2 className="w-4 h-4 text-rose-500" />
+                    </button>
 
-                  <button
-                    onClick={() => toggleKioskStatus(kiosk)}
-                    disabled={updatingId === kiosk.id}
-                    className={`px-3 py-1.5 rounded text-xs font-semibold flex items-center gap-1.5 transition ${
-                      updatingId === kiosk.id
-                        ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 border border-slate-200 dark:border-slate-700 cursor-not-allowed'
-                        : isDisabled
-                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-300 hover:bg-emerald-200 dark:bg-emerald-950 dark:text-emerald-400 dark:border-emerald-800 dark:hover:bg-emerald-900'
-                        : 'bg-slate-100 hover:bg-rose-100 text-slate-700 hover:text-rose-700 border border-slate-200 dark:bg-slate-800 dark:hover:bg-rose-950 dark:text-slate-300 dark:hover:text-rose-400 dark:border-slate-700'
-                    }`}
-                  >
-                    {updatingId === kiosk.id ? (
-                      <>
-                        <div className="w-3 h-3 border border-slate-400 border-t-slate-700 rounded-full animate-spin" />
-                        Saving...
-                      </>
-                    ) : (
-                      <>
-                        <Power className="w-3.5 h-3.5" />
-                        {isDisabled ? 'Activate' : 'Disable'}
-                      </>
-                    )}
-                  </button>
+                    <button
+                      onClick={() => toggleKioskStatus(kiosk)}
+                      disabled={updatingId === kiosk.id}
+                      className={`px-3 py-1.5 rounded text-xs font-semibold flex items-center gap-1.5 transition ${
+                        updatingId === kiosk.id
+                          ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 border border-slate-200 dark:border-slate-700 cursor-not-allowed'
+                          : isDisabled
+                          ? 'bg-emerald-100 text-emerald-800 border border-emerald-300 hover:bg-emerald-200 dark:bg-emerald-950 dark:text-emerald-400 dark:border-emerald-800 dark:hover:bg-emerald-900'
+                          : 'bg-slate-100 hover:bg-rose-100 text-slate-700 hover:text-rose-700 border border-slate-200 dark:bg-slate-800 dark:hover:bg-rose-950 dark:text-slate-300 dark:hover:text-rose-400 dark:border-slate-700'
+                      }`}
+                    >
+                      {updatingId === kiosk.id ? (
+                        <>
+                          <div className="w-3 h-3 border border-slate-400 border-t-slate-700 rounded-full animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          <Power className="w-3.5 h-3.5" />
+                          {isDisabled ? 'Activate' : 'Disable'}
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
         </div>
       )}
 
-      {/* Register Modal */}
+      {/* Modal: Customize / Refill Card Feed Tray */}
+      {editTrayKiosk && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+              <div>
+                <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <Layers className="w-4 h-4 text-red-500" />
+                  Customize Card Feed Tray
+                </h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  Set number of cards inserted into <span className="font-semibold text-slate-700 dark:text-slate-200">{editTrayKiosk.code}</span>
+                </p>
+              </div>
+              <button
+                onClick={() => setEditTrayKiosk(null)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateTrayCapacity} className="space-y-4 text-xs">
+              <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 space-y-1">
+                <div className="text-slate-700 dark:text-slate-300 font-semibold">{editTrayKiosk.name}</div>
+                <div className="text-[11px] text-slate-500">Branch: {editTrayKiosk.branchName}</div>
+                <div className="text-[11px] text-slate-500">Currently Printed: <span className="font-mono font-bold text-slate-700 dark:text-slate-300">{editTrayKiosk.cardsPrinted ?? 0}</span> cards</div>
+              </div>
+
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 mb-1.5 font-semibold">
+                  Inserted Card Quantity (Tray Capacity)
+                </label>
+                <input
+                  type="number"
+                  required
+                  min={1}
+                  max={500}
+                  value={customCapacityInput}
+                  onChange={(e) => setCustomCapacityInput(e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-slate-900 dark:text-white font-mono text-sm focus:outline-none focus:border-red-500"
+                />
+              </div>
+
+              {/* Quick Presets */}
+              <div>
+                <span className="block text-[11px] text-slate-500 mb-1.5 font-medium">Quick Presets:</span>
+                <div className="grid grid-cols-4 gap-2">
+                  {[20, 30, 50, 100].map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => setCustomCapacityInput(preset)}
+                      className={`py-1.5 px-2 rounded-lg border text-xs font-semibold transition ${
+                        Number(customCapacityInput) === preset
+                          ? 'bg-red-600 text-white border-red-600 shadow-xs'
+                          : 'bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800'
+                      }`}
+                    >
+                      {preset} Cards
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEditTrayKiosk(null)}
+                  className="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isUpdatingTray}
+                  className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white font-semibold shadow flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  {isUpdatingTray ? (
+                    <>
+                      <div className="w-3.5 h-3.5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    'Save & Update Tray'
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Register New KIOSK */}
       {showRegisterModal && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="w-full max-w-md rounded-2xl bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 p-6 shadow-2xl">
@@ -457,6 +634,20 @@ export default function HrKiosksPage() {
               </div>
 
               <div>
+                <label className="block text-slate-700 dark:text-slate-300 mb-1 font-medium">Card Feed Tray Capacity (Inserted Cards)</label>
+                <input
+                  type="number"
+                  required
+                  min={1}
+                  max={500}
+                  value={newKioskCapacity}
+                  onChange={(e) => setNewKioskCapacity(parseInt(e.target.value, 10) || 50)}
+                  placeholder="e.g. 30, 50, 100"
+                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2 text-slate-900 dark:text-white font-mono"
+                />
+              </div>
+
+              <div>
                 <label className="block text-slate-700 dark:text-slate-300 mb-1 font-medium">Assigned Branch</label>
                 <select
                   value={selectedBranchId}
@@ -464,7 +655,9 @@ export default function HrKiosksPage() {
                   className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2 text-slate-900 dark:text-white"
                 >
                   {branches.map((b) => (
-                    <option key={b.id} value={b.id}>{b.name}</option>
+                    <option key={b.id} value={b.id}>
+                      {b.name}
+                    </option>
                   ))}
                 </select>
               </div>

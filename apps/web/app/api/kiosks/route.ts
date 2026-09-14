@@ -1,13 +1,22 @@
 import { NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { requireAuth } from '@/lib/auth/require-auth';
+
+async function getSupabaseClient() {
+  try {
+    return createAdminClient();
+  } catch {
+    return await createServerSupabaseClient();
+  }
+}
 
 export async function GET() {
   const auth = await requireAuth();
   if (!auth.authenticated) return auth.response;
 
   try {
-    const supabase = await createServerSupabaseClient();
+    const supabase = await getSupabaseClient();
     const [{ data: kiosks, error }, { data: branches }, { data: templateVersions }, { data: printJobs }] = await Promise.all([
       supabase.from('kiosks').select('*').order('created_at', { ascending: false }),
       supabase.from('branches').select('id, name'),
@@ -83,12 +92,12 @@ export async function PATCH(request: Request) {
 
   try {
     const body = await request.json();
-    const { id, status, name, code, ipAddress } = body;
+    const { id, status, name, code, ipAddress, maxCardCapacity } = body;
     if (!id) {
       return NextResponse.json({ error: 'Missing kiosk id' }, { status: 400 });
     }
 
-    const supabase = await createServerSupabaseClient();
+    const supabase = await getSupabaseClient();
     const updatePayload: any = {
       updated_at: new Date().toISOString(),
     };
@@ -96,17 +105,19 @@ export async function PATCH(request: Request) {
     if (name) updatePayload.name = name;
     if (code) updatePayload.kiosk_code = code;
     if (ipAddress) updatePayload.ip_address = ipAddress;
+    if (maxCardCapacity !== undefined && maxCardCapacity !== null) {
+      updatePayload.max_card_capacity = parseInt(maxCardCapacity, 10);
+    }
 
     const { data, error } = await supabase
       .from('kiosks')
       .update(updatePayload)
       .eq('id', id)
-      .select()
-      .single();
+      .select();
 
     if (error) throw error;
 
-    return NextResponse.json({ data });
+    return NextResponse.json({ data: data?.[0] || { id, ...updatePayload } });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
@@ -122,17 +133,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing required kiosk code or name' }, { status: 400 });
     }
 
-    const supabase = await createServerSupabaseClient();
+    const supabase = await getSupabaseClient();
 
     let companyId = body.companyId;
     if (!companyId) {
-      const { data: comp } = await supabase.from('companies').select('id').limit(1).single();
+      const { data: comp } = await supabase.from('companies').select('id').limit(1).maybeSingle();
       companyId = comp?.id;
     }
 
     let branchId = body.branchId;
     if (!branchId) {
-      const { data: br } = await supabase.from('branches').select('id').limit(1).single();
+      const { data: br } = await supabase.from('branches').select('id').limit(1).maybeSingle();
       branchId = br?.id;
     }
 
@@ -144,6 +155,7 @@ export async function POST(request: Request) {
       app_version: body.appVersion || 'v2.1.0',
       ip_address: body.ipAddress || '127.0.0.1',
       printer_status_summary: body.printerStatus || 'READY',
+      max_card_capacity: body.maxCardCapacity ? parseInt(body.maxCardCapacity, 10) : 50,
     };
 
     if (companyId) newKiosk.company_id = companyId;
@@ -152,12 +164,11 @@ export async function POST(request: Request) {
     const { data, error } = await supabase
       .from('kiosks')
       .insert([newKiosk])
-      .select()
-      .single();
+      .select();
 
     if (error) throw error;
 
-    return NextResponse.json({ data }, { status: 201 });
+    return NextResponse.json({ data: data?.[0] }, { status: 201 });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
@@ -172,7 +183,7 @@ export async function DELETE(request: Request) {
     const id = searchParams.get('id');
     if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
 
-    const supabase = await createServerSupabaseClient();
+    const supabase = await getSupabaseClient();
     const { error } = await supabase.from('kiosks').delete().eq('id', id);
 
     if (error) throw error;
