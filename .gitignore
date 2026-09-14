@@ -42,3 +42,11 @@ Thumbs.db
 # Cache
 .cache/
 .eslintcache
+
+# .NET Build & Installer Outputs
+bin/
+obj/
+**/bin/
+**/obj/
+installer/output/
+

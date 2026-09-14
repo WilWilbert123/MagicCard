@@ -36,14 +36,10 @@ if (useMock)
 {
     builder.Services.AddSingleton<ICardPrinter, MockCardPrinter>();
 }
-else if (string.Equals(printerType, "Windows", StringComparison.OrdinalIgnoreCase))
-{
-    builder.Services.AddSingleton<ICardPrinter, WindowsCardPrinter>();
-}
 else
 {
-    // Default to Mock for safe execution if physical printer is not present
-    builder.Services.AddSingleton<ICardPrinter, MockCardPrinter>();
+    // Register WindowsCardPrinter for live physical hardware printing via Windows Print Spooler
+    builder.Services.AddSingleton<ICardPrinter, WindowsCardPrinter>();
 }
 
 builder.Services.AddSingleton<IMagicCardAdapter, MagicCardTrustIdAdapter>();
