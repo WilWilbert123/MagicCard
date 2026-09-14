@@ -33,6 +33,9 @@ export async function GET() {
         ? `v${(templateVersions || []).find((t) => t.status === 'PUBLISHED')?.version_number}.0.0`
         : 'v1.0.0';
 
+    const now = Date.now();
+    const staleKioskIds: string[] = [];
+
     const mapped = (kiosks || []).map((k: any) => {
       // Parse ribbon level % if mentioned in printer status summary e.g. "Ribbon 94%"
       let ribbonPct = 100;
@@ -55,26 +58,56 @@ export async function GET() {
         ? templateMap.get(k.active_template_version_id) || defaultPublishedTag
         : defaultPublishedTag;
 
+      // Real-time heartbeat validation: Kiosk sends ping every 30s. If no heartbeat within 120s (2 mins), it's OFFLINE
+      const lastHbTime = k.last_heartbeat_at ? new Date(k.last_heartbeat_at).getTime() : 0;
+      const diffMs = now - lastHbTime;
+
+      let computedStatus = k.status || 'OFFLINE';
+      if (computedStatus !== 'DISABLED') {
+        if (!k.last_heartbeat_at || isNaN(diffMs) || diffMs > 120000) {
+          computedStatus = 'OFFLINE';
+          if (k.status === 'ONLINE') {
+            staleKioskIds.push(k.id);
+          }
+        } else {
+          computedStatus = 'ONLINE';
+        }
+      }
+
+      const isOffline = computedStatus === 'OFFLINE';
+      const printerStatusSummary = isOffline
+        ? 'OFFLINE (Agent Disconnected)'
+        : k.printer_status_summary || 'READY';
+
       return {
         id: k.id,
         code: k.kiosk_code,
         name: k.name,
         branchId: k.branch_id,
         branchName: branchMap.get(k.branch_id) || 'Unassigned',
-        status: k.status || 'OFFLINE',
+        status: computedStatus,
         agentVersion: k.agent_version || 'v1.4.0',
         appVersion: k.app_version || 'v2.1.0',
         ipAddress: k.ip_address || '127.0.0.1',
         activeTemplateVersion: activeTag,
         printerModel: 'Magicard 600NEO',
-        printerStatus: k.printer_status_summary || 'READY',
-        ribbonLevelPct: ribbonPct,
+        printerStatus: printerStatusSummary,
+        ribbonLevelPct: isOffline ? 0 : ribbonPct,
         cardsPrinted,
         maxCardCapacity,
         cardsRemaining,
         lastHeartbeat: k.last_heartbeat_at || k.created_at,
       };
     });
+
+    // Asynchronously sync DB rows for kiosks whose heartbeats have expired
+    if (staleKioskIds.length > 0) {
+      supabase
+        .from('kiosks')
+        .update({ status: 'OFFLINE', updated_at: new Date().toISOString() })
+        .in('id', staleKioskIds)
+        .then();
+    }
 
     return NextResponse.json({
       data: mapped,
