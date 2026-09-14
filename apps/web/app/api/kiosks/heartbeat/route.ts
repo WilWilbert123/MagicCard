@@ -33,15 +33,31 @@ export async function POST(request: Request) {
       await admin.from('kiosks').update(updateData).eq('id', kiosk.id);
     } else {
       // Auto-register new KIOSK terminal when installer on another laptop connects!
-      const { data: defaultCompany } = await admin.from('companies').select('id').limit(1).maybeSingle();
-      const { data: defaultBranch } = await admin.from('branches').select('id').limit(1).maybeSingle();
+      const targetBranchStr = body.branchId || body.branchCode || body.branchName;
+      let matchedBranch: any = null;
 
-      if (defaultCompany && defaultBranch) {
+      if (targetBranchStr) {
+        const { data: b } = await admin
+          .from('branches')
+          .select('id')
+          .or(`id.eq.${targetBranchStr},name.eq.${targetBranchStr},code.eq.${targetBranchStr}`)
+          .maybeSingle();
+        matchedBranch = b;
+      }
+
+      if (!matchedBranch) {
+        const { data: defaultBranch } = await admin.from('branches').select('id').limit(1).maybeSingle();
+        matchedBranch = defaultBranch;
+      }
+
+      const { data: defaultCompany } = await admin.from('companies').select('id').limit(1).maybeSingle();
+
+      if (defaultCompany && matchedBranch) {
         await admin.from('kiosks').insert([{
           kiosk_code: codeToSearch.toUpperCase(),
           name: `Terminal (${codeToSearch})`,
           company_id: defaultCompany.id,
-          branch_id: defaultBranch.id,
+          branch_id: matchedBranch.id,
           status: 'ONLINE',
           agent_version: agentVersion || 'v1.4.0',
           ip_address: ipAddress || '127.0.0.1',
