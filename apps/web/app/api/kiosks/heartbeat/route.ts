@@ -31,6 +31,25 @@ export async function POST(request: Request) {
       if (ipAddress) updateData.ip_address = ipAddress;
 
       await admin.from('kiosks').update(updateData).eq('id', kiosk.id);
+    } else {
+      // Auto-register new KIOSK terminal when installer on another laptop connects!
+      const { data: defaultCompany } = await admin.from('companies').select('id').limit(1).maybeSingle();
+      const { data: defaultBranch } = await admin.from('branches').select('id').limit(1).maybeSingle();
+
+      if (defaultCompany && defaultBranch) {
+        await admin.from('kiosks').insert([{
+          kiosk_code: codeToSearch.toUpperCase(),
+          name: `Terminal (${codeToSearch})`,
+          company_id: defaultCompany.id,
+          branch_id: defaultBranch.id,
+          status: 'ONLINE',
+          agent_version: agentVersion || 'v1.4.0',
+          ip_address: ipAddress || '127.0.0.1',
+          printer_status_summary: printerStatus || 'READY',
+          max_card_capacity: 50,
+          last_heartbeat_at: now,
+        }]);
+      }
     }
 
     // 2. Fetch current published template version from Supabase
