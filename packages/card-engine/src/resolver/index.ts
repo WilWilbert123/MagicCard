@@ -18,12 +18,57 @@ export interface EmployeeResolutionContext {
   verificationToken?: string;
 }
 
+export function encodeVerificationToken(employeeNumber: string): string {
+  if (!employeeNumber) return '';
+  const clean = employeeNumber.trim();
+  try {
+    const raw = `SEAL_2028:${clean}`;
+    let base64 = '';
+    if (typeof Buffer !== 'undefined') {
+      base64 = Buffer.from(raw, 'utf-8').toString('base64');
+    } else if (typeof btoa !== 'undefined') {
+      base64 = btoa(raw);
+    } else {
+      return clean;
+    }
+    const safe = base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    return `v1_${safe}`;
+  } catch {
+    return clean;
+  }
+}
+
+export function decodeVerificationToken(token: string): string {
+  if (!token) return '';
+  const clean = token.trim();
+  if (clean.startsWith('v1_')) {
+    try {
+      let base64 = clean.slice(3).replace(/-/g, '+').replace(/_/g, '/');
+      while (base64.length % 4 !== 0) {
+        base64 += '=';
+      }
+      let decoded = '';
+      if (typeof Buffer !== 'undefined') {
+        decoded = Buffer.from(base64, 'base64').toString('utf-8');
+      } else if (typeof atob !== 'undefined') {
+        decoded = atob(base64);
+      }
+      if (decoded.startsWith('SEAL_2028:')) {
+        return decoded.slice(10);
+      }
+    } catch {
+      // Fallback to raw token
+    }
+  }
+  return clean;
+}
+
 /**
  * Builds the canonical lookup dictionary from an employee record.
  */
 export function buildResolutionDictionary(
   employee: EmployeeResolutionContext,
-  baseUrl = 'https://verify.acmecorp.com'
+  baseUrl = 'https://magic-card-trust-id.vercel.app'
 ): Record<string, string> {
   const constructedFullName = employee.fullName || 
     [employee.firstName, employee.middleName, employee.lastName, employee.suffix]
@@ -31,16 +76,20 @@ export function buildResolutionDictionary(
       .join(' ');
 
   const empAny = employee as any;
-  const cleanBase = (baseUrl || 'https://verify.acmecorp.com').trim().replace(/\/+$/, '');
+  const rawBase = (baseUrl && baseUrl !== 'https://verify.acmecorp.com')
+    ? baseUrl
+    : 'https://magic-card-trust-id.vercel.app';
+  const cleanBase = rawBase.trim().replace(/\/+$/, '');
+  
+  const token = encodeVerificationToken(employee.employeeNumber || '');
   let verificationUrl = '';
 
-  if (cleanBase.includes('.php') || cleanBase.includes('.html') || cleanBase.includes('?')) {
-    const sep = cleanBase.includes('?') ? '&' : '?';
-    verificationUrl = `${cleanBase}${sep}emp=${encodeURIComponent(employee.employeeNumber || '')}`;
-  } else if (cleanBase.endsWith('/verify')) {
-    verificationUrl = `${cleanBase}/${encodeURIComponent(employee.employeeNumber || '')}`;
+  if (cleanBase.endsWith('/verify')) {
+    verificationUrl = `${cleanBase}/${encodeURIComponent(token)}`;
+  } else if (cleanBase.includes('/verify/')) {
+    verificationUrl = cleanBase.replace(/\/verify\/.*$/, `/verify/${encodeURIComponent(token)}`);
   } else {
-    verificationUrl = `${cleanBase}/verify/${encodeURIComponent(employee.employeeNumber || '')}`;
+    verificationUrl = `${cleanBase}/verify/${encodeURIComponent(token)}`;
   }
 
   return {
@@ -73,19 +122,30 @@ export function resolveDataBinding(
     return '';
   }
 
-  const dict = buildResolutionDictionary(employee, baseUrl);
+  const effectiveBaseUrl = (baseUrl && baseUrl !== 'https://verify.acmecorp.com')
+    ? baseUrl
+    : 'https://magic-card-trust-id.vercel.app';
+
+  const dict = buildResolutionDictionary(employee, effectiveBaseUrl);
   let result = templateString;
 
-  // If a custom verification baseUrl is provided, dynamically replace legacy hardcoded verification domains
-  if (baseUrl) {
+  // Dynamically replace legacy hardcoded domain strings with the dynamic Vercel domain setting
+  if (
+    result.includes('verify.acmecorp.com') ||
+    result.includes('verify.magiccard.corp') ||
+    result.includes('verify.corp.com')
+  ) {
     const customUrl = dict['system.verificationUrl'];
-    if (
-      result.includes('verify.acmecorp.com') ||
-      result.includes('verify.magiccard.corp') ||
-      result.includes('verify.corp.com')
-    ) {
+
+    // If the template string is a direct link or verification URL, substitute the target URL
+    if (result.includes('/{{') || result.includes('/id') || result.endsWith('/id') || !result.includes(' ')) {
       return customUrl;
     }
+
+    result = result
+      .replace(/https?:\/\/verify\.(acmecorp\.com|magiccard\.corp|corp\.com)\/id/gi, customUrl)
+      .replace(/https?:\/\/verify\.(acmecorp\.com|magiccard\.corp|corp\.com)\/\{\{\s*employee\.employeeNumber\s*\}\}/gi, customUrl)
+      .replace(/https?:\/\/verify\.(acmecorp\.com|magiccard\.corp|corp\.com)/gi, effectiveBaseUrl);
   }
 
   if (!result.includes('{{')) {

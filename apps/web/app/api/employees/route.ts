@@ -20,84 +20,123 @@ export async function GET(request: Request) {
 
   try {
     const admin = createAdminSupabaseClient();
-    const supabase = await createServerSupabaseClient();
-
-    let queryBuilder = supabase
-      .from('employees')
-      .select('*')
-      .order('created_at', { ascending: false });
+    let employees: any[] = [];
 
     if (employeeNumber) {
-      queryBuilder = queryBuilder.ilike('employee_number', employeeNumber.trim());
-    } else if (query) {
-      const q = query.trim();
-      queryBuilder = queryBuilder.or(
-        `employee_number.ilike.%${q}%,first_name.ilike.%${q}%,last_name.ilike.%${q}%,email.ilike.%${q}%`
-      );
+      // Use admin client directly for single employee lookup to bypass RLS for public QR verification scans
+      const { data: empData, error: empErr } = await admin
+        .from('employees')
+        .select('*')
+        .ilike('employee_number', employeeNumber.trim());
+
+      if (!empErr && empData && empData.length > 0) {
+        employees = empData;
+      }
     }
 
-    if (branchId && branchId !== 'ALL') {
-      queryBuilder = queryBuilder.eq('branch_id', branchId);
-    }
-    if (deptId && deptId !== 'ALL') {
-      queryBuilder = queryBuilder.eq('department_id', deptId);
-    }
-
-    let { data: employees, error: empError } = await queryBuilder;
-    if (empError || !employees || employees.length === 0) {
-      let adminBuilder = admin
+    if (!employees || employees.length === 0) {
+      const supabase = await createServerSupabaseClient();
+      let queryBuilder = supabase
         .from('employees')
         .select('*')
         .order('created_at', { ascending: false });
 
       if (employeeNumber) {
-        adminBuilder = adminBuilder.ilike('employee_number', employeeNumber.trim());
+        queryBuilder = queryBuilder.ilike('employee_number', employeeNumber.trim());
       } else if (query) {
         const q = query.trim();
-        adminBuilder = adminBuilder.or(
+        queryBuilder = queryBuilder.or(
           `employee_number.ilike.%${q}%,first_name.ilike.%${q}%,last_name.ilike.%${q}%,email.ilike.%${q}%`
         );
       }
-      if (branchId && branchId !== 'ALL') adminBuilder = adminBuilder.eq('branch_id', branchId);
-      if (deptId && deptId !== 'ALL') adminBuilder = adminBuilder.eq('department_id', deptId);
 
-      const adminRes = await adminBuilder;
-      if (!adminRes.error && adminRes.data) {
-        employees = adminRes.data;
+      if (branchId && branchId !== 'ALL') queryBuilder = queryBuilder.eq('branch_id', branchId);
+      if (deptId && deptId !== 'ALL') queryBuilder = queryBuilder.eq('department_id', deptId);
+
+      const { data: rlsEmps, error: empError } = await queryBuilder;
+      if (!empError && rlsEmps && rlsEmps.length > 0) {
+        employees = rlsEmps;
+      } else {
+        let adminBuilder = admin
+          .from('employees')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (employeeNumber) {
+          adminBuilder = adminBuilder.ilike('employee_number', employeeNumber.trim());
+        } else if (query) {
+          const q = query.trim();
+          adminBuilder = adminBuilder.or(
+            `employee_number.ilike.%${q}%,first_name.ilike.%${q}%,last_name.ilike.%${q}%,email.ilike.%${q}%`
+          );
+        }
+        if (branchId && branchId !== 'ALL') adminBuilder = adminBuilder.eq('branch_id', branchId);
+        if (deptId && deptId !== 'ALL') adminBuilder = adminBuilder.eq('department_id', deptId);
+
+        const adminRes = await adminBuilder;
+        if (!adminRes.error && adminRes.data) {
+          employees = adminRes.data;
+        }
       }
     }
 
-    // Fetch branches and departments using admin client to guarantee lookup mapping
-    const [{ data: branches }, { data: departments }] = await Promise.all([
+    // Fetch branches, departments, and completed print_jobs to guarantee real-time card status
+    const [{ data: branches }, { data: departments }, { data: completedJobs }] = await Promise.all([
       admin.from('branches').select('id, name, code'),
       admin.from('departments').select('id, name, code'),
+      admin.from('print_jobs').select('employee_id, printer_metadata, status').eq('status', 'COMPLETED'),
     ]);
 
     const branchMap = new Map((branches || []).map((b) => [b.id, b.name]));
     const deptMap = new Map((departments || []).map((d) => [d.id, d.name]));
 
-    const mapped = (employees || []).map((e: any) => ({
-      id: e.id,
-      employeeNumber: e.employee_number,
-      firstName: e.first_name,
-      middleName: e.middle_name || '',
-      lastName: e.last_name,
-      suffix: e.suffix || '',
-      fullName: `${e.first_name || ''} ${e.last_name || ''}`.trim(),
-      branchId: e.branch_id || '',
-      branchName: branchMap.get(e.branch_id) || 'Unassigned',
-      departmentId: e.department_id || '',
-      departmentName: deptMap.get(e.department_id) || 'General',
-      positionId: e.position_id || '',
-      positionTitle: e.metadata?.positionTitle || 'Staff',
-      email: e.email || '',
-      contactNumber: e.contact_number || '',
-      photoUrl: e.photo_url || '',
-      employmentStatus: e.employment_status || 'ACTIVE',
-      cardStatus: e.card_status || 'NOT_ISSUED',
-      dateHired: e.date_hired || '',
-      createdAt: e.created_at || '',
-    }));
+    const printedEmpIds = new Set((completedJobs || []).map((j: any) => j.employee_id).filter(Boolean));
+    const printedEmpNums = new Set(
+      (completedJobs || []).map((j: any) => j.printer_metadata?.employeeNumber).filter(Boolean)
+    );
+
+    const staleCardStatusEmpIds: string[] = [];
+
+    const mapped = (employees || []).map((e: any) => {
+      const hasCompletedJob = printedEmpIds.has(e.id) || (e.employee_number && printedEmpNums.has(e.employee_number));
+      let status = e.card_status || 'NOT_ISSUED';
+      if (hasCompletedJob && status === 'NOT_ISSUED') {
+        status = 'PRINTED';
+        staleCardStatusEmpIds.push(e.id);
+      }
+
+      return {
+        id: e.id,
+        employeeNumber: e.employee_number,
+        firstName: e.first_name,
+        middleName: e.middle_name || '',
+        lastName: e.last_name,
+        suffix: e.suffix || '',
+        fullName: `${e.first_name || ''} ${e.last_name || ''}`.trim(),
+        branchId: e.branch_id || '',
+        branchName: branchMap.get(e.branch_id) || 'Unassigned',
+        departmentId: e.department_id || '',
+        departmentName: deptMap.get(e.department_id) || 'General',
+        positionId: e.position_id || '',
+        positionTitle: e.metadata?.positionTitle || 'Staff',
+        email: e.email || '',
+        contactNumber: e.contact_number || '',
+        photoUrl: e.photo_url || '',
+        employmentStatus: e.employment_status || 'ACTIVE',
+        cardStatus: status,
+        dateHired: e.date_hired || '',
+        createdAt: e.created_at || '',
+      };
+    });
+
+    // Asynchronously backfill card_status = 'PRINTED' in Supabase for employees with completed print jobs
+    if (staleCardStatusEmpIds.length > 0) {
+      admin
+        .from('employees')
+        .update({ card_status: 'PRINTED', updated_at: new Date().toISOString() })
+        .in('id', staleCardStatusEmpIds)
+        .then();
+    }
 
     return NextResponse.json({
       data: mapped,
@@ -255,7 +294,11 @@ export async function PUT(request: Request) {
     if (updateFields.contactNumber !== undefined) updateRecord.contact_number = updateFields.contactNumber?.trim() || null;
     if (updateFields.photoUrl !== undefined) updateRecord.photo_url = updateFields.photoUrl || null;
     if (updateFields.employmentStatus !== undefined) updateRecord.employment_status = updateFields.employmentStatus;
-    if (updateFields.cardStatus !== undefined) updateRecord.card_status = updateFields.cardStatus;
+    if (updateFields.cardStatus !== undefined) {
+      let st = updateFields.cardStatus;
+      if (st === 'ISSUED') st = 'PRINTED';
+      updateRecord.card_status = st;
+    }
     if (updateFields.dateHired !== undefined) updateRecord.date_hired = updateFields.dateHired;
     if (updateFields.branchId !== undefined) updateRecord.branch_id = updateFields.branchId || null;
     if (updateFields.departmentId !== undefined) updateRecord.department_id = updateFields.departmentId || null;
