@@ -142,6 +142,8 @@ export default function KioskMainPage() {
     }
   };
 
+  const [verificationBaseUrl, setVerificationBaseUrl] = useState<string>(process.env.NEXT_PUBLIC_APP_URL || 'https://magic-card-trust-id.vercel.app');
+
   useEffect(() => {
     fetch('/api/settings')
       .then((r) => r.json())
@@ -152,6 +154,9 @@ export default function KioskMainPage() {
           }
           if (json.data.kioskInactivityTimeoutSeconds) {
             setKioskTimeoutSeconds(json.data.kioskInactivityTimeoutSeconds);
+          }
+          if (json.data.verificationBaseUrl) {
+            setVerificationBaseUrl(json.data.verificationBaseUrl);
           }
         }
       })
@@ -377,8 +382,8 @@ export default function KioskMainPage() {
       const backCanvas = document.createElement('canvas');
 
       await Promise.all([
-        renderCardToCanvas(frontCanvas, activeTemplate, 'front', foundEmployee, { scale: 3 }),
-        renderCardToCanvas(backCanvas, activeTemplate, 'back', foundEmployee, { scale: 3 }),
+        renderCardToCanvas(frontCanvas, activeTemplate, 'front', foundEmployee, { scale: 3, baseUrl: verificationBaseUrl }),
+        renderCardToCanvas(backCanvas, activeTemplate, 'back', foundEmployee, { scale: 3, baseUrl: verificationBaseUrl }),
       ]);
 
       const frontCanvasDataUrl = frontCanvas.toDataURL('image/png');
