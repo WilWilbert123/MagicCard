@@ -159,20 +159,27 @@ export default function KioskMainPage() {
 
   const [hardwarePrinterOnline, setHardwarePrinterOnline] = useState<boolean>(false);
   const [printerMode, setPrinterMode] = useState<'HARDWARE' | 'SIMULATION'>('HARDWARE');
+  const [localKioskId, setLocalKioskId] = useState<string>('KIOSK-001');
 
   // Check hardware printer connectivity on localhost port 7125
   useEffect(() => {
     const checkPrinterHardware = async () => {
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 1500);
+        const timeoutId = setTimeout(() => controller.abort(), 2000);
         const agentBaseUrl = process.env.NEXT_PUBLIC_KIOSK_AGENT_URL || 'http://127.0.0.1:7125';
-        const res = await fetch(`${agentBaseUrl}/api/status`, { signal: controller.signal });
+        const res = await fetch(`${agentBaseUrl}/api/kiosk/status`, { signal: controller.signal });
         clearTimeout(timeoutId);
         if (res.ok) {
+          const data = await res.json();
           setHardwarePrinterOnline(true);
+          if (data.kioskId) {
+            setLocalKioskId(data.kioskId);
+          }
         } else {
-          setHardwarePrinterOnline(false);
+          // Fallback check to /api/status if /api/kiosk/status differs
+          const statusRes = await fetch(`${agentBaseUrl}/api/status`);
+          setHardwarePrinterOnline(statusRes.ok);
         }
       } catch {
         setHardwarePrinterOnline(false);
@@ -192,7 +199,7 @@ export default function KioskMainPage() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            kioskCode: 'KIOSK-SOR-01',
+            kioskCode: localKioskId || 'KIOSK-001',
             printerStatus: hardwarePrinterOnline ? 'READY - Magicard 600NEO (Ribbon 100%)' : 'OFFLINE - No Physical Printer Detected',
             agentVersion: 'v1.4.0',
             ipAddress: '127.0.0.1',
@@ -204,7 +211,7 @@ export default function KioskMainPage() {
     sendHeartbeat();
     const interval = setInterval(sendHeartbeat, 15000);
     return () => clearInterval(interval);
-  }, [hardwarePrinterOnline]);
+  }, [hardwarePrinterOnline, localKioskId]);
 
 
   // Inactivity timeout back to Screensaver on SEARCH screen

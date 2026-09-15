@@ -26,7 +26,13 @@ builder.Services.Configure<SecurityOptions>(builder.Configuration.GetSection(Sec
 
 // 4. Register Services & Dependencies
 builder.Services.AddSingleton<ILocalAgentAuthentication, LocalAgentAuthentication>();
-builder.Services.AddSingleton<HttpClient>();
+builder.Services.AddSingleton<HttpClient>(sp =>
+{
+    var client = new HttpClient();
+    client.DefaultRequestHeaders.Add("User-Agent", "EmployeeID-KioskAgent/1.0.0");
+    client.Timeout = TimeSpan.FromSeconds(15);
+    return client;
+});
 
 // Determine Printer Implementation (Mock vs Windows vs MagicCard)
 var printerType = builder.Configuration.GetValue<string>("Printer:Type") ?? "MagicCard";

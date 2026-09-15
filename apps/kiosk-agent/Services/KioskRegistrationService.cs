@@ -113,7 +113,10 @@ public class KioskRegistrationService : IKioskRegistrationService
         try
         {
             if (string.IsNullOrWhiteSpace(_kioskOptions.SupabaseUrl))
+            {
+                _logger.LogWarning("SupabaseUrl is empty in KioskOptions. Central heartbeat disabled.");
                 return true;
+            }
 
             var creds = await _auth.LoadCredentialsAsync();
             var endpoint = $"{_kioskOptions.SupabaseUrl.TrimEnd('/')}/api/kiosks/heartbeat";
@@ -130,11 +133,21 @@ public class KioskRegistrationService : IKioskRegistrationService
             };
 
             var response = await _httpClient.PostAsJsonAsync(endpoint, payload, cancellationToken);
-            return response.IsSuccessStatusCode;
+            if (response.IsSuccessStatusCode)
+            {
+                _logger.LogInformation("Successfully sent heartbeat ping to central server for KIOSK {KioskId}.", _kioskOptions.KioskId);
+                return true;
+            }
+            else
+            {
+                var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
+                _logger.LogWarning("Heartbeat ping failed for KIOSK {KioskId} (HTTP {StatusCode}): {Error}", _kioskOptions.KioskId, response.StatusCode, errorBody);
+                return false;
+            }
         }
         catch (Exception ex)
         {
-            _logger.LogDebug(ex, "Heartbeat update failed to central server (KioskAgent operating normally)");
+            _logger.LogWarning(ex, "Heartbeat connection error for KIOSK {KioskId} to server {Url}", _kioskOptions.KioskId, _kioskOptions.SupabaseUrl);
             return false;
         }
     }

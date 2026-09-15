@@ -16,11 +16,16 @@ export async function POST(request: Request) {
       ? rawCode.replace('-0', '-00')
       : rawCode;
 
-    // 1. Fetch target kiosk dynamically by its exact incoming code (supports KIOSK-009, KIOSK-01, KIOSK-NYC-02, etc.)
+    // 1. Fetch target kiosk dynamically by its exact incoming code (supports KIOSK-001, KIOSK-SOR-01, KIOSK-NYC-01, etc.)
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rawCode);
+    const filterQuery = isUuid
+      ? `kiosk_code.eq.${rawCode},kiosk_code.eq.${altCode},id.eq.${rawCode}`
+      : `kiosk_code.eq.${rawCode},kiosk_code.eq.${altCode}`;
+
     const { data: kiosk } = await admin
       .from('kiosks')
       .select('id, kiosk_code, status')
-      .or(`kiosk_code.eq.${rawCode},kiosk_code.eq.${altCode},id.eq.${rawCode}`)
+      .or(filterQuery)
       .maybeSingle();
 
     if (kiosk) {
