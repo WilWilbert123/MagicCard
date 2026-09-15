@@ -531,9 +531,9 @@ export default function CardDesignerPage() {
 
   // Drag & Drop Handlers
   const handleElementMouseDown = (e: React.MouseEvent, el: CardElement) => {
-    if (el.isLocked) return;
     e.stopPropagation();
     setSelectedElementId(el.id);
+    if (el.isLocked) return;
 
     setIsDragging(true);
     setDragElementId(el.id);

@@ -34,19 +34,31 @@ export async function GET(
 
     const templateId = template?.id || id;
 
-    // Fetch published version layout
-    const [{ data: version }, { data: branch }] = await Promise.all([
-      admin
+    // Fetch published or latest version layout
+    let version: any = null;
+    if (template?.current_published_version_id) {
+      const { data: pubVer } = await admin
+        .from('card_template_versions')
+        .select('*')
+        .eq('id', template.current_published_version_id)
+        .maybeSingle();
+      version = pubVer;
+    }
+
+    if (!version && templateId) {
+      const { data: latestVer } = await admin
         .from('card_template_versions')
         .select('*')
         .eq('template_id', templateId)
         .order('version_number', { ascending: false })
         .limit(1)
-        .maybeSingle(),
-      template?.branch_id
-        ? admin.from('branches').select('id, name, code').eq('id', template.branch_id).maybeSingle()
-        : Promise.resolve({ data: null }),
-    ]);
+        .maybeSingle();
+      version = latestVer;
+    }
+
+    const { data: branch } = template?.branch_id
+      ? await admin.from('branches').select('id, name, code').eq('id', template.branch_id).maybeSingle()
+      : { data: null };
 
     const layout = version?.layout_json || DEFAULT_CR80_TEMPLATE;
 
@@ -150,6 +162,17 @@ export async function POST(
         updated_at: now,
       })
       .eq('id', template.id);
+
+    // Update active_template_version_id across all kiosks so kiosks immediately receive the newly published template
+    if (publish && newVersion.id) {
+      await admin
+        .from('kiosks')
+        .update({
+          active_template_version_id: newVersion.id,
+          updated_at: now,
+        })
+        .neq('id', '00000000-0000-0000-0000-000000000000');
+    }
 
     await recordAuditLog({
       actorId: auth.user.id,
