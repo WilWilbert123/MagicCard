@@ -121,7 +121,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "h-1-qr",
         "type": "QR_CODE",
-        "data": "https://verify.corp.com/{{employee.employeeNumber}}",
+        "data": "{{system.verificationUrl}}",
         "x": 665,
         "y": 75,
         "width": 145,
@@ -179,7 +179,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "h-1-b-contact",
         "type": "TEXT",
-        "text": "VERIFICATION: https://verify.corp.com/id  \u2022  DIRECT SECURITY LINE: +1 (800) 555-0199",
+        "text": "VERIFICATION: {{system.verificationUrl}}  \u2022  DIRECT SECURITY LINE: +1 (800) 555-0199",
         "x": 50,
         "y": 195,
         "width": 756,
@@ -303,7 +303,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "v-1-qr",
         "type": "QR_CODE",
-        "data": "https://verify.corp.com/{{employee.employeeNumber}}",
+        "data": "{{system.verificationUrl}}",
         "x": 200,
         "y": 455,
         "width": 140,
@@ -481,7 +481,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "h-2-qr",
         "type": "QR_CODE",
-        "data": "https://verify.corp.com/{{employee.employeeNumber}}",
+        "data": "{{system.verificationUrl}}",
         "x": 670,
         "y": 75,
         "width": 140,
@@ -539,7 +539,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "h-2-b-contact",
         "type": "TEXT",
-        "text": "VERIFICATION: https://verify.corp.com/id  \u2022  DIRECT SECURITY LINE: +1 (800) 555-0199",
+        "text": "VERIFICATION: {{system.verificationUrl}}  \u2022  DIRECT SECURITY LINE: +1 (800) 555-0199",
         "x": 50,
         "y": 195,
         "width": 756,
@@ -652,7 +652,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "v-2-qr",
         "type": "QR_CODE",
-        "data": "https://verify.corp.com/{{employee.employeeNumber}}",
+        "data": "{{system.verificationUrl}}",
         "x": 300,
         "y": 440,
         "width": 140,
@@ -819,7 +819,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "h-3-qr",
         "type": "QR_CODE",
-        "data": "https://verify.corp.com/{{employee.employeeNumber}}",
+        "data": "{{system.verificationUrl}}",
         "x": 665,
         "y": 65,
         "width": 145,
@@ -877,7 +877,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "h-3-b-contact",
         "type": "TEXT",
-        "text": "VERIFICATION: https://verify.corp.com/id  \u2022  DIRECT SECURITY LINE: +1 (800) 555-0199",
+        "text": "VERIFICATION: {{system.verificationUrl}}  \u2022  DIRECT SECURITY LINE: +1 (800) 555-0199",
         "x": 50,
         "y": 195,
         "width": 756,
@@ -990,7 +990,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "v-3-qr",
         "type": "QR_CODE",
-        "data": "https://verify.corp.com/{{employee.employeeNumber}}",
+        "data": "{{system.verificationUrl}}",
         "x": 340,
         "y": 420,
         "width": 140,
@@ -1157,7 +1157,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "h-4-qr",
         "type": "QR_CODE",
-        "data": "https://verify.corp.com/{{employee.employeeNumber}}",
+        "data": "{{system.verificationUrl}}",
         "x": 660,
         "y": 65,
         "width": 145,
@@ -1215,7 +1215,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "h-4-b-contact",
         "type": "TEXT",
-        "text": "VERIFICATION: https://verify.corp.com/id  \u2022  DIRECT SECURITY LINE: +1 (800) 555-0199",
+        "text": "VERIFICATION: {{system.verificationUrl}}  \u2022  DIRECT SECURITY LINE: +1 (800) 555-0199",
         "x": 50,
         "y": 195,
         "width": 756,
@@ -1317,7 +1317,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "v-4-qr",
         "type": "QR_CODE",
-        "data": "https://verify.corp.com/{{employee.employeeNumber}}",
+        "data": "{{system.verificationUrl}}",
         "x": 195,
         "y": 440,
         "width": 150,
@@ -1484,7 +1484,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "h-5-qr",
         "type": "QR_CODE",
-        "data": "https://verify.corp.com/{{employee.employeeNumber}}",
+        "data": "{{system.verificationUrl}}",
         "x": 670,
         "y": 65,
         "width": 140,
@@ -1542,7 +1542,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "h-5-b-contact",
         "type": "TEXT",
-        "text": "VERIFICATION: https://verify.corp.com/id  \u2022  DIRECT SECURITY LINE: +1 (800) 555-0199",
+        "text": "VERIFICATION: {{system.verificationUrl}}  \u2022  DIRECT SECURITY LINE: +1 (800) 555-0199",
         "x": 50,
         "y": 195,
         "width": 756,
@@ -1655,7 +1655,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "v-5-qr",
         "type": "QR_CODE",
-        "data": "https://verify.corp.com/{{employee.employeeNumber}}",
+        "data": "{{system.verificationUrl}}",
         "x": 195,
         "y": 380,
         "width": 150,
@@ -1833,7 +1833,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "h-6-qr",
         "type": "QR_CODE",
-        "data": "https://verify.corp.com/{{employee.employeeNumber}}",
+        "data": "{{system.verificationUrl}}",
         "x": 665,
         "y": 65,
         "width": 145,
@@ -1891,7 +1891,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "h-6-b-contact",
         "type": "TEXT",
-        "text": "VERIFICATION: https://verify.corp.com/id  \u2022  DIRECT SECURITY LINE: +1 (800) 555-0199",
+        "text": "VERIFICATION: {{system.verificationUrl}}  \u2022  DIRECT SECURITY LINE: +1 (800) 555-0199",
         "x": 50,
         "y": 195,
         "width": 756,
@@ -2015,7 +2015,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "v-6-qr",
         "type": "QR_CODE",
-        "data": "https://verify.corp.com/{{employee.employeeNumber}}",
+        "data": "{{system.verificationUrl}}",
         "x": 50,
         "y": 360,
         "width": 135,
@@ -2182,7 +2182,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "h-7-qr",
         "type": "QR_CODE",
-        "data": "https://verify.corp.com/{{employee.employeeNumber}}",
+        "data": "{{system.verificationUrl}}",
         "x": 665,
         "y": 65,
         "width": 145,
@@ -2240,7 +2240,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "h-7-b-contact",
         "type": "TEXT",
-        "text": "VERIFICATION: https://verify.corp.com/id  \u2022  DIRECT SECURITY LINE: +1 (800) 555-0199",
+        "text": "VERIFICATION: {{system.verificationUrl}}  \u2022  DIRECT SECURITY LINE: +1 (800) 555-0199",
         "x": 50,
         "y": 195,
         "width": 756,
@@ -2342,7 +2342,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "v-7-qr",
         "type": "QR_CODE",
-        "data": "https://verify.corp.com/{{employee.employeeNumber}}",
+        "data": "{{system.verificationUrl}}",
         "x": 350,
         "y": 420,
         "width": 140,
@@ -2509,7 +2509,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "h-8-qr",
         "type": "QR_CODE",
-        "data": "https://verify.corp.com/{{employee.employeeNumber}}",
+        "data": "{{system.verificationUrl}}",
         "x": 670,
         "y": 65,
         "width": 140,
@@ -2567,7 +2567,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "h-8-b-contact",
         "type": "TEXT",
-        "text": "VERIFICATION: https://verify.corp.com/id  \u2022  DIRECT SECURITY LINE: +1 (800) 555-0199",
+        "text": "VERIFICATION: {{system.verificationUrl}}  \u2022  DIRECT SECURITY LINE: +1 (800) 555-0199",
         "x": 50,
         "y": 195,
         "width": 756,
@@ -2680,7 +2680,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "v-8-qr",
         "type": "QR_CODE",
-        "data": "https://verify.corp.com/{{employee.employeeNumber}}",
+        "data": "{{system.verificationUrl}}",
         "x": 50,
         "y": 420,
         "width": 140,
@@ -2858,7 +2858,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "h-9-qr",
         "type": "QR_CODE",
-        "data": "https://verify.corp.com/{{employee.employeeNumber}}",
+        "data": "{{system.verificationUrl}}",
         "x": 665,
         "y": 65,
         "width": 145,
@@ -2916,7 +2916,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "h-9-b-contact",
         "type": "TEXT",
-        "text": "VERIFICATION: https://verify.corp.com/id  \u2022  DIRECT SECURITY LINE: +1 (800) 555-0199",
+        "text": "VERIFICATION: {{system.verificationUrl}}  \u2022  DIRECT SECURITY LINE: +1 (800) 555-0199",
         "x": 50,
         "y": 195,
         "width": 756,
@@ -3040,7 +3040,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "v-9-qr",
         "type": "QR_CODE",
-        "data": "https://verify.corp.com/{{employee.employeeNumber}}",
+        "data": "{{system.verificationUrl}}",
         "x": 195,
         "y": 430,
         "width": 150,
@@ -3218,7 +3218,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "h-10-qr",
         "type": "QR_CODE",
-        "data": "https://verify.corp.com/{{employee.employeeNumber}}",
+        "data": "{{system.verificationUrl}}",
         "x": 655,
         "y": 65,
         "width": 145,
@@ -3276,7 +3276,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "h-10-b-contact",
         "type": "TEXT",
-        "text": "VERIFICATION: https://verify.corp.com/id  \u2022  DIRECT SECURITY LINE: +1 (800) 555-0199",
+        "text": "VERIFICATION: {{system.verificationUrl}}  \u2022  DIRECT SECURITY LINE: +1 (800) 555-0199",
         "x": 50,
         "y": 195,
         "width": 756,
@@ -3389,7 +3389,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "v-10-qr",
         "type": "QR_CODE",
-        "data": "https://verify.corp.com/{{employee.employeeNumber}}",
+        "data": "{{system.verificationUrl}}",
         "x": 200,
         "y": 410,
         "width": 140,
@@ -3567,7 +3567,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "h-11-qr",
         "type": "QR_CODE",
-        "data": "https://verify.corp.com/{{employee.employeeNumber}}",
+        "data": "{{system.verificationUrl}}",
         "x": 650,
         "y": 75,
         "width": 145,
@@ -3625,7 +3625,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "h-11-b-contact",
         "type": "TEXT",
-        "text": "VERIFICATION: https://verify.corp.com/id  \u2022  DIRECT SECURITY LINE: +1 (800) 555-0199",
+        "text": "VERIFICATION: {{system.verificationUrl}}  \u2022  DIRECT SECURITY LINE: +1 (800) 555-0199",
         "x": 50,
         "y": 195,
         "width": 756,
@@ -3749,7 +3749,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "v-11-qr",
         "type": "QR_CODE",
-        "data": "https://verify.corp.com/{{employee.employeeNumber}}",
+        "data": "{{system.verificationUrl}}",
         "x": 330,
         "y": 380,
         "width": 140,
@@ -3916,7 +3916,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "h-12-qr",
         "type": "QR_CODE",
-        "data": "https://verify.corp.com/{{employee.employeeNumber}}",
+        "data": "{{system.verificationUrl}}",
         "x": 450,
         "y": 65,
         "width": 145,
@@ -3974,7 +3974,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "h-12-b-contact",
         "type": "TEXT",
-        "text": "VERIFICATION: https://verify.corp.com/id  \u2022  DIRECT SECURITY LINE: +1 (800) 555-0199",
+        "text": "VERIFICATION: {{system.verificationUrl}}  \u2022  DIRECT SECURITY LINE: +1 (800) 555-0199",
         "x": 50,
         "y": 195,
         "width": 756,
@@ -4087,7 +4087,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "v-12-qr",
         "type": "QR_CODE",
-        "data": "https://verify.corp.com/{{employee.employeeNumber}}",
+        "data": "{{system.verificationUrl}}",
         "x": 360,
         "y": 90,
         "width": 130,
@@ -4254,7 +4254,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "h-13-qr",
         "type": "QR_CODE",
-        "data": "https://verify.corp.com/{{employee.employeeNumber}}",
+        "data": "{{system.verificationUrl}}",
         "x": 660,
         "y": 70,
         "width": 145,
@@ -4312,7 +4312,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "h-13-b-contact",
         "type": "TEXT",
-        "text": "VERIFICATION: https://verify.corp.com/id  \u2022  DIRECT SECURITY LINE: +1 (800) 555-0199",
+        "text": "VERIFICATION: {{system.verificationUrl}}  \u2022  DIRECT SECURITY LINE: +1 (800) 555-0199",
         "x": 50,
         "y": 195,
         "width": 756,
@@ -4414,7 +4414,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "v-13-qr",
         "type": "QR_CODE",
-        "data": "https://verify.corp.com/{{employee.employeeNumber}}",
+        "data": "{{system.verificationUrl}}",
         "x": 195,
         "y": 545,
         "width": 150,
@@ -4581,7 +4581,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "h-14-qr",
         "type": "QR_CODE",
-        "data": "https://verify.corp.com/{{employee.employeeNumber}}",
+        "data": "{{system.verificationUrl}}",
         "x": 665,
         "y": 65,
         "width": 145,
@@ -4639,7 +4639,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "h-14-b-contact",
         "type": "TEXT",
-        "text": "VERIFICATION: https://verify.corp.com/id  \u2022  DIRECT SECURITY LINE: +1 (800) 555-0199",
+        "text": "VERIFICATION: {{system.verificationUrl}}  \u2022  DIRECT SECURITY LINE: +1 (800) 555-0199",
         "x": 50,
         "y": 195,
         "width": 756,
@@ -4752,7 +4752,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "v-14-qr",
         "type": "QR_CODE",
-        "data": "https://verify.corp.com/{{employee.employeeNumber}}",
+        "data": "{{system.verificationUrl}}",
         "x": 45,
         "y": 240,
         "width": 140,
@@ -4930,7 +4930,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "h-15-qr",
         "type": "QR_CODE",
-        "data": "https://verify.corp.com/{{employee.employeeNumber}}",
+        "data": "{{system.verificationUrl}}",
         "x": 665,
         "y": 65,
         "width": 145,
@@ -4988,7 +4988,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "h-15-b-contact",
         "type": "TEXT",
-        "text": "VERIFICATION: https://verify.corp.com/id  \u2022  DIRECT SECURITY LINE: +1 (800) 555-0199",
+        "text": "VERIFICATION: {{system.verificationUrl}}  \u2022  DIRECT SECURITY LINE: +1 (800) 555-0199",
         "x": 50,
         "y": 195,
         "width": 756,
@@ -5112,7 +5112,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "v-15-qr",
         "type": "QR_CODE",
-        "data": "https://verify.corp.com/{{employee.employeeNumber}}",
+        "data": "{{system.verificationUrl}}",
         "x": 195,
         "y": 430,
         "width": 150,
@@ -5279,7 +5279,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "h-16-qr",
         "type": "QR_CODE",
-        "data": "https://verify.corp.com/{{employee.employeeNumber}}",
+        "data": "{{system.verificationUrl}}",
         "x": 665,
         "y": 65,
         "width": 145,
@@ -5337,7 +5337,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "h-16-b-contact",
         "type": "TEXT",
-        "text": "VERIFICATION: https://verify.corp.com/id  \u2022  DIRECT SECURITY LINE: +1 (800) 555-0199",
+        "text": "VERIFICATION: {{system.verificationUrl}}  \u2022  DIRECT SECURITY LINE: +1 (800) 555-0199",
         "x": 50,
         "y": 195,
         "width": 756,
@@ -5450,7 +5450,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "v-16-qr",
         "type": "QR_CODE",
-        "data": "https://verify.corp.com/{{employee.employeeNumber}}",
+        "data": "{{system.verificationUrl}}",
         "x": 195,
         "y": 380,
         "width": 150,
@@ -5617,7 +5617,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "h-17-qr",
         "type": "QR_CODE",
-        "data": "https://verify.corp.com/{{employee.employeeNumber}}",
+        "data": "{{system.verificationUrl}}",
         "x": 665,
         "y": 65,
         "width": 145,
@@ -5675,7 +5675,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "h-17-b-contact",
         "type": "TEXT",
-        "text": "VERIFICATION: https://verify.corp.com/id  \u2022  DIRECT SECURITY LINE: +1 (800) 555-0199",
+        "text": "VERIFICATION: {{system.verificationUrl}}  \u2022  DIRECT SECURITY LINE: +1 (800) 555-0199",
         "x": 50,
         "y": 195,
         "width": 756,
@@ -5788,7 +5788,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "v-17-qr",
         "type": "QR_CODE",
-        "data": "https://verify.corp.com/{{employee.employeeNumber}}",
+        "data": "{{system.verificationUrl}}",
         "x": 195,
         "y": 425,
         "width": 150,
@@ -5955,7 +5955,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "h-18-qr",
         "type": "QR_CODE",
-        "data": "https://verify.corp.com/{{employee.employeeNumber}}",
+        "data": "{{system.verificationUrl}}",
         "x": 675,
         "y": 65,
         "width": 145,
@@ -6013,7 +6013,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "h-18-b-contact",
         "type": "TEXT",
-        "text": "VERIFICATION: https://verify.corp.com/id  \u2022  DIRECT SECURITY LINE: +1 (800) 555-0199",
+        "text": "VERIFICATION: {{system.verificationUrl}}  \u2022  DIRECT SECURITY LINE: +1 (800) 555-0199",
         "x": 50,
         "y": 195,
         "width": 756,
@@ -6115,7 +6115,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "v-18-qr",
         "type": "QR_CODE",
-        "data": "https://verify.corp.com/{{employee.employeeNumber}}",
+        "data": "{{system.verificationUrl}}",
         "x": 45,
         "y": 410,
         "width": 145,
@@ -6293,7 +6293,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "h-19-qr",
         "type": "QR_CODE",
-        "data": "https://verify.corp.com/{{employee.employeeNumber}}",
+        "data": "{{system.verificationUrl}}",
         "x": 665,
         "y": 65,
         "width": 145,
@@ -6351,7 +6351,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "h-19-b-contact",
         "type": "TEXT",
-        "text": "VERIFICATION: https://verify.corp.com/id  \u2022  DIRECT SECURITY LINE: +1 (800) 555-0199",
+        "text": "VERIFICATION: {{system.verificationUrl}}  \u2022  DIRECT SECURITY LINE: +1 (800) 555-0199",
         "x": 50,
         "y": 195,
         "width": 756,
@@ -6475,7 +6475,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "v-19-qr",
         "type": "QR_CODE",
-        "data": "https://verify.corp.com/{{employee.employeeNumber}}",
+        "data": "{{system.verificationUrl}}",
         "x": 195,
         "y": 435,
         "width": 150,
@@ -6642,7 +6642,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "h-20-qr",
         "type": "QR_CODE",
-        "data": "https://verify.corp.com/{{employee.employeeNumber}}",
+        "data": "{{system.verificationUrl}}",
         "x": 450,
         "y": 65,
         "width": 145,
@@ -6700,7 +6700,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "h-20-b-contact",
         "type": "TEXT",
-        "text": "VERIFICATION: https://verify.corp.com/id  \u2022  DIRECT SECURITY LINE: +1 (800) 555-0199",
+        "text": "VERIFICATION: {{system.verificationUrl}}  \u2022  DIRECT SECURITY LINE: +1 (800) 555-0199",
         "x": 50,
         "y": 195,
         "width": 756,
@@ -6802,7 +6802,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "v-20-qr",
         "type": "QR_CODE",
-        "data": "https://verify.corp.com/{{employee.employeeNumber}}",
+        "data": "{{system.verificationUrl}}",
         "x": 45,
         "y": 370,
         "width": 145,
@@ -6969,7 +6969,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "h-21-qr",
         "type": "QR_CODE",
-        "data": "https://verify.corp.com/{{employee.employeeNumber}}",
+        "data": "{{system.verificationUrl}}",
         "x": 665,
         "y": 65,
         "width": 145,
@@ -7027,7 +7027,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "h-21-b-contact",
         "type": "TEXT",
-        "text": "VERIFICATION: https://verify.corp.com/id  \u2022  DIRECT SECURITY LINE: +1 (800) 555-0199",
+        "text": "VERIFICATION: {{system.verificationUrl}}  \u2022  DIRECT SECURITY LINE: +1 (800) 555-0199",
         "x": 50,
         "y": 195,
         "width": 756,
@@ -7140,7 +7140,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "v-21-qr",
         "type": "QR_CODE",
-        "data": "https://verify.corp.com/{{employee.employeeNumber}}",
+        "data": "{{system.verificationUrl}}",
         "x": 340,
         "y": 375,
         "width": 140,
@@ -7307,7 +7307,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "h-22-qr",
         "type": "QR_CODE",
-        "data": "https://verify.corp.com/{{employee.employeeNumber}}",
+        "data": "{{system.verificationUrl}}",
         "x": 665,
         "y": 65,
         "width": 145,
@@ -7365,7 +7365,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "h-22-b-contact",
         "type": "TEXT",
-        "text": "VERIFICATION: https://verify.corp.com/id  \u2022  DIRECT SECURITY LINE: +1 (800) 555-0199",
+        "text": "VERIFICATION: {{system.verificationUrl}}  \u2022  DIRECT SECURITY LINE: +1 (800) 555-0199",
         "x": 50,
         "y": 195,
         "width": 756,
@@ -7478,7 +7478,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "v-22-qr",
         "type": "QR_CODE",
-        "data": "https://verify.corp.com/{{employee.employeeNumber}}",
+        "data": "{{system.verificationUrl}}",
         "x": 195,
         "y": 480,
         "width": 150,
@@ -7645,7 +7645,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "h-23-qr",
         "type": "QR_CODE",
-        "data": "https://verify.corp.com/{{employee.employeeNumber}}",
+        "data": "{{system.verificationUrl}}",
         "x": 665,
         "y": 65,
         "width": 145,
@@ -7703,7 +7703,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "h-23-b-contact",
         "type": "TEXT",
-        "text": "VERIFICATION: https://verify.corp.com/id  \u2022  DIRECT SECURITY LINE: +1 (800) 555-0199",
+        "text": "VERIFICATION: {{system.verificationUrl}}  \u2022  DIRECT SECURITY LINE: +1 (800) 555-0199",
         "x": 50,
         "y": 195,
         "width": 756,
@@ -7816,7 +7816,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "v-23-qr",
         "type": "QR_CODE",
-        "data": "https://verify.corp.com/{{employee.employeeNumber}}",
+        "data": "{{system.verificationUrl}}",
         "x": 195,
         "y": 425,
         "width": 150,
@@ -7983,7 +7983,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "h-24-qr",
         "type": "QR_CODE",
-        "data": "https://verify.corp.com/{{employee.employeeNumber}}",
+        "data": "{{system.verificationUrl}}",
         "x": 665,
         "y": 65,
         "width": 145,
@@ -8041,7 +8041,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "h-24-b-contact",
         "type": "TEXT",
-        "text": "VERIFICATION: https://verify.corp.com/id  \u2022  DIRECT SECURITY LINE: +1 (800) 555-0199",
+        "text": "VERIFICATION: {{system.verificationUrl}}  \u2022  DIRECT SECURITY LINE: +1 (800) 555-0199",
         "x": 50,
         "y": 195,
         "width": 756,
@@ -8165,7 +8165,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "v-24-qr",
         "type": "QR_CODE",
-        "data": "https://verify.corp.com/{{employee.employeeNumber}}",
+        "data": "{{system.verificationUrl}}",
         "x": 360,
         "y": 60,
         "width": 140,
@@ -8332,7 +8332,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "h-25-qr",
         "type": "QR_CODE",
-        "data": "https://verify.corp.com/{{employee.employeeNumber}}",
+        "data": "{{system.verificationUrl}}",
         "x": 665,
         "y": 65,
         "width": 145,
@@ -8390,7 +8390,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "h-25-b-contact",
         "type": "TEXT",
-        "text": "VERIFICATION: https://verify.corp.com/id  \u2022  DIRECT SECURITY LINE: +1 (800) 555-0199",
+        "text": "VERIFICATION: {{system.verificationUrl}}  \u2022  DIRECT SECURITY LINE: +1 (800) 555-0199",
         "x": 50,
         "y": 195,
         "width": 756,
@@ -8492,7 +8492,7 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
       {
         "id": "v-25-qr",
         "type": "QR_CODE",
-        "data": "https://verify.corp.com/{{employee.employeeNumber}}",
+        "data": "{{system.verificationUrl}}",
         "x": 340,
         "y": 420,
         "width": 145,
