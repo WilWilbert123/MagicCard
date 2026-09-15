@@ -289,12 +289,18 @@ export async function POST(request: Request) {
       }
     }
 
-    // Update Employee Card Status
-    if (employeeId) {
-      await admin.from('employees').update({ card_status: 'ISSUED' }).eq('id', employeeId);
-    }
-    if (empNum) {
-      await admin.from('employees').update({ card_status: 'ISSUED' }).eq('employee_number', empNum);
+    // Update Employee Card Status in Supabase (using PRINTED to pass Postgres check constraint)
+    if (status === 'COMPLETED') {
+      try {
+        if (employeeId) {
+          await admin.from('employees').update({ card_status: 'PRINTED', updated_at: new Date().toISOString() }).eq('id', employeeId);
+        }
+        if (empNum) {
+          await admin.from('employees').update({ card_status: 'PRINTED', updated_at: new Date().toISOString() }).eq('employee_number', empNum);
+        }
+      } catch (empErr) {
+        console.warn('Failed to update employee card_status to PRINTED:', empErr);
+      }
     }
 
     // Record Audit Log
