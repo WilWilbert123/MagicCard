@@ -50,7 +50,18 @@ export async function GET() {
       const kioskJobs = (printJobs || []).filter(
         (pj) => pj.kiosk_id === k.id || (pj.branch_id && pj.branch_id === k.branch_id)
       );
-      const cardsPrinted = kioskJobs.length;
+      const totalCardsPrinted = kioskJobs.length;
+
+      // Count print jobs completed since last tray reset timestamp
+      const resetTime = k.tray_reset_at ? new Date(k.tray_reset_at).getTime() : 0;
+      const currentBatchJobs = resetTime > 0
+        ? kioskJobs.filter((pj: any) => {
+            const pjTime = pj.created_at ? new Date(pj.created_at).getTime() : 0;
+            return pjTime >= resetTime;
+          })
+        : kioskJobs;
+
+      const cardsPrinted = currentBatchJobs.length;
       const maxCardCapacity = k.max_card_capacity || 50;
       const cardsRemaining = Math.max(0, maxCardCapacity - cardsPrinted);
 
@@ -96,6 +107,7 @@ export async function GET() {
         cardsPrinted,
         maxCardCapacity,
         cardsRemaining,
+        totalCardsPrinted,
         lastHeartbeat: k.last_heartbeat_at || k.created_at,
       };
     });
@@ -125,7 +137,7 @@ export async function PATCH(request: Request) {
 
   try {
     const body = await request.json();
-    const { id, status, name, code, ipAddress, maxCardCapacity } = body;
+    const { id, status, name, code, ipAddress, maxCardCapacity, resetTray } = body;
     if (!id) {
       return NextResponse.json({ error: 'Missing kiosk id' }, { status: 400 });
     }
@@ -140,6 +152,9 @@ export async function PATCH(request: Request) {
     if (ipAddress) updatePayload.ip_address = ipAddress;
     if (maxCardCapacity !== undefined && maxCardCapacity !== null) {
       updatePayload.max_card_capacity = parseInt(maxCardCapacity, 10);
+    }
+    if (resetTray) {
+      updatePayload.tray_reset_at = new Date().toISOString();
     }
 
     const { data, error } = await supabase
