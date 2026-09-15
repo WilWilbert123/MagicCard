@@ -46,9 +46,9 @@ export async function GET() {
         }
       }
 
-      // Count completed print jobs for this kiosk
+      // Count completed print jobs strictly for this specific kiosk terminal
       const kioskJobs = (printJobs || []).filter(
-        (pj) => pj.kiosk_id === k.id || (pj.branch_id && pj.branch_id === k.branch_id)
+        (pj) => pj.kiosk_id && pj.kiosk_id === k.id
       );
 
       // Count print jobs completed since last tray reset timestamp
@@ -60,8 +60,8 @@ export async function GET() {
           })
         : kioskJobs;
 
-      const cardsPrinted = typeof k.cards_printed === 'number' ? Math.max(k.cards_printed, currentBatchJobs.length) : currentBatchJobs.length;
-      const totalCardsPrinted = typeof k.total_cards_printed === 'number' ? Math.max(k.total_cards_printed, kioskJobs.length) : kioskJobs.length;
+      const cardsPrinted = currentBatchJobs.length;
+      const totalCardsPrinted = kioskJobs.length;
       const maxCardCapacity = k.max_card_capacity || 50;
       const cardsRemaining = Math.max(0, maxCardCapacity - cardsPrinted);
 
