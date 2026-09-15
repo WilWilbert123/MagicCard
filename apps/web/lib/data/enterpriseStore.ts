@@ -322,7 +322,7 @@ export const DEFAULT_CR80_TEMPLATE: CardTemplateJSON = {
         y: 340,
         width: 125,
         height: 125,
-        data: 'https://verify.magiccard.corp/id/{{employee.employeeNumber}}',
+        data: '{{system.verificationUrl}}',
         foregroundColor: '#0f172a',
         backgroundColor: 'transparent',
         errorCorrectionLevel: 'M',
