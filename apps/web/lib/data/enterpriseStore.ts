@@ -63,6 +63,7 @@ export interface KioskDevice {
   cardsPrinted?: number;
   maxCardCapacity?: number;
   cardsRemaining?: number;
+  totalCardsPrinted?: number;
   lastHeartbeat: string;
 }
 

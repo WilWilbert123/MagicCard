@@ -38,6 +38,7 @@ export default function HrKiosksPage() {
   // Custom Tray Capacity Modal State
   const [editTrayKiosk, setEditTrayKiosk] = useState<KioskDevice | null>(null);
   const [customCapacityInput, setCustomCapacityInput] = useState<number | string>(50);
+  const [resetTrayCount, setResetTrayCount] = useState<boolean>(true);
   const [isUpdatingTray, setIsUpdatingTray] = useState(false);
 
   const formatHeartbeatTime = (dateStr?: string) => {
@@ -153,23 +154,17 @@ export default function HrKiosksPage() {
         body: JSON.stringify({
           id: editTrayKiosk.id,
           maxCardCapacity: numCap,
+          resetTray: resetTrayCount,
         }),
       });
 
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || 'Failed to update tray capacity');
 
-      toast.success(`Card feed tray set to ${numCap} cards for ${editTrayKiosk.code}. Saved to database!`);
-      setKiosks((prev) =>
-        prev.map((k) =>
-          k.id === editTrayKiosk.id
-            ? {
-                ...k,
-                maxCardCapacity: numCap,
-                cardsRemaining: Math.max(0, numCap - (k.cardsPrinted ?? 0)),
-              }
-            : k
-        )
+      toast.success(
+        resetTrayCount
+          ? `Card feed tray refilled (${numCap} cards). Batch count reset to 0 / ${numCap}.`
+          : `Card feed tray capacity set to ${numCap} cards.`
       );
       setEditTrayKiosk(null);
       loadKiosks();
@@ -382,9 +377,10 @@ export default function HrKiosksPage() {
                           onClick={() => {
                             setEditTrayKiosk(kiosk);
                             setCustomCapacityInput(maxCap);
+                            setResetTrayCount(true);
                           }}
                           className="px-1.5 py-0.5 rounded text-[10px] font-semibold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 hover:bg-red-100 transition flex items-center gap-1"
-                          title="Set cards inserted into tray"
+                          title="Set cards inserted into tray / Refill"
                         >
                           <Edit3 className="w-3 h-3" /> Set Tray
                         </button>
@@ -399,7 +395,7 @@ export default function HrKiosksPage() {
                       <div className="w-full h-1.5 bg-slate-200 dark:bg-slate-800 rounded-full mt-1.5 overflow-hidden">
                         <div
                           style={{ width: `${Math.min(100, (printed / maxCap) * 100)}%` }}
-                          className="h-full rounded-full bg-blue-500"
+                          className={`h-full rounded-full ${printed >= maxCap ? 'bg-red-500' : 'bg-blue-500'}`}
                         />
                       </div>
 
@@ -407,6 +403,11 @@ export default function HrKiosksPage() {
                         <span className="block text-[10px] text-slate-400">
                           {remaining} cards remaining
                         </span>
+                        {typeof kiosk.totalCardsPrinted === 'number' && (
+                          <span className="block text-[10px] text-slate-500 dark:text-slate-400 font-mono" title="Lifetime total cards printed across all refills">
+                            Total: <strong>{kiosk.totalCardsPrinted}</strong>
+                          </span>
+                        )}
                       </div>
                     </div>
 
@@ -575,6 +576,26 @@ export default function HrKiosksPage() {
                     </button>
                   ))}
                 </div>
+              </div>
+
+              {/* Refill / Reset Checkbox */}
+              <div className="pt-2 border-t border-slate-200 dark:border-slate-800">
+                <label className="flex items-start gap-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={resetTrayCount}
+                    onChange={(e) => setResetTrayCount(e.target.checked)}
+                    className="mt-0.5 rounded border-slate-300 text-red-600 focus:ring-red-500 w-4 h-4"
+                  />
+                  <div>
+                    <span className="text-xs font-semibold text-slate-900 dark:text-white block">
+                      Refill Tray & Reset Batch Count to 0 / {customCapacityInput || 30}
+                    </span>
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400 block mt-0.5">
+                      Resets current tray progress to 0 printed cards while preserving historical total lifetime prints ({editTrayKiosk.totalCardsPrinted ?? editTrayKiosk.cardsPrinted ?? 0} total cards).
+                    </span>
+                  </div>
+                </label>
               </div>
 
               <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-2">
