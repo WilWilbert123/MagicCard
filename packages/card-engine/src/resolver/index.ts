@@ -69,13 +69,30 @@ export function resolveDataBinding(
   employee: EmployeeResolutionContext,
   baseUrl?: string
 ): string {
-  if (!templateString || !templateString.includes('{{')) {
-    return templateString;
+  if (!templateString) {
+    return '';
   }
 
   const dict = buildResolutionDictionary(employee, baseUrl);
+  let result = templateString;
 
-  return templateString.replace(/\{\{\s*([a-zA-Z0-9_.]+)\s*\}\}/g, (match, key) => {
+  // If a custom verification baseUrl is provided, dynamically replace legacy hardcoded verification domains
+  if (baseUrl) {
+    const customUrl = dict['system.verificationUrl'];
+    if (
+      result.includes('verify.acmecorp.com') ||
+      result.includes('verify.magiccard.corp') ||
+      result.includes('verify.corp.com')
+    ) {
+      return customUrl;
+    }
+  }
+
+  if (!result.includes('{{')) {
+    return result;
+  }
+
+  return result.replace(/\{\{\s*([a-zA-Z0-9_.]+)\s*\}\}/g, (match, key) => {
     // Only resolve keys present in our whitelist
     if (ALLOWED_DATA_BINDINGS.includes(key as AllowedDataBinding) && key in dict) {
       return dict[key];

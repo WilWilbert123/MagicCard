@@ -165,22 +165,33 @@ export async function POST(request: Request) {
 
     // 4. Resolve Kiosk ID & Code
     let kioskId = body.kioskId;
-    let kioskCode = body.kioskCode || body.kiosk_code || 'KIOSK-001';
+    let kioskCode = (body.kioskCode || body.kiosk_code || 'KIOSK-001').trim().toUpperCase();
 
-    const { data: kRecord } = await admin
+    let kRecord: any = null;
+
+    // Search by kiosk_code first
+    const { data: codeK } = await admin
       .from('kiosks')
-      .select('id, kiosk_code')
-      .or(`kiosk_code.ilike.${kioskCode},id.eq.${kioskCode}${kioskId ? `,id.eq.${kioskId}` : ''}`)
+      .select('id, kiosk_code, branch_id')
+      .ilike('kiosk_code', kioskCode)
       .maybeSingle();
+
+    if (codeK) {
+      kRecord = codeK;
+    } else if (kioskId && /^[0-9a-fA-F-]{36}$/.test(kioskId)) {
+      const { data: idK } = await admin
+        .from('kiosks')
+        .select('id, kiosk_code, branch_id')
+        .eq('id', kioskId)
+        .maybeSingle();
+      if (idK) kRecord = idK;
+    }
 
     if (kRecord) {
       kioskId = kRecord.id;
       kioskCode = kRecord.kiosk_code;
-    } else {
-      const { data: anyK } = await admin.from('kiosks').select('id, kiosk_code').limit(1).maybeSingle();
-      if (anyK) {
-        kioskId = anyK.id;
-        kioskCode = anyK.kiosk_code;
+      if (kRecord.branch_id && !branchId) {
+        branchId = kRecord.branch_id;
       }
     }
 
