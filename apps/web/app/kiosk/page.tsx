@@ -2,15 +2,15 @@
 
 import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
-import { 
-  Search, 
-  Delete, 
-  ArrowLeft, 
-  Printer, 
-  CheckCircle2, 
-  AlertCircle, 
-  RotateCcw, 
-  RefreshCw, 
+import {
+  Search,
+  Delete,
+  ArrowLeft,
+  Printer,
+  CheckCircle2,
+  AlertCircle,
+  RotateCcw,
+  RefreshCw,
   Check,
   User,
   HelpCircle,
@@ -19,6 +19,7 @@ import {
   Building2,
 } from 'lucide-react';
 import { enterpriseStore, Employee, DEFAULT_CR80_TEMPLATE } from '@/lib/data/enterpriseStore';
+import { renderCardToCanvas } from '@workspace/card-engine';
 import { toast } from '@/components/ui/Toast';
 import Card2DViewer from '@/components/card/Card2DViewer';
 
@@ -154,7 +155,7 @@ export default function KioskMainPage() {
           }
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   const [hardwarePrinterOnline, setHardwarePrinterOnline] = useState<boolean>(false);
@@ -300,7 +301,7 @@ export default function KioskMainPage() {
             emp.cardStatus = 'ISSUED';
           }
         }
-      } catch {}
+      } catch { }
 
       setFoundEmployee(emp);
 
@@ -367,8 +368,22 @@ export default function KioskMainPage() {
     // Attempt local hardware agent communication on port 7125 (/api/print)
     const agentBaseUrl = process.env.NEXT_PUBLIC_KIOSK_AGENT_URL || 'http://127.0.0.1:7125';
     let agentSuccess = false;
+    let agentErrorMessage = '';
 
     try {
+      // Render offscreen canvases at 300 DPI (scale: 3) for 1:1 match with 3D card preview
+      const activeTemplate = kioskTemplate || DEFAULT_CR80_TEMPLATE;
+      const frontCanvas = document.createElement('canvas');
+      const backCanvas = document.createElement('canvas');
+
+      await Promise.all([
+        renderCardToCanvas(frontCanvas, activeTemplate, 'front', foundEmployee, { scale: 3 }),
+        renderCardToCanvas(backCanvas, activeTemplate, 'back', foundEmployee, { scale: 3 }),
+      ]);
+
+      const frontCanvasDataUrl = frontCanvas.toDataURL('image/png');
+      const backCanvasDataUrl = backCanvas.toDataURL('image/png');
+
       const agentRes = await fetch(`${agentBaseUrl}/api/print`, {
         method: 'POST',
         headers: {
@@ -380,7 +395,9 @@ export default function KioskMainPage() {
           idempotencyKey,
           employeeId: foundEmployee.id,
           employeeNumber: foundEmployee.employeeNumber,
-          templateId: 'ver-2',
+          templateId: activeTemplate?.id || 'ver-2',
+          frontCanvasDataUrl,
+          backCanvasDataUrl,
           frontData: {
             fullName: foundEmployee.fullName,
             employeeNumber: foundEmployee.employeeNumber,
@@ -388,16 +405,23 @@ export default function KioskMainPage() {
           },
         }),
       });
-      if (agentRes.ok) {
+
+      const agentData = await agentRes.json().catch(() => ({}));
+
+      if (agentRes.ok && agentData.success) {
         agentSuccess = true;
+      } else {
+        agentSuccess = false;
+        agentErrorMessage = agentData.errorMessage || agentData.error || `KioskAgent returned HTTP ${agentRes.status}`;
       }
-    } catch {
+    } catch (err: any) {
       agentSuccess = false;
+      agentErrorMessage = err.message || 'Unable to connect to local KioskAgent daemon on port 7125.';
     }
 
-    // HARDWARE PRINTER ENFORCEMENT: If in Hardware mode and no physical printer agent responded
+    // HARDWARE PRINTER ENFORCEMENT: If in Hardware mode and physical printer agent failed
     if (!agentSuccess && printerMode === 'HARDWARE') {
-      setErrorMessage(`No Physical Card Printer Connected: Unable to communicate with the local Magicard 600NEO print engine agent on http://127.0.0.1:7125. Please verify your Magicard 600NEO USB cable or launch the local KIOSK Print Service.`);
+      setErrorMessage(`Physical Card Print Failed: ${agentErrorMessage}. Please verify your Magicard 600NEO USB cable, power status, and printer driver on your kiosk laptop.`);
       setStep('ERROR');
       return;
     }
@@ -508,11 +532,11 @@ export default function KioskMainPage() {
             {/* Badge / Logo Icon */}
             <div className="w-20 h-20 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center shadow-2xl mb-2">
               <svg viewBox="0 0 40 40" className="w-11 h-11" fill="none">
-                <rect x="4" y="10" width="32" height="20" rx="3" fill="white" fillOpacity="0.15" stroke="white" strokeOpacity="0.6" strokeWidth="1.5"/>
-                <rect x="8" y="14" width="8" height="6" rx="1" fill="#ef4444" fillOpacity="0.8"/>
-                <line x1="19" y1="15" x2="30" y2="15" stroke="white" strokeOpacity="0.6" strokeWidth="1.5" strokeLinecap="round"/>
-                <line x1="19" y1="19" x2="27" y2="19" stroke="white" strokeOpacity="0.4" strokeWidth="1.2" strokeLinecap="round"/>
-                <line x1="19" y1="23" x2="29" y2="23" stroke="white" strokeOpacity="0.3" strokeWidth="1" strokeLinecap="round"/>
+                <rect x="4" y="10" width="32" height="20" rx="3" fill="white" fillOpacity="0.15" stroke="white" strokeOpacity="0.6" strokeWidth="1.5" />
+                <rect x="8" y="14" width="8" height="6" rx="1" fill="#ef4444" fillOpacity="0.8" />
+                <line x1="19" y1="15" x2="30" y2="15" stroke="white" strokeOpacity="0.6" strokeWidth="1.5" strokeLinecap="round" />
+                <line x1="19" y1="19" x2="27" y2="19" stroke="white" strokeOpacity="0.4" strokeWidth="1.2" strokeLinecap="round" />
+                <line x1="19" y1="23" x2="29" y2="23" stroke="white" strokeOpacity="0.3" strokeWidth="1" strokeLinecap="round" />
               </svg>
             </div>
 
@@ -608,11 +632,10 @@ export default function KioskMainPage() {
           <button
             onClick={handleSearch}
             disabled={!employeeInput.trim() || isSearching}
-            className={`w-full py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-2 transition shadow-xl ${
-              employeeInput.trim() && !isSearching
+            className={`w-full py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-2 transition shadow-xl ${employeeInput.trim() && !isSearching
                 ? 'bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white shadow-red-600/30'
                 : 'bg-[#401217] text-[#ef4444]/60 border border-[#521920] cursor-pointer'
-            }`}
+              }`}
           >
             {isSearching ? (
               <>
@@ -704,17 +727,15 @@ export default function KioskMainPage() {
             <div className="flex bg-slate-900 p-1 rounded-xl border border-slate-800">
               <button
                 onClick={() => setPreviewMode('2D')}
-                className={`px-4 py-1.5 rounded-lg text-xs font-extrabold transition ${
-                  previewMode === '2D' ? 'bg-red-600 text-white' : 'text-slate-400 hover:text-white'
-                }`}
+                className={`px-4 py-1.5 rounded-lg text-xs font-extrabold transition ${previewMode === '2D' ? 'bg-red-600 text-white' : 'text-slate-400 hover:text-white'
+                  }`}
               >
                 2D
               </button>
               <button
                 onClick={() => setPreviewMode('3D')}
-                className={`px-4 py-1.5 rounded-lg text-xs font-extrabold transition ${
-                  previewMode === '3D' ? 'bg-red-600 text-white' : 'text-slate-400 hover:text-white'
-                }`}
+                className={`px-4 py-1.5 rounded-lg text-xs font-extrabold transition ${previewMode === '3D' ? 'bg-red-600 text-white' : 'text-slate-400 hover:text-white'
+                  }`}
               >
                 3D
               </button>
@@ -779,11 +800,10 @@ export default function KioskMainPage() {
                 <button
                   onClick={handleStartPrint}
                   disabled={isAlreadyPrinted}
-                  className={`px-8 py-3.5 rounded-xl font-bold text-base flex items-center gap-2 transition ${
-                    isAlreadyPrinted
+                  className={`px-8 py-3.5 rounded-xl font-bold text-base flex items-center gap-2 transition ${isAlreadyPrinted
                       ? 'bg-[#1e293b] text-slate-500 border border-slate-700/80 cursor-not-allowed shadow-none'
                       : 'bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white shadow-xl shadow-red-600/30'
-                  }`}
+                    }`}
                 >
                   <Printer className={`w-5 h-5 ${isAlreadyPrinted ? 'text-slate-500 opacity-40' : ''}`} />
                   <span>{isAlreadyPrinted ? 'CARD ALREADY PRINTED' : 'PRINT CARD'}</span>
@@ -818,13 +838,12 @@ export default function KioskMainPage() {
               return (
                 <div
                   key={stepName}
-                  className={`flex items-center justify-between py-1.5 px-3 rounded-lg transition ${
-                    isCurrent
+                  className={`flex items-center justify-between py-1.5 px-3 rounded-lg transition ${isCurrent
                       ? 'bg-red-950/60 border border-red-800/80 text-white font-semibold'
                       : isDone
-                      ? 'text-slate-300'
-                      : 'text-slate-600'
-                  }`}
+                        ? 'text-slate-300'
+                        : 'text-slate-600'
+                    }`}
                 >
                   <span className="flex items-center gap-2">
                     <span className="font-mono text-[10px] text-slate-500">{idx + 1}.</span>
@@ -979,11 +998,10 @@ export default function KioskMainPage() {
                           setDispatchNotes(`Reporting issue: ${topic}`);
                         }
                       }}
-                      className={`px-3 py-1.5 rounded-lg text-xs transition border ${
-                        isSelected
+                      className={`px-3 py-1.5 rounded-lg text-xs transition border ${isSelected
                           ? 'bg-red-600 text-white font-semibold border-red-500 shadow-md shadow-red-950/50'
                           : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border-slate-800'
-                      }`}
+                        }`}
                     >
                       {topic}
                     </button>

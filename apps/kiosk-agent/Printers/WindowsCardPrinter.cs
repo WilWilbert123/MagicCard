@@ -188,23 +188,35 @@ public class WindowsCardPrinter : ICardPrinter
                 printDoc.PrinterSettings.Duplex = Duplex.Vertical;
             }
 
-            // Set CR80 card landscape orientation and 0 margins for edge-to-edge card printing
-            printDoc.DefaultPageSettings.Landscape = true;
+            // Decode Front & Back Canvas Images
+            Image? frontImage = DecodeBase64Image(request.FrontCanvasDataUrl);
+            Image? backImage = DecodeBase64Image(request.BackCanvasDataUrl);
+
+            // Automatically detect orientation from input card graphic (Portrait vs Landscape)
+            bool isPortrait = false;
+            if (frontImage != null && frontImage.Height > frontImage.Width)
+            {
+                isPortrait = true;
+            }
+            else if (backImage != null && backImage.Height > backImage.Width)
+            {
+                isPortrait = true;
+            }
+
+            // Set CR80 card orientation and zero margins for full edge-to-edge bleed card printing
+            printDoc.DefaultPageSettings.Landscape = !isPortrait;
             printDoc.DefaultPageSettings.Margins = new Margins(0, 0, 0, 0);
+            printDoc.OriginAtMargins = false;
 
             // Select High Resolution printer setting (300 DPI)
             foreach (PrinterResolution res in printDoc.PrinterSettings.PrinterResolutions)
             {
-                if (res.Kind == PrinterResolutionKind.High)
+                if (res.Kind == PrinterResolutionKind.High || res.Y >= 300)
                 {
                     printDoc.DefaultPageSettings.PrinterResolution = res;
                     break;
                 }
             }
-
-            // Decode Front & Back Canvas Images
-            Image? frontImage = DecodeBase64Image(request.FrontCanvasDataUrl);
-            Image? backImage = DecodeBase64Image(request.BackCanvasDataUrl);
 
             int currentPage = 1;
             bool hasBackPage = backImage != null || !string.IsNullOrEmpty(request.BackCanvasDataUrl);
@@ -220,7 +232,8 @@ public class WindowsCardPrinter : ICardPrinter
                     e.Graphics.CompositingQuality = System.Drawing.Drawing2D.CompositingQuality.HighQuality;
                     e.Graphics.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
 
-                    var targetBounds = e.MarginBounds.Width > 0 ? e.MarginBounds : e.PageBounds;
+                    // Use full page bounds (0,0 to Page width/height) for full edge-to-edge bleed without white border gaps
+                    Rectangle targetBounds = e.PageBounds;
 
                     if (currentPage == 1)
                     {
