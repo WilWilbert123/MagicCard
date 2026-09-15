@@ -8,6 +8,7 @@ const DEFAULT_SETTINGS = {
   kioskInactivityTimeoutSeconds: 45,
   defaultBleedMm: 1.5,
   defaultSafeMarginMm: 3.0,
+  verificationBaseUrl: process.env.NEXT_PUBLIC_APP_URL || 'https://magic-card-trust-id.vercel.app',
 };
 
 export async function GET() {
@@ -25,6 +26,7 @@ export async function GET() {
       kioskInactivityTimeoutSeconds: settings.kioskInactivityTimeoutSeconds ?? settings.kiosk_inactivity_timeout_seconds ?? DEFAULT_SETTINGS.kioskInactivityTimeoutSeconds,
       defaultBleedMm: settings.defaultBleedMm ?? settings.default_bleed_mm ?? DEFAULT_SETTINGS.defaultBleedMm,
       defaultSafeMarginMm: settings.defaultSafeMarginMm ?? settings.default_safe_margin_mm ?? DEFAULT_SETTINGS.defaultSafeMarginMm,
+      verificationBaseUrl: settings.verificationBaseUrl ?? settings.verification_base_url ?? DEFAULT_SETTINGS.verificationBaseUrl,
     };
 
     return NextResponse.json({ data: merged });
@@ -49,6 +51,7 @@ export async function POST(request: Request) {
       kioskInactivityTimeoutSeconds: Number(body.kioskInactivityTimeoutSeconds) || 45,
       defaultBleedMm: Number(body.defaultBleedMm) || 1.5,
       defaultSafeMarginMm: Number(body.defaultSafeMarginMm) || 3.0,
+      verificationBaseUrl: (body.verificationBaseUrl || DEFAULT_SETTINGS.verificationBaseUrl).trim(),
     };
 
     if (company?.id) {
@@ -71,6 +74,7 @@ export async function POST(request: Request) {
           { company_id: company.id, key: 'kiosk_inactivity_timeout_seconds', value: JSON.stringify(newSettings.kioskInactivityTimeoutSeconds) },
           { company_id: company.id, key: 'default_bleed_mm', value: JSON.stringify(newSettings.defaultBleedMm) },
           { company_id: company.id, key: 'default_safe_margin_mm', value: JSON.stringify(newSettings.defaultSafeMarginMm) },
+          { company_id: company.id, key: 'verification_base_url', value: JSON.stringify(newSettings.verificationBaseUrl) },
         ];
         await admin.from('system_settings').upsert(settingsToUpsert, { onConflict: 'company_id,key' });
       } catch {
@@ -84,7 +88,7 @@ export async function POST(request: Request) {
       action: 'UPDATE_SETTINGS',
       entityType: 'SystemSettings',
       entityName: 'KIOSK & Hardware Policies',
-      details: `Updated system settings: Self-service reprint: ${newSettings.allowSelfServiceReprint ? 'ENABLED' : 'DISABLED'}, Inactivity timeout: ${newSettings.kioskInactivityTimeoutSeconds}s, Safe margin: ${newSettings.defaultSafeMarginMm}mm, Bleed: ${newSettings.defaultBleedMm}mm.`,
+      details: `Updated system settings: Verification Base URL: ${newSettings.verificationBaseUrl}, Self-service reprint: ${newSettings.allowSelfServiceReprint ? 'ENABLED' : 'DISABLED'}, Inactivity timeout: ${newSettings.kioskInactivityTimeoutSeconds}s.`,
     });
 
     return NextResponse.json({ success: true, data: newSettings });

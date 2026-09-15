@@ -56,6 +56,7 @@ export default function HrSettingsPage() {
   const [kioskInactivityTimeoutSeconds, setKioskInactivityTimeoutSeconds] = useState(45);
   const [defaultBleedMm, setDefaultBleedMm] = useState(1.5);
   const [defaultSafeMarginMm, setDefaultSafeMarginMm] = useState(3.0);
+  const [verificationBaseUrl, setVerificationBaseUrl] = useState('https://magic-card-trust-id.vercel.app');
   const [policiesSaving, setPoliciesSaving] = useState(false);
 
   // Branches States
@@ -152,6 +153,7 @@ export default function HrSettingsPage() {
           setKioskInactivityTimeoutSeconds(json.data.kioskInactivityTimeoutSeconds ?? 45);
           setDefaultBleedMm(json.data.defaultBleedMm ?? 1.5);
           setDefaultSafeMarginMm(json.data.defaultSafeMarginMm ?? 3.0);
+          setVerificationBaseUrl(json.data.verificationBaseUrl ?? 'https://magic-card-trust-id.vercel.app');
         }
       })
       .catch(() => toast.error('Failed to load system settings.'));
@@ -186,6 +188,7 @@ export default function HrSettingsPage() {
           kioskInactivityTimeoutSeconds,
           defaultBleedMm,
           defaultSafeMarginMm,
+          verificationBaseUrl,
         }),
       });
       const json = await res.json();
@@ -862,6 +865,30 @@ export default function HrSettingsPage() {
                 />
                 <span className="text-[10px] text-slate-500 mt-1 block">Thermal edge-to-edge bleed allowance.</span>
               </div>
+            </div>
+          </div>
+
+          {/* Digital ID Verification & QR Domain Configuration */}
+          <div className="rounded-xl bg-white dark:bg-[#111827]/90 border border-slate-200/80 dark:border-slate-800 p-6 space-y-4 shadow-sm">
+            <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-red-500" />
+              Digital ID Verification & QR Code Domain (Saved to Supabase)
+            </h2>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Verification Base Web URL / Domain
+              </label>
+              <input
+                type="url"
+                required
+                value={verificationBaseUrl}
+                onChange={(e) => setVerificationBaseUrl(e.target.value)}
+                placeholder="https://magic-card-trust-id.vercel.app"
+                className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-white font-mono"
+              />
+              <span className="text-[11px] text-slate-500 dark:text-slate-400 mt-1.5 block">
+                This domain is encoded into printed QR codes. When scanned by a phone, it redirects to your identity verification portal (e.g. <code className="text-red-500 font-mono">{verificationBaseUrl || 'https://yourdomain.com'}/verify/EMP-303943</code>).
+              </span>
             </div>
           </div>
 
