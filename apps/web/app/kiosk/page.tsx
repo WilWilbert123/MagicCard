@@ -371,7 +371,7 @@ export default function KioskMainPage() {
     let agentErrorMessage = '';
 
     try {
-      // Render offscreen canvases at 300 DPI (scale: 3) for 1:1 match with 3D card preview
+      // Render offscreen canvases for high-resolution 300DPI front & back ID card graphics
       const activeTemplate = kioskTemplate || DEFAULT_CR80_TEMPLATE;
       const frontCanvas = document.createElement('canvas');
       const backCanvas = document.createElement('canvas');
@@ -419,8 +419,7 @@ export default function KioskMainPage() {
       agentErrorMessage = err.message || 'Unable to connect to local KioskAgent daemon on port 7125.';
     }
 
-    // HARDWARE PRINTER ENFORCEMENT: If in Hardware mode and physical printer agent failed
-    if (!agentSuccess && printerMode === 'HARDWARE') {
+    if (!agentSuccess) {
       setErrorMessage(`Physical Card Print Failed: ${agentErrorMessage}. Please verify your Magicard 600NEO USB cable, power status, and printer driver on your kiosk laptop.`);
       setStep('ERROR');
       return;

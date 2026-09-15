@@ -1,3 +1,4 @@
+// Enterprise ID Card & Kiosk Management Platform
 import type { Metadata } from 'next';
 import './globals.css';
 
