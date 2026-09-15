@@ -21,7 +21,11 @@ export async function GET() {
 
     const mapped = (templates || []).map((t: any) => {
       const templateVersions = (versions || []).filter((v) => v.template_id === t.id);
-      const activeVer = templateVersions.find((v) => v.id === t.current_published_version_id || v.status === 'PUBLISHED') || templateVersions[0];
+      templateVersions.sort((a, b) => (b.version_number || 0) - (a.version_number || 0));
+      const activeVer =
+        (t.current_published_version_id && templateVersions.find((v) => v.id === t.current_published_version_id)) ||
+        templateVersions.find((v) => v.status === 'PUBLISHED') ||
+        templateVersions[0];
 
       const b = t.branch_id ? branchMap.get(t.branch_id) : null;
       const layout = activeVer?.layout_json || DEFAULT_CR80_TEMPLATE;
