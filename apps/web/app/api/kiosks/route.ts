@@ -21,7 +21,7 @@ export async function GET() {
       supabase.from('kiosks').select('*').order('created_at', { ascending: false }),
       supabase.from('branches').select('id, name'),
       supabase.from('card_template_versions').select('id, version_number, status'),
-      supabase.from('print_jobs').select('id, kiosk_id, branch_id, status').eq('status', 'COMPLETED'),
+      supabase.from('print_jobs').select('id, kiosk_id, branch_id, status, created_at').eq('status', 'COMPLETED'),
     ]);
 
     if (error) throw error;
@@ -50,7 +50,6 @@ export async function GET() {
       const kioskJobs = (printJobs || []).filter(
         (pj) => pj.kiosk_id === k.id || (pj.branch_id && pj.branch_id === k.branch_id)
       );
-      const totalCardsPrinted = kioskJobs.length;
 
       // Count print jobs completed since last tray reset timestamp
       const resetTime = k.tray_reset_at ? new Date(k.tray_reset_at).getTime() : 0;
@@ -61,7 +60,8 @@ export async function GET() {
           })
         : kioskJobs;
 
-      const cardsPrinted = currentBatchJobs.length;
+      const cardsPrinted = typeof k.cards_printed === 'number' ? Math.max(k.cards_printed, currentBatchJobs.length) : currentBatchJobs.length;
+      const totalCardsPrinted = typeof k.total_cards_printed === 'number' ? Math.max(k.total_cards_printed, kioskJobs.length) : kioskJobs.length;
       const maxCardCapacity = k.max_card_capacity || 50;
       const cardsRemaining = Math.max(0, maxCardCapacity - cardsPrinted);
 

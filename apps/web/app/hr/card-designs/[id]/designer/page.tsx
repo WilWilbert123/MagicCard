@@ -435,8 +435,8 @@ export default function CardDesignerPage() {
     'el-front-photo':       { x: 185, y: 104, width: 170, height: 215 },
     'el-front-name':        { x: 20,  y: 338, width: 500, height: 42, textAlign: 'center' },
     'el-front-position':    { x: 20,  y: 388, width: 500, height: 28, textAlign: 'center' },
-    'el-front-id':          { x: 20,  y: 428, width: 500, height: 24, textAlign: 'center' },
-    'el-front-dept':        { x: 20,  y: 460, width: 500, height: 24, textAlign: 'center' },
+    'el-front-id':          { x: 20,  y: 428, width: 500, height: 35, textAlign: 'center' },
+    'el-front-dept':        { x: 20,  y: 468, width: 500, height: 24, textAlign: 'center' },
     'el-front-branch':      { x: 20,  y: 490, width: 500, height: 24, textAlign: 'center' },
     'el-front-qr':          { x: 200, y: 630, width: 140, height: 140 },
     'el-front-footer-line': { x: 30,  y: 800, width: 480, height: 1  },
@@ -808,11 +808,32 @@ export default function CardDesignerPage() {
     toast.success(`Applied "${preset.name}" preset! All layout elements are unlocked & ready to customize.`);
   };
 
-  const handleSaveDraft = () => {
-    enterpriseStore.activeTemplate = JSON.parse(JSON.stringify(template));
-    setSaveSuccessNotice(true);
-    setTimeout(() => setSaveSuccessNotice(false), 3000);
-    toast.success('Draft layout saved to local session!');
+  const handleSaveDraft = async () => {
+    try {
+      enterpriseStore.activeTemplate = JSON.parse(JSON.stringify(template));
+      const pathParts = window.location.pathname.split('/');
+      const idIdx = pathParts.indexOf('card-designs') + 1;
+      const targetId = pathParts[idIdx] || 'template-acme-cr80';
+
+      const res = await fetch(`/api/card-templates/${targetId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          layout: template,
+          changelog: 'Saved layout customization',
+          publish: true,
+        }),
+      });
+
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Failed to save template layout');
+
+      setSaveSuccessNotice(true);
+      setTimeout(() => setSaveSuccessNotice(false), 3000);
+      toast.success(`Layout saved to Supabase! (${json.versionTag || 'v1.0.0'})`);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to save to Supabase.');
+    }
   };
 
   const handlePublish = async () => {

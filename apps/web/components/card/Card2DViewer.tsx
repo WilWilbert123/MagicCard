@@ -9,6 +9,7 @@ interface Card2DViewerProps {
   side: 'front' | 'back';
   employeeData?: any;
   employeeNumber?: string;
+  baseUrl?: string;
   className?: string;
 }
 
@@ -34,6 +35,7 @@ export default function Card2DViewer({
   side,
   employeeData,
   employeeNumber,
+  baseUrl,
   className = '',
 }: Card2DViewerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -51,6 +53,7 @@ export default function Card2DViewer({
 
     renderCardToCanvas(canvas, template, side, employee, {
       scale: 2,
+      baseUrl: baseUrl || 'https://magic-card-trust-id.vercel.app',
       signal: controller.signal,
     }).catch((err) => {
       if (err?.name !== 'AbortError') {

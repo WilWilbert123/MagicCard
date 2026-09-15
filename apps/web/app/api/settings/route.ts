@@ -11,22 +11,39 @@ const DEFAULT_SETTINGS = {
   verificationBaseUrl: process.env.NEXT_PUBLIC_APP_URL || 'https://magic-card-trust-id.vercel.app',
 };
 
+function cleanVerificationUrl(rawUrl: any): string {
+  if (!rawUrl) return DEFAULT_SETTINGS.verificationBaseUrl;
+  let str = String(rawUrl).trim();
+  try {
+    while (typeof str === 'string' && ((str.startsWith('"') && str.endsWith('"')) || (str.startsWith('\\"') && str.endsWith('\\"')))) {
+      const parsed = JSON.parse(str);
+      if (typeof parsed === 'string') str = parsed;
+      else break;
+    }
+  } catch {}
+  return str.replace(/^"|"$/g, '').replace(/\\/g, '').trim() || DEFAULT_SETTINGS.verificationBaseUrl;
+}
+
 export async function GET() {
   try {
     const admin = createAdminSupabaseClient();
-    const { data: company } = await admin.from('companies').select('id, settings').limit(1).single();
+    const [{ data: company }, { data: sysSettings }] = await Promise.all([
+      admin.from('companies').select('id, settings').limit(1).maybeSingle(),
+      admin.from('system_settings').select('key, value'),
+    ]);
 
-    if (!company) {
-      return NextResponse.json({ data: DEFAULT_SETTINGS });
-    }
+    const sysMap = new Map((sysSettings || []).map((s: any) => [s.key, s.value]));
+    const rawSysUrl = sysMap.get('verification_base_url');
 
-    const settings = company.settings || {};
+    const settings = company?.settings || {};
+    const rawUrl = rawSysUrl ?? settings.verificationBaseUrl ?? settings.verification_base_url;
+
     const merged = {
       allowSelfServiceReprint: settings.allowSelfServiceReprint ?? settings.allow_self_service_reprint ?? DEFAULT_SETTINGS.allowSelfServiceReprint,
       kioskInactivityTimeoutSeconds: settings.kioskInactivityTimeoutSeconds ?? settings.kiosk_inactivity_timeout_seconds ?? DEFAULT_SETTINGS.kioskInactivityTimeoutSeconds,
       defaultBleedMm: settings.defaultBleedMm ?? settings.default_bleed_mm ?? DEFAULT_SETTINGS.defaultBleedMm,
       defaultSafeMarginMm: settings.defaultSafeMarginMm ?? settings.default_safe_margin_mm ?? DEFAULT_SETTINGS.defaultSafeMarginMm,
-      verificationBaseUrl: settings.verificationBaseUrl ?? settings.verification_base_url ?? DEFAULT_SETTINGS.verificationBaseUrl,
+      verificationBaseUrl: cleanVerificationUrl(rawUrl),
     };
 
     return NextResponse.json({ data: merged });
@@ -45,13 +62,14 @@ export async function POST(request: Request) {
 
     const { data: company } = await admin.from('companies').select('id, settings').limit(1).single();
     
+    const cleanUrl = cleanVerificationUrl(body.verificationBaseUrl);
     const newSettings = {
       ...(company?.settings || {}),
       allowSelfServiceReprint: typeof body.allowSelfServiceReprint === 'boolean' ? body.allowSelfServiceReprint : true,
       kioskInactivityTimeoutSeconds: Number(body.kioskInactivityTimeoutSeconds) || 45,
       defaultBleedMm: Number(body.defaultBleedMm) || 1.5,
       defaultSafeMarginMm: Number(body.defaultSafeMarginMm) || 3.0,
-      verificationBaseUrl: (body.verificationBaseUrl || DEFAULT_SETTINGS.verificationBaseUrl).trim(),
+      verificationBaseUrl: cleanUrl,
     };
 
     if (company?.id) {
@@ -74,7 +92,7 @@ export async function POST(request: Request) {
           { company_id: company.id, key: 'kiosk_inactivity_timeout_seconds', value: JSON.stringify(newSettings.kioskInactivityTimeoutSeconds) },
           { company_id: company.id, key: 'default_bleed_mm', value: JSON.stringify(newSettings.defaultBleedMm) },
           { company_id: company.id, key: 'default_safe_margin_mm', value: JSON.stringify(newSettings.defaultSafeMarginMm) },
-          { company_id: company.id, key: 'verification_base_url', value: JSON.stringify(newSettings.verificationBaseUrl) },
+          { company_id: company.id, key: 'verification_base_url', value: JSON.stringify(cleanUrl) },
         ];
         await admin.from('system_settings').upsert(settingsToUpsert, { onConflict: 'company_id,key' });
       } catch {

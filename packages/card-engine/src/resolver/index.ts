@@ -31,6 +31,18 @@ export function buildResolutionDictionary(
       .join(' ');
 
   const empAny = employee as any;
+  const cleanBase = (baseUrl || 'https://verify.acmecorp.com').trim().replace(/\/+$/, '');
+  let verificationUrl = '';
+
+  if (cleanBase.includes('.php') || cleanBase.includes('.html') || cleanBase.includes('?')) {
+    const sep = cleanBase.includes('?') ? '&' : '?';
+    verificationUrl = `${cleanBase}${sep}emp=${encodeURIComponent(employee.employeeNumber || '')}`;
+  } else if (cleanBase.endsWith('/verify')) {
+    verificationUrl = `${cleanBase}/${encodeURIComponent(employee.employeeNumber || '')}`;
+  } else {
+    verificationUrl = `${cleanBase}/verify/${encodeURIComponent(employee.employeeNumber || '')}`;
+  }
+
   return {
     'employee.fullName': constructedFullName,
     'employee.firstName': employee.firstName || '',
@@ -44,7 +56,7 @@ export function buildResolutionDictionary(
     'employee.dateHired': employee.dateHired || new Date().toISOString().split('T')[0],
     'employee.photoUrl': employee.photoUrl || '',
     'system.currentDate': new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
-    'system.verificationUrl': `${baseUrl}/verify/${employee.employeeNumber}`,
+    'system.verificationUrl': verificationUrl,
   };
 }
 

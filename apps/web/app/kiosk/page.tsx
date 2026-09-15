@@ -167,6 +167,16 @@ export default function KioskMainPage() {
   const [printerMode, setPrinterMode] = useState<'HARDWARE' | 'SIMULATION'>('HARDWARE');
   const [localKioskId, setLocalKioskId] = useState<string>('KIOSK-001');
 
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const kParam = params.get('kiosk') || params.get('kioskCode') || params.get('code');
+      if (kParam) {
+        setLocalKioskId(kParam.trim().toUpperCase());
+      }
+    }
+  }, []);
+
   // Check hardware printer connectivity on localhost port 7125
   useEffect(() => {
     const checkPrinterHardware = async () => {
@@ -454,6 +464,8 @@ export default function KioskMainPage() {
           branchId: foundEmployee.branchId || null,
           departmentName: foundEmployee.departmentName || 'General',
           departmentId: foundEmployee.departmentId || null,
+          kioskCode: localKioskId,
+          kioskId: localKioskId,
           idempotencyKey,
           status: 'COMPLETED',
         }),
@@ -755,6 +767,7 @@ export default function KioskMainPage() {
                   template={kioskTemplate}
                   employeeNumber={foundEmployee.employeeNumber}
                   employeeData={foundEmployee}
+                  baseUrl={verificationBaseUrl}
                   autoRotate={false}
                 />
               </div>
@@ -765,6 +778,7 @@ export default function KioskMainPage() {
                   template={kioskTemplate}
                   side={cardSide}
                   employeeData={foundEmployee}
+                  baseUrl={verificationBaseUrl}
                 />
 
                 {/* Flip Card Toggle */}
@@ -981,7 +995,7 @@ export default function KioskMainPage() {
                 <span>Branch: <strong>SM Sorsogon City</strong></span>
               </div>
               <div className="px-2 py-0.5 rounded bg-red-950/80 border border-red-800 text-red-300 text-[11px] font-bold">
-                KIOSK-SOR-01
+                {localKioskId}
               </div>
             </div>
 
