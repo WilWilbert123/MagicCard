@@ -138,79 +138,178 @@ export async function POST(request: Request) {
 
     const admin = createAdminSupabaseClient();
 
+    // 1. Resolve Company ID
     let companyId = body.companyId;
     if (!companyId) {
-      const { data: comp } = await admin.from('companies').select('id').limit(1).single();
+      const { data: comp } = await admin.from('companies').select('id').limit(1).maybeSingle();
       companyId = comp?.id;
     }
 
+    // 2. Resolve Branch ID
+    let branchId = body.branchId;
+    if (!branchId) {
+      const { data: br } = await admin.from('branches').select('id').limit(1).maybeSingle();
+      branchId = br?.id;
+    }
+
+    // 3. Resolve Employee ID & Record
+    let employeeId = body.employeeId;
+    const empNum = (body.employeeNumber || '').trim();
+    if (!employeeId && empNum) {
+      const { data: empRecord } = await admin.from('employees').select('id, branch_id').eq('employee_number', empNum).maybeSingle();
+      if (empRecord) {
+        employeeId = empRecord.id;
+        if (!branchId && empRecord.branch_id) branchId = empRecord.branch_id;
+      }
+    }
+
+    // 4. Resolve Kiosk ID & Code
+    let kioskId = body.kioskId;
+    let kioskCode = body.kioskCode || body.kiosk_code || 'KIOSK-001';
+
+    const { data: kRecord } = await admin
+      .from('kiosks')
+      .select('id, kiosk_code')
+      .or(`kiosk_code.ilike.${kioskCode},id.eq.${kioskCode}${kioskId ? `,id.eq.${kioskId}` : ''}`)
+      .maybeSingle();
+
+    if (kRecord) {
+      kioskId = kRecord.id;
+      kioskCode = kRecord.kiosk_code;
+    } else {
+      const { data: anyK } = await admin.from('kiosks').select('id, kiosk_code').limit(1).maybeSingle();
+      if (anyK) {
+        kioskId = anyK.id;
+        kioskCode = anyK.kiosk_code;
+      }
+    }
+
+    // 5. Resolve Template Version ID
+    let templateVersionId = body.templateVersionId || body.template_version_id;
+    if (!templateVersionId) {
+      const { data: tVer } = await admin.from('card_template_versions').select('id').eq('status', 'PUBLISHED').limit(1).maybeSingle();
+      if (tVer) {
+        templateVersionId = tVer.id;
+      } else {
+        const { data: anyTVer } = await admin.from('card_template_versions').select('id').limit(1).maybeSingle();
+        templateVersionId = anyTVer?.id;
+      }
+    }
+
     const empName = body.employeeName || 'Employee';
-    const empNum = body.employeeNumber || '';
     const branch = body.branchName || 'Main Headquarters';
     const dept = body.departmentName || 'General Operations';
+    const idempotencyKey = body.idempotencyKey || `idem-${Date.now()}`;
+    const status = body.status || 'COMPLETED';
 
     const newRecord: any = {
-      job_number: `PRINT-${Date.now()}`,
-      idempotency_key: body.idempotencyKey || `idem-${Date.now()}`,
-      status: body.status || 'COMPLETED',
-      metadata: {
+      job_number: `PRINT-${Date.now().toString().slice(-6)}`,
+      idempotency_key: idempotencyKey,
+      status: status,
+      retry_count: 0,
+      printer_metadata: {
         employeeName: empName,
         employeeNumber: empNum,
         branchName: branch,
-        branchId: body.branchId || null,
         departmentName: dept,
-        departmentId: body.departmentId || null,
+        kioskCode: kioskCode,
         templateVersion: 'v2.1.0 (CR80 Duo)',
       },
       started_at: new Date().toISOString(),
-      completed_at: new Date().toISOString(),
+      completed_at: status === 'COMPLETED' ? new Date().toISOString() : null,
     };
 
     if (companyId) newRecord.company_id = companyId;
-    if (body.branchId) newRecord.branch_id = body.branchId;
-    if (body.employeeId) newRecord.employee_id = body.employeeId;
+    if (branchId) newRecord.branch_id = branchId;
+    if (kioskId) newRecord.kiosk_id = kioskId;
+    if (employeeId) newRecord.employee_id = employeeId;
+    if (templateVersionId) newRecord.template_version_id = templateVersionId;
 
-    const { data, error } = await admin
-      .from('print_jobs')
-      .insert([newRecord])
-      .select()
-      .single();
+    // Insert into Supabase table public.print_jobs
+    let insertedJob: any = null;
+    let insertError: any = null;
 
-    if (body.employeeId) {
-      // Mark employee card status as ISSUED
-      await admin.from('employees').update({ card_status: 'ISSUED' }).eq('id', body.employeeId);
+    if (companyId && branchId && kioskId && employeeId && templateVersionId) {
+      const res = await admin.from('print_jobs').insert([newRecord]).select().single();
+      insertedJob = res.data;
+      insertError = res.error;
+    } else {
+      console.warn('Missing required UUID foreign keys for print_jobs insert:', { companyId, branchId, kioskId, employeeId, templateVersionId });
     }
-    if (body.employeeNumber || empNum) {
-      await admin.from('employees').update({ card_status: 'ISSUED' }).eq('employee_number', body.employeeNumber || empNum);
+
+    const finalJobId = insertedJob?.id || `job-${Date.now()}`;
+
+    // Insert timeline event into Supabase table public.print_job_events
+    if (insertedJob?.id) {
+      try {
+        await admin.from('print_job_events').insert([
+          {
+            print_job_id: insertedJob.id,
+            status: status,
+            details: {
+              event: 'CARD_PRINT_EXECUTED',
+              employeeNumber: empNum,
+              employeeName: empName,
+              kioskCode: kioskCode,
+              timestamp: new Date().toISOString(),
+            },
+          },
+        ]);
+      } catch (evErr) {
+        console.warn('Failed to insert print_job_events:', evErr);
+      }
     }
 
+    // Increment printed card counters in Supabase table public.kiosks
+    if (kioskId && status === 'COMPLETED') {
+      try {
+        const { data: kData } = await admin.from('kiosks').select('cards_printed, total_cards_printed').eq('id', kioskId).maybeSingle();
+        if (kData) {
+          const newPrinted = (kData.cards_printed || 0) + 1;
+          const newTotal = (kData.total_cards_printed || 0) + 1;
+          await admin.from('kiosks').update({
+            cards_printed: newPrinted,
+            total_cards_printed: newTotal,
+            updated_at: new Date().toISOString(),
+          }).eq('id', kioskId);
+        }
+      } catch (kErr) {
+        console.warn('Failed to update kiosk card counts in Supabase:', kErr);
+      }
+    }
+
+    // Update Employee Card Status
+    if (employeeId) {
+      await admin.from('employees').update({ card_status: 'ISSUED' }).eq('id', employeeId);
+    }
+    if (empNum) {
+      await admin.from('employees').update({ card_status: 'ISSUED' }).eq('employee_number', empNum);
+    }
+
+    // Record Audit Log
     await recordAuditLog({
       actorType: 'KIOSK',
-      actorName: `KIOSK Terminal (${branch})`,
+      actorName: `KIOSK Terminal (${kioskCode})`,
       action: 'PRINT_ID_CARD',
       entityType: 'PrintJob',
-      entityId: data?.id || newRecord.job_number,
+      entityId: finalJobId,
       entityName: `${empName} (${empNum || 'EMP'})`,
-      branchId: body.branchId || null,
-      details: `Dispatched & printed physical ID card badge for employee "${empName}" (${empNum}) in Department "${dept}" at Branch "${branch}".`,
+      branchId: branchId || null,
+      details: `Dispatched & printed physical ID card badge for employee "${empName}" (${empNum}) at KIOSK "${kioskCode}".`,
     });
 
-    if (error) {
-      return NextResponse.json({
-        data: {
-          id: `job-${Date.now()}`,
-          jobNumber: newRecord.job_number,
-          idempotencyKey: newRecord.idempotency_key,
-          employeeName: empName,
-          employeeNumber: empNum,
-          branchName: branch,
-          departmentName: dept,
-          status: 'COMPLETED',
-        },
-      }, { status: 201 });
-    }
-
-    return NextResponse.json({ data }, { status: 201 });
+    return NextResponse.json({
+      data: {
+        id: finalJobId,
+        jobNumber: insertedJob?.job_number || newRecord.job_number,
+        idempotencyKey: idempotencyKey,
+        employeeName: empName,
+        employeeNumber: empNum,
+        branchName: branch,
+        departmentName: dept,
+        status: status,
+      },
+    }, { status: 201 });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }

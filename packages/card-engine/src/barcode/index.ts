@@ -17,12 +17,16 @@ export async function generateQRCodeDataUrl(
   text: string,
   options: QRCodeGenerateOptions = {}
 ): Promise<string> {
+  let lightColor = options.color?.light || '#ffffff';
+  if (lightColor === 'transparent' || lightColor === 'none') {
+    lightColor = '#00000000';
+  }
   return QRCode.toDataURL(text, {
     width: options.width || 256,
     margin: options.margin !== undefined ? options.margin : 1,
     color: {
       dark: options.color?.dark || '#000000',
-      light: options.color?.light || '#ffffff',
+      light: lightColor,
     },
     errorCorrectionLevel: options.errorCorrectionLevel || 'M',
   });

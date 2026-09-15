@@ -12,6 +12,7 @@ interface ThreeCardViewerProps {
   template: CardTemplateJSON;
   employeeNumber?: string;
   employeeData?: any;
+  baseUrl?: string;
   autoRotate?: boolean;
 }
 
@@ -38,6 +39,7 @@ export default function ThreeCardViewer({
   template,
   employeeNumber,
   employeeData,
+  baseUrl,
   autoRotate = false,
 }: ThreeCardViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -264,8 +266,9 @@ export default function ThreeCardViewer({
     let frontTex: THREE.CanvasTexture | null = null;
     let backTex:  THREE.CanvasTexture | null = null;
 
+    const activeBaseUrl = baseUrl || 'https://magic-card-trust-id.vercel.app';
     const frontCanvas = document.createElement('canvas');
-    renderCardToCanvas(frontCanvas, template, 'front', employee, { scale: 2 })
+    renderCardToCanvas(frontCanvas, template, 'front', employee, { scale: 2, baseUrl: activeBaseUrl })
       .then(() => {
         frontTex = new THREE.CanvasTexture(frontCanvas);
         frontTex.colorSpace = THREE.SRGBColorSpace;
@@ -276,7 +279,7 @@ export default function ThreeCardViewer({
       .catch((err) => console.warn('Front texture:', err));
 
     const backCanvas = document.createElement('canvas');
-    renderCardToCanvas(backCanvas, template, 'back', employee, { scale: 2 })
+    renderCardToCanvas(backCanvas, template, 'back', employee, { scale: 2, baseUrl: activeBaseUrl })
       .then(() => {
         backTex = new THREE.CanvasTexture(backCanvas);
         backTex.colorSpace = THREE.SRGBColorSpace;

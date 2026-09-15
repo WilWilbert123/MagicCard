@@ -303,11 +303,17 @@ async function drawQRCode(
   signal?: AbortSignal
 ) {
   const resolvedData = resolveDataBinding(el.data, employee, baseUrl);
+  // Force transparent background (#00000000) unless a custom non-white color is explicitly defined
+  let lightColor = '#00000000';
+  if (el.backgroundColor && el.backgroundColor !== '#ffffff' && el.backgroundColor !== 'transparent' && el.backgroundColor !== 'none') {
+    lightColor = el.backgroundColor;
+  }
+
   const dataUrl = await generateQRCodeDataUrl(resolvedData, {
     width: el.width,
     color: {
       dark: el.foregroundColor || '#000000',
-      light: el.backgroundColor || '#ffffff',
+      light: lightColor,
     },
     errorCorrectionLevel: el.errorCorrectionLevel || 'M',
   });
@@ -325,7 +331,7 @@ async function drawBarcode(
   const svg = generateBarcodeSvg(resolvedValue, {
     format: el.format || 'CODE128',
     lineColor: el.lineColor || '#000000',
-    backgroundColor: el.backgroundColor || '#ffffff',
+    backgroundColor: el.backgroundColor || 'transparent',
     displayValue: el.displayValue !== false,
     fontSize: el.fontSize || 12,
     width: el.width,
@@ -385,10 +391,7 @@ function drawImageFromUrl(
         resolve();
       };
       img.onerror = () => {
-        if (!signal?.aborted) {
-          ctx.fillStyle = '#fee2e2';
-          ctx.fillRect(x, y, width, height);
-        }
+        // Do not draw any opaque box on image error
         resolve();
       };
       img.src = src;
