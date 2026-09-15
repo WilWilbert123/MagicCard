@@ -19,6 +19,7 @@ import {
   Building2,
 } from 'lucide-react';
 import { enterpriseStore, Employee, DEFAULT_CR80_TEMPLATE } from '@/lib/data/enterpriseStore';
+import { renderCardToCanvas } from '@workspace/card-engine';
 import { toast } from '@/components/ui/Toast';
 import Card2DViewer from '@/components/card/Card2DViewer';
 
@@ -367,8 +368,22 @@ export default function KioskMainPage() {
     // Attempt local hardware agent communication on port 7125 (/api/print)
     const agentBaseUrl = process.env.NEXT_PUBLIC_KIOSK_AGENT_URL || 'http://127.0.0.1:7125';
     let agentSuccess = false;
+    let agentErrorMessage = '';
 
     try {
+      // Render offscreen canvases for high-resolution 300DPI front & back ID card graphics
+      const activeTemplate = kioskTemplate || DEFAULT_CR80_TEMPLATE;
+      const frontCanvas = document.createElement('canvas');
+      const backCanvas = document.createElement('canvas');
+
+      await Promise.all([
+        renderCardToCanvas(frontCanvas, activeTemplate, 'front', foundEmployee, { scale: 3 }),
+        renderCardToCanvas(backCanvas, activeTemplate, 'back', foundEmployee, { scale: 3 }),
+      ]);
+
+      const frontCanvasDataUrl = frontCanvas.toDataURL('image/png');
+      const backCanvasDataUrl = backCanvas.toDataURL('image/png');
+
       const agentRes = await fetch(`${agentBaseUrl}/api/print`, {
         method: 'POST',
         headers: {
@@ -380,7 +395,9 @@ export default function KioskMainPage() {
           idempotencyKey,
           employeeId: foundEmployee.id,
           employeeNumber: foundEmployee.employeeNumber,
-          templateId: 'ver-2',
+          templateId: activeTemplate?.id || 'ver-2',
+          frontCanvasDataUrl,
+          backCanvasDataUrl,
           frontData: {
             fullName: foundEmployee.fullName,
             employeeNumber: foundEmployee.employeeNumber,
@@ -388,16 +405,22 @@ export default function KioskMainPage() {
           },
         }),
       });
-      if (agentRes.ok) {
+
+      const agentData = await agentRes.json().catch(() => ({}));
+
+      if (agentRes.ok && agentData.success) {
         agentSuccess = true;
+      } else {
+        agentSuccess = false;
+        agentErrorMessage = agentData.errorMessage || agentData.error || `KioskAgent returned HTTP ${agentRes.status}`;
       }
-    } catch {
+    } catch (err: any) {
       agentSuccess = false;
+      agentErrorMessage = err.message || 'Unable to connect to local KioskAgent daemon on port 7125.';
     }
 
-    // HARDWARE PRINTER ENFORCEMENT: If in Hardware mode and no physical printer agent responded
-    if (!agentSuccess && printerMode === 'HARDWARE') {
-      setErrorMessage(`No Physical Card Printer Connected: Unable to communicate with the local Magicard 600NEO print engine agent on http://127.0.0.1:7125. Please verify your Magicard 600NEO USB cable or launch the local KIOSK Print Service.`);
+    if (!agentSuccess) {
+      setErrorMessage(`Physical Card Print Failed: ${agentErrorMessage}. Please verify your Magicard 600NEO USB cable, power status, and printer driver on your kiosk laptop.`);
       setStep('ERROR');
       return;
     }
