@@ -26,19 +26,16 @@ public class WindowsCardPrinter : ICardPrinter
     {
         try
         {
-            var targetPrinter = string.IsNullOrEmpty(_printerOptions.Name)
-                ? new PrinterSettings().PrinterName
-                : _printerOptions.Name;
-
-            foreach (string printer in PrinterSettings.InstalledPrinters)
+            var targetPrinter = ResolveTargetPrinterName();
+            if (string.IsNullOrEmpty(targetPrinter))
             {
-                if (printer.Equals(targetPrinter, StringComparison.OrdinalIgnoreCase))
-                {
-                    var settings = new PrinterSettings { PrinterName = printer };
-                    return Task.FromResult(settings.IsValid);
-                }
+                _logger.LogWarning("No matching printer found for target name '{ConfiguredName}'. Installed printers: [{Printers}]",
+                    _printerOptions.Name, string.Join(", ", PrinterSettings.InstalledPrinters.Cast<string>()));
+                return Task.FromResult(false);
             }
-            return Task.FromResult(false);
+
+            var settings = new PrinterSettings { PrinterName = targetPrinter };
+            return Task.FromResult(settings.IsValid);
         }
         catch (Exception ex)
         {
@@ -51,17 +48,19 @@ public class WindowsCardPrinter : ICardPrinter
     {
         try
         {
-            var targetPrinter = string.IsNullOrEmpty(_printerOptions.Name)
-                ? new PrinterSettings().PrinterName
-                : _printerOptions.Name;
+            var targetPrinter = ResolveTargetPrinterName();
+            if (string.IsNullOrEmpty(targetPrinter))
+            {
+                return Task.FromResult($"PRINTER_UNAVAILABLE (No installed printer matches '{_printerOptions.Name}')");
+            }
 
             var settings = new PrinterSettings { PrinterName = targetPrinter };
             if (!settings.IsValid)
             {
-                return Task.FromResult($"PRINTER_UNAVAILABLE ({targetPrinter} not found)");
+                return Task.FromResult($"PRINTER_OFFLINE ({targetPrinter})");
             }
 
-            return Task.FromResult("READY");
+            return Task.FromResult($"READY ({targetPrinter})");
         }
         catch (Exception ex)
         {
@@ -95,31 +94,66 @@ public class WindowsCardPrinter : ICardPrinter
         return Task.FromResult(list);
     }
 
+    private string? ResolveTargetPrinterName()
+    {
+        var configured = _printerOptions.Name;
+        if (string.IsNullOrWhiteSpace(configured))
+        {
+            return new PrinterSettings().PrinterName;
+        }
+
+        // 1. Exact match
+        foreach (string printer in PrinterSettings.InstalledPrinters)
+        {
+            if (printer.Equals(configured, StringComparison.OrdinalIgnoreCase))
+                return printer;
+        }
+
+        // 2. Substring match (e.g. "Magicard" or "600NEO" or "Magicard 600")
+        foreach (string printer in PrinterSettings.InstalledPrinters)
+        {
+            if (printer.Contains(configured, StringComparison.OrdinalIgnoreCase) ||
+                configured.Contains(printer, StringComparison.OrdinalIgnoreCase))
+                return printer;
+        }
+
+        // 3. Fallback search for any Magicard driver
+        foreach (string printer in PrinterSettings.InstalledPrinters)
+        {
+            if (printer.Contains("Magicard", StringComparison.OrdinalIgnoreCase))
+                return printer;
+        }
+
+        return null;
+    }
+
     public async Task<PrinterPrintResult> PrintCardAsync(PrintRequest request, CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Sending print job for Request ID: {RequestId} to Windows printer: {PrinterName}",
-            request.RequestId, PrinterName);
+        var resolvedPrinter = ResolveTargetPrinterName();
+        _logger.LogInformation("Sending card print job for Request ID: {RequestId} (Employee: {EmployeeId}) to printer: {PrinterName}",
+            request.RequestId, request.EmployeeNumber ?? request.EmployeeId, resolvedPrinter ?? _printerOptions.Name);
 
         try
         {
-            // Verify printer availability
-            var isAvailable = await IsAvailableAsync(cancellationToken);
-            if (!isAvailable)
+            if (string.IsNullOrEmpty(resolvedPrinter))
             {
+                var installedList = string.Join(", ", PrinterSettings.InstalledPrinters.Cast<string>());
+                _logger.LogWarning("Card print failed: No installed Windows printer matches '{Configured}'. Installed: [{Installed}]",
+                    _printerOptions.Name, installedList);
+
                 return new PrinterPrintResult
                 {
                     Success = false,
                     ErrorCode = "PRINTER_UNAVAILABLE",
-                    ErrorMessage = $"Configured printer '{PrinterName}' is offline or not installed on this KIOSK."
+                    ErrorMessage = $"No physical printer matching '{_printerOptions.Name}' was found on Windows. Installed printers: [{installedList}]"
                 };
             }
 
-            var targetPrinter = string.IsNullOrEmpty(_printerOptions.Name)
-                ? new PrinterSettings().PrinterName
-                : _printerOptions.Name;
-
             // Execute physical spooling to Windows Print Spooler
-            await SendToWindowsPrintSpoolerAsync(request, targetPrinter);
+            await SendToWindowsPrintSpoolerAsync(request, resolvedPrinter);
+
+            _logger.LogInformation("Successfully spooled card print job to physical USB printer '{PrinterName}' for Request ID: {RequestId}",
+                resolvedPrinter, request.RequestId);
 
             return new PrinterPrintResult
             {
@@ -146,56 +180,121 @@ public class WindowsCardPrinter : ICardPrinter
         {
             using var printDoc = new PrintDocument();
             printDoc.PrinterSettings.PrinterName = printerName;
+            printDoc.PrinterSettings.Copies = 1;
 
-            Image? cardImage = null;
-            if (!string.IsNullOrEmpty(request.FrontCanvasDataUrl))
+            // Enable Duplex (Back-to-Back) printing if supported by driver
+            if (printDoc.PrinterSettings.CanDuplex)
             {
-                try
+                printDoc.PrinterSettings.Duplex = Duplex.Vertical;
+            }
+
+            // Set CR80 card landscape orientation and 0 margins for edge-to-edge card printing
+            printDoc.DefaultPageSettings.Landscape = true;
+            printDoc.DefaultPageSettings.Margins = new Margins(0, 0, 0, 0);
+
+            // Select High Resolution printer setting (300 DPI)
+            foreach (PrinterResolution res in printDoc.PrinterSettings.PrinterResolutions)
+            {
+                if (res.Kind == PrinterResolutionKind.High)
                 {
-                    var base64Data = request.FrontCanvasDataUrl;
-                    if (base64Data.Contains(","))
-                    {
-                        base64Data = base64Data.Split(',')[1];
-                    }
-                    var bytes = Convert.FromBase64String(base64Data);
-                    using var ms = new MemoryStream(bytes);
-                    cardImage = Image.FromStream(ms);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "Could not decode FrontCanvasDataUrl base64 string, falling back to text drawing");
+                    printDoc.DefaultPageSettings.PrinterResolution = res;
+                    break;
                 }
             }
+
+            // Decode Front & Back Canvas Images
+            Image? frontImage = DecodeBase64Image(request.FrontCanvasDataUrl);
+            Image? backImage = DecodeBase64Image(request.BackCanvasDataUrl);
+
+            int currentPage = 1;
+            bool hasBackPage = backImage != null || !string.IsNullOrEmpty(request.BackCanvasDataUrl);
 
             printDoc.PrintPage += (sender, e) =>
             {
                 if (e.Graphics != null)
                 {
-                    if (cardImage != null)
-                    {
-                        // Draw card image to page bounds
-                        e.Graphics.DrawImage(cardImage, e.PageBounds);
-                    }
-                    else
-                    {
-                        // Draw standard card fallback
-                        using var fontTitle = new Font("Arial", 16, FontStyle.Bold);
-                        using var fontSub = new Font("Arial", 12, FontStyle.Regular);
-                        using var brush = new SolidBrush(Color.Black);
+                    // Ultra High-Quality rendering configuration for Magicard 600NEO dye-sublimation
+                    e.Graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                    e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
+                    e.Graphics.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
+                    e.Graphics.CompositingQuality = System.Drawing.Drawing2D.CompositingQuality.HighQuality;
+                    e.Graphics.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
 
-                        e.Graphics.DrawString("EMPLOYEE ID CARD", fontTitle, brush, new PointF(20, 20));
-                        e.Graphics.DrawString($"ID: {request.EmployeeNumber ?? request.EmployeeId}", fontSub, brush, new PointF(20, 60));
-                        if (!string.IsNullOrEmpty(request.EmployeeId))
+                    var targetBounds = e.MarginBounds.Width > 0 ? e.MarginBounds : e.PageBounds;
+
+                    if (currentPage == 1)
+                    {
+                        // Render Page 1 (FRONT SIDE OF CARD)
+                        if (frontImage != null)
                         {
-                            e.Graphics.DrawString($"Name: {request.EmployeeId}", fontSub, brush, new PointF(20, 90));
+                            e.Graphics.DrawImage(frontImage, targetBounds);
+                        }
+                        else
+                        {
+                            DrawCardFallbackText(e.Graphics, request, "FRONT SIDE");
+                        }
+
+                        // If back page image exists, signal to print engine to flip card and print Page 2!
+                        if (hasBackPage)
+                        {
+                            e.HasMorePages = true;
+                            currentPage = 2;
+                        }
+                        else
+                        {
+                            e.HasMorePages = false;
                         }
                     }
+                    else if (currentPage == 2)
+                    {
+                        // Render Page 2 (BACK SIDE OF CARD - AUTOMATIC DUPLEX FLIP)
+                        if (backImage != null)
+                        {
+                            e.Graphics.DrawImage(backImage, targetBounds);
+                        }
+                        else
+                        {
+                            DrawCardFallbackText(e.Graphics, request, "BACK SIDE");
+                        }
+
+                        e.HasMorePages = false;
+                    }
                 }
-                e.HasMorePages = false;
             };
 
             printDoc.Print();
         });
+    }
+
+    private Image? DecodeBase64Image(string? dataUrl)
+    {
+        if (string.IsNullOrEmpty(dataUrl)) return null;
+        try
+        {
+            var base64Data = dataUrl;
+            if (base64Data.Contains(","))
+            {
+                base64Data = base64Data.Split(',')[1];
+            }
+            var bytes = Convert.FromBase64String(base64Data);
+            using var ms = new MemoryStream(bytes);
+            return Image.FromStream(ms);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Could not decode base64 image string for card rendering");
+            return null;
+        }
+    }
+
+    private static void DrawCardFallbackText(Graphics g, PrintRequest request, string sideName)
+    {
+        using var fontTitle = new Font("Arial", 16, FontStyle.Bold);
+        using var fontSub = new Font("Arial", 12, FontStyle.Regular);
+        using var brush = new SolidBrush(Color.Black);
+
+        g.DrawString($"EMPLOYEE ID CARD ({sideName})", fontTitle, brush, new PointF(20, 20));
+        g.DrawString($"ID: {request.EmployeeNumber ?? request.EmployeeId}", fontSub, brush, new PointF(20, 60));
     }
 }
 

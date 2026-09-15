@@ -116,25 +116,7 @@ public class PrintJobService : IPrintJobService
             record.Status = "PRINTING";
             _logger.LogInformation("Executing physical card print for Request ID: {RequestId}", request.RequestId);
 
-            PrinterPrintResult printResult;
-            if (_printer is WindowsCardPrinter)
-            {
-                // Execute standard Windows print spooling
-                printResult = await _printer.PrintCardAsync(request, cancellationToken);
-            }
-            else
-            {
-                // Execute MagicCard Trust ID printing
-                var magResult = await _magicCardAdapter.PrintAsync(request, cancellationToken);
-                printResult = new PrinterPrintResult
-                {
-                    Success = magResult.Success,
-                    JobId = magResult.JobId,
-                    ErrorCode = magResult.ErrorCode,
-                    ErrorMessage = magResult.ErrorMessage,
-                    CompletedAt = magResult.CompletedAt
-                };
-            }
+            PrinterPrintResult printResult = await _printer.PrintCardAsync(request, cancellationToken);
 
             if (!printResult.Success)
             {
