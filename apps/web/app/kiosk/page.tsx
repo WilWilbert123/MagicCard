@@ -191,27 +191,7 @@ export default function KioskMainPage() {
     return () => clearInterval(interval);
   }, []);
 
-  // Send real-time heartbeat to Supabase database every 15 seconds
-  useEffect(() => {
-    const sendHeartbeat = async () => {
-      try {
-        await fetch('/api/kiosks/heartbeat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            kioskCode: localKioskId || 'KIOSK-001',
-            printerStatus: hardwarePrinterOnline ? 'READY - Magicard 600NEO (Ribbon 100%)' : 'OFFLINE - No Physical Printer Detected',
-            agentVersion: 'v1.4.0',
-            ipAddress: '127.0.0.1',
-          }),
-        });
-      } catch {}
-    };
 
-    sendHeartbeat();
-    const interval = setInterval(sendHeartbeat, 15000);
-    return () => clearInterval(interval);
-  }, [hardwarePrinterOnline, localKioskId]);
 
 
   // Inactivity timeout back to Screensaver on SEARCH screen
