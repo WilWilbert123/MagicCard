@@ -29,7 +29,6 @@ export const ALLOWED_DATA_BINDINGS = [
   'employee.dateHired',
   'employee.photoUrl',
   'company.logoUrl',
-  'system.logoUrl',
   'system.currentDate',
   'system.verificationUrl',
 ] as const;
@@ -78,6 +77,7 @@ export const EmployeePhotoElementSchema = BaseElementSchema.extend({
 export const ImageElementSchema = BaseElementSchema.extend({
   type: z.literal('IMAGE'),
   src: z.string(),
+  tintColor: z.string().optional(),
   borderRadius: z.number().default(0).optional(),
   borderWidth: z.number().default(0).optional(),
   borderColor: z.string().default('transparent').optional(),

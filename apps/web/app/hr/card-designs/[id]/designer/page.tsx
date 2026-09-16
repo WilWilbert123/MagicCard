@@ -1209,327 +1209,352 @@ export default function CardDesignerPage() {
             }}
             className={`relative shadow-2xl border border-slate-700/80 ${isVertical ? 'rounded-[18px]' : 'rounded-[24px]'} ${activeSide === 'front' ? 'bg-white' : 'bg-[#f8fafc]'}`}
           >
-            {/* Grid Overlay */}
-            {showGrid && (
-              <div className="absolute inset-0 rounded-[24px] pointer-events-none bg-[radial-gradient(#94a3b8_1px,transparent_1px)] [background-size:16px_16px] opacity-25" />
-            )}
+            {/* Inner Clipped Surface: Crops all visual graphics (waves, smoke, shapes, photos, text) cleanly at card boundary */}
+            <div className={`absolute inset-0 overflow-hidden pointer-events-auto ${isVertical ? 'rounded-[18px]' : 'rounded-[24px]'}`}>
+              {/* Grid Overlay */}
+              {showGrid && (
+                <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(#94a3b8_1px,transparent_1px)] [background-size:16px_16px] opacity-25" />
+              )}
 
-            {/* Safe Margin Guide (3mm / ~30px) */}
-            {showSafeMargin && (
-              <div className="absolute inset-[30px] rounded-[14px] border border-dashed border-blue-400/50 pointer-events-none flex items-start justify-end p-1">
-                <span className="text-[9px] font-mono text-blue-400 bg-blue-950/60 px-1 rounded">
-                  Safe Print Margin (3mm)
-                </span>
-              </div>
-            )}
+              {/* Safe Margin Guide (3mm / ~30px) */}
+              {showSafeMargin && (
+                <div className="absolute inset-[30px] rounded-[14px] border border-dashed border-blue-400/50 pointer-events-none flex items-start justify-end p-1 z-20">
+                  <span className="text-[9px] font-mono text-blue-400 bg-blue-950/60 px-1 rounded">
+                    Safe Print Margin (3mm)
+                  </span>
+                </div>
+              )}
 
-            {/* Elements Layer */}
-            {currentSurface.elements.map((el) => {
-              if (el.isHidden) return null;
-              const isSelected = selectedElementId === el.id;
+              {/* Visual Elements Layer (Clipped at Card Boundary) */}
+              {currentSurface.elements.map((el) => {
+                if (el.isHidden) return null;
+                const isSelected = selectedElementId === el.id;
 
-              const transformParts: string[] = [];
-              if (el.rotation) transformParts.push(`rotate(${el.rotation}deg)`);
-              if ((el as any).flipX) transformParts.push('scaleX(-1)');
-              if ((el as any).flipY) transformParts.push('scaleY(-1)');
-              const transformStr = transformParts.length > 0 ? transformParts.join(' ') : undefined;
+                const transformParts: string[] = [];
+                if (el.rotation) transformParts.push(`rotate(${el.rotation}deg)`);
+                if ((el as any).flipX) transformParts.push('scaleX(-1)');
+                if ((el as any).flipY) transformParts.push('scaleY(-1)');
+                const transformStr = transformParts.length > 0 ? transformParts.join(' ') : undefined;
 
-              return (
+                return (
+                  <div
+                    key={el.id}
+                    onMouseDown={(e) => handleElementMouseDown(e, el)}
+                    style={{
+                      position: 'absolute',
+                      left: `${el.x}px`,
+                      top: `${el.y}px`,
+                      width: `${el.width}px`,
+                      height: `${el.height}px`,
+                      transform: transformStr,
+                      opacity: el.opacity ?? 1,
+                      cursor: el.isLocked ? 'default' : 'move',
+                    }}
+                    className={`group ${isSelected ? 'ring-2 ring-red-500 shadow-lg z-30' : 'hover:ring-1 hover:ring-red-400/50'}`}
+                  >
+                    {/* Element Type Render */}
+                    {el.type === 'TEXT' && (
+                      <div
+                        style={{
+                          fontSize: `${el.fontSize}px`,
+                          color: el.color,
+                          fontWeight: el.fontWeight,
+                          textAlign: el.textAlign,
+                          fontFamily: el.fontFamily || 'Inter',
+                        }}
+                        className="w-full h-full flex items-center leading-none select-none"
+                      >
+                        {resolveDataBinding(el.text, activeBindingMap)}
+                      </div>
+                    )}
+
+                    {(el.type === 'EMPLOYEE_PHOTO' || el.type === 'IMAGE') && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={el.type === 'IMAGE' ? (resolveDataBinding(el.src || '', activeBindingMap) || el.src) : activePhotoSrc}
+                        alt="Preview Image"
+                        style={{
+                          filter: el.type === 'IMAGE' && ((el as any).tintColor === '#ffffff' || (el as any).tintColor === 'white')
+                            ? 'brightness(0) invert(1)'
+                            : el.type === 'IMAGE' && ((el as any).tintColor === '#000000' || (el as any).tintColor === 'black')
+                            ? 'brightness(0)'
+                            : undefined,
+                          borderRadius: (el.borderRadius !== undefined && el.borderRadius !== null)
+                            ? (el.borderRadius >= 9999 || el.borderRadius >= Math.min(el.width, el.height) / 2 ? '50%' : `${el.borderRadius}px`)
+                            : '0px',
+                          borderWidth: `${el.borderWidth || 0}px`,
+                          borderColor: el.borderColor || 'transparent',
+                          borderStyle: (el.borderWidth || 0) > 0 ? 'solid' : 'none',
+                          objectFit: el.objectFit || (el.type === 'IMAGE' ? 'contain' : 'cover'),
+                        }}
+                        className="w-full h-full shadow-sm pointer-events-none"
+                      />
+                    )}
+
+                    {el.type === 'QR_CODE' && (
+                      <div
+                        className="w-full h-full p-2 border border-slate-200/50 flex flex-col items-center justify-center rounded pointer-events-none transition-colors"
+                        style={{
+                          backgroundColor: el.backgroundColor === 'transparent' || el.backgroundColor === 'none' ? 'transparent' : (el.backgroundColor || '#ffffff'),
+                        }}
+                      >
+                        <QrCode
+                          className="w-full h-full"
+                          style={{ color: el.foregroundColor || '#0f172a' }}
+                        />
+                      </div>
+                    )}
+
+                    {el.type === 'BARCODE' && (
+                      <div className="w-full h-full bg-white p-2 border border-slate-200 flex flex-col items-center justify-center rounded pointer-events-none">
+                        <Barcode className="w-full h-12 text-black" />
+                        <span className="text-[10px] font-mono text-black">{activeBindingMap.employeeNumber}</span>
+                      </div>
+                    )}
+
+                    {el.type === 'SHAPE' && (
+                      <>
+                        {el.shapeType === 'TRIANGLE' && (
+                          <div
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              backgroundColor: el.fill || '#dc2626',
+                              clipPath: 'polygon(50% 0%, 0% 100%, 100% 100%)',
+                            }}
+                          />
+                        )}
+                        {el.shapeType === 'CIRCLE' && (
+                          <div
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              backgroundColor: el.fill || '#dc2626',
+                              borderRadius: '9999px',
+                            }}
+                          />
+                        )}
+                        {el.shapeType === 'DIAGONAL' && (
+                          <div
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              backgroundColor: el.fill || '#dc2626',
+                              clipPath: 'polygon(0 0, 100% 0, 80% 100%, 0% 100%)',
+                            }}
+                          />
+                        )}
+                        {el.shapeType === 'WAVE_HORIZONTAL' && (
+                          <svg className="w-full h-full pointer-events-none" viewBox="0 0 100 100" preserveAspectRatio="none">
+                            <path
+                              d="M 0 35 C 20 5, 40 85, 65 45 C 80 20, 92 10, 100 25 L 100 100 L 0 100 Z"
+                              fill={el.fill || '#dc2626'}
+                              stroke={el.stroke || 'none'}
+                              strokeWidth={el.strokeWidth || 0}
+                            />
+                          </svg>
+                        )}
+                        {el.shapeType === 'WAVE_VERTICAL' && (
+                          <svg className="w-full h-full pointer-events-none" viewBox="0 0 100 100" preserveAspectRatio="none">
+                            <path
+                              d="M 35 0 C 5 20, 85 40, 45 65 C 20 80, 10 92, 25 100 L 100 100 L 100 0 Z"
+                              fill={el.fill || '#dc2626'}
+                              stroke={el.stroke || 'none'}
+                              strokeWidth={el.strokeWidth || 0}
+                            />
+                          </svg>
+                        )}
+                        {el.shapeType === 'SMOKE' && (
+                          <div
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              background: `radial-gradient(circle, ${el.fill || '#dc2626'} 0%, rgba(255,255,255,0) 70%)`,
+                              borderRadius: '50%',
+                            }}
+                          />
+                        )}
+                        {el.shapeType === 'SIGNATURE_LINE' && (
+                          <div className="w-full h-full flex flex-col justify-end">
+                            <div className="w-full h-[1px] bg-slate-400" />
+                            <span className="text-[9px] font-mono text-slate-400 text-center mt-1">SIGNATURE</span>
+                          </div>
+                        )}
+                        {el.shapeType === 'LOGO' && (
+                          <div className="w-full h-full border-2 border-dashed border-slate-400 rounded flex items-center justify-center bg-slate-100/50">
+                            <span className="text-xs font-bold tracking-widest text-slate-500">LOGO</span>
+                          </div>
+                        )}
+                        {(!el.shapeType || el.shapeType === 'RECTANGLE' || el.shapeType === 'LINE') && (
+                          <div
+                            style={{
+                              backgroundColor: el.fill || '#dc2626',
+                              borderRadius: el.borderRadius ? `${el.borderRadius}px` : undefined,
+                            }}
+                            className="w-full h-full"
+                          />
+                        )}
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Selection Controls Layer (Floating action bar, Rotate Knob, & Corner Resize Handles - Unclipped) */}
+            {selectedElement && !selectedElement.isHidden && (
+              <div
+                style={{
+                  position: 'absolute',
+                  left: `${selectedElement.x}px`,
+                  top: `${selectedElement.y}px`,
+                  width: `${selectedElement.width}px`,
+                  height: `${selectedElement.height}px`,
+                  transform: [
+                    selectedElement.rotation ? `rotate(${selectedElement.rotation}deg)` : '',
+                    (selectedElement as any).flipX ? 'scaleX(-1)' : '',
+                    (selectedElement as any).flipY ? 'scaleY(-1)' : '',
+                  ].filter(Boolean).join(' ') || undefined,
+                  pointerEvents: 'none',
+                }}
+                className="z-50"
+              >
+                {/* On-Canvas Floating Quick Action Bar */}
                 <div
-                  key={el.id}
-                  onMouseDown={(e) => handleElementMouseDown(e, el)}
                   style={{
                     position: 'absolute',
-                    left: `${el.x}px`,
-                    top: `${el.y}px`,
-                    width: `${el.width}px`,
-                    height: `${el.height}px`,
-                    transform: transformStr,
-                    opacity: el.opacity ?? 1,
-                    cursor: el.isLocked ? 'default' : 'move',
+                    left: 0,
+                    top: '-42px',
+                    height: '34px',
                   }}
-                  className={`group ${isSelected ? 'ring-2 ring-red-500 shadow-lg z-30' : 'hover:ring-1 hover:ring-red-400/50'
-                    }`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="z-50 flex items-center gap-1 bg-slate-900/95 backdrop-blur-md border border-slate-700/90 rounded-lg px-2 py-1 text-white shadow-xl text-[11px] pointer-events-auto"
                 >
-                  {/* On-Canvas Floating Quick Action Bar */}
-                  {isSelected && (
-                    <div
-                      style={{
-                        position: 'absolute',
-                        left: 0,
-                        top: '-42px',
-                        height: '34px',
-                      }}
-                      onClick={(e) => e.stopPropagation()}
-                      className="z-50 flex items-center gap-1 bg-slate-900/95 backdrop-blur-md border border-slate-700/90 rounded-lg px-2 py-1 text-white shadow-xl text-[11px] pointer-events-auto"
-                    >
-                      <button
-                        onClick={() => updateSelectedElement({ rotation: ((el.rotation || 0) + 90) % 360 })}
-                        title="Rotate 90°"
-                        className="p-1 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition"
-                      >
-                        <RotateCw className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => updateSelectedElement({ flipX: !(el as any).flipX } as any)}
-                        title="Flip Horizontal"
-                        className={`p-1 rounded transition ${ (el as any).flipX ? 'bg-indigo-600 text-white' : 'hover:bg-slate-800 text-slate-300 hover:text-white' }`}
-                      >
-                        <FlipHorizontal className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => updateSelectedElement({ flipY: !(el as any).flipY } as any)}
-                        title="Flip Vertical"
-                        className={`p-1 rounded transition ${ (el as any).flipY ? 'bg-indigo-600 text-white' : 'hover:bg-slate-800 text-slate-300 hover:text-white' }`}
-                      >
-                        <FlipVertical className="w-3.5 h-3.5" />
-                      </button>
+                  <button
+                    onClick={() => updateSelectedElement({ rotation: ((selectedElement.rotation || 0) + 90) % 360 })}
+                    title="Rotate 90°"
+                    className="p-1 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition"
+                  >
+                    <RotateCw className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={() => updateSelectedElement({ flipX: !(selectedElement as any).flipX } as any)}
+                    title="Flip Horizontal"
+                    className={`p-1 rounded transition ${ (selectedElement as any).flipX ? 'bg-indigo-600 text-white' : 'hover:bg-slate-800 text-slate-300 hover:text-white' }`}
+                  >
+                    <FlipHorizontal className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={() => updateSelectedElement({ flipY: !(selectedElement as any).flipY } as any)}
+                    title="Flip Vertical"
+                    className={`p-1 rounded transition ${ (selectedElement as any).flipY ? 'bg-indigo-600 text-white' : 'hover:bg-slate-800 text-slate-300 hover:text-white' }`}
+                  >
+                    <FlipVertical className="w-3.5 h-3.5" />
+                  </button>
 
-                      <div className="w-[1px] h-3.5 bg-slate-700 mx-0.5" />
+                  <div className="w-[1px] h-3.5 bg-slate-700 mx-0.5" />
 
-                      <button
-                        onClick={() => moveElementLayer(el.id, 'top')}
-                        title="Bring to Front"
-                        className="p-1 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition"
-                      >
-                        <ChevronsUp className="w-3.5 h-3.5 text-emerald-400" />
-                      </button>
-                      <button
-                        onClick={() => moveElementLayer(el.id, 'up')}
-                        title="Bring Forward"
-                        className="p-1 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition"
-                      >
-                        <ArrowUp className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => moveElementLayer(el.id, 'down')}
-                        title="Send Backward"
-                        className="p-1 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition"
-                      >
-                        <ArrowDown className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => moveElementLayer(el.id, 'bottom')}
-                        title="Send to Back"
-                        className="p-1 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition"
-                      >
-                        <ChevronsDown className="w-3.5 h-3.5 text-indigo-400" />
-                      </button>
+                  <button
+                    onClick={() => moveElementLayer(selectedElement.id, 'top')}
+                    title="Bring to Front"
+                    className="p-1 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition"
+                  >
+                    <ChevronsUp className="w-3.5 h-3.5 text-emerald-400" />
+                  </button>
+                  <button
+                    onClick={() => moveElementLayer(selectedElement.id, 'up')}
+                    title="Bring Forward"
+                    className="p-1 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition"
+                  >
+                    <ArrowUp className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={() => moveElementLayer(selectedElement.id, 'down')}
+                    title="Send Backward"
+                    className="p-1 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition"
+                  >
+                    <ArrowDown className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={() => moveElementLayer(selectedElement.id, 'bottom')}
+                    title="Send to Back"
+                    className="p-1 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition"
+                  >
+                    <ChevronsDown className="w-3.5 h-3.5 text-indigo-400" />
+                  </button>
 
-                      <div className="w-[1px] h-3.5 bg-slate-700 mx-0.5" />
+                  <div className="w-[1px] h-3.5 bg-slate-700 mx-0.5" />
 
-                      <button
-                        onClick={() => updateSelectedElement({ isLocked: !el.isLocked })}
-                        title={el.isLocked ? 'Unlock Element' : 'Lock Element'}
-                        className="p-1 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition"
-                      >
-                        {el.isLocked ? <Unlock className="w-3.5 h-3.5 text-amber-400" /> : <Lock className="w-3.5 h-3.5" />}
-                      </button>
-                      <button
-                        onClick={deleteSelectedElement}
-                        title="Delete Element"
-                        className="p-1 hover:bg-rose-900/60 rounded text-rose-400 hover:text-rose-200 transition"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Element Type Render */}
-                  {el.type === 'TEXT' && (
-                    <div
-                      style={{
-                        fontSize: `${el.fontSize}px`,
-                        color: el.color,
-                        fontWeight: el.fontWeight,
-                        textAlign: el.textAlign,
-                        fontFamily: el.fontFamily || 'Inter',
-                      }}
-                      className="w-full h-full flex items-center leading-none select-none"
-                    >
-                      {resolveDataBinding(el.text, activeBindingMap)}
-                    </div>
-                  )}
-
-                  {(el.type === 'EMPLOYEE_PHOTO' || el.type === 'IMAGE') && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={el.type === 'IMAGE' ? (resolveDataBinding(el.src || '', activeBindingMap) || el.src) : activePhotoSrc}
-                      alt="Preview Image"
-                      style={{
-                        borderRadius: (el.borderRadius !== undefined && el.borderRadius !== null)
-                          ? (el.borderRadius >= 9999 || el.borderRadius >= Math.min(el.width, el.height) / 2 ? '50%' : `${el.borderRadius}px`)
-                          : '0px',
-                        borderWidth: `${el.borderWidth || 0}px`,
-                        borderColor: el.borderColor || 'transparent',
-                        borderStyle: (el.borderWidth || 0) > 0 ? 'solid' : 'none',
-                        objectFit: el.objectFit || (el.type === 'IMAGE' ? 'contain' : 'cover'),
-                      }}
-                      className="w-full h-full shadow-sm pointer-events-none"
-                    />
-                  )}
-
-                  {el.type === 'QR_CODE' && (
-                    <div
-                      className="w-full h-full p-2 border border-slate-200/50 flex flex-col items-center justify-center rounded pointer-events-none transition-colors"
-                      style={{
-                        backgroundColor: el.backgroundColor === 'transparent' || el.backgroundColor === 'none' ? 'transparent' : (el.backgroundColor || '#ffffff'),
-                      }}
-                    >
-                      <QrCode
-                        className="w-full h-full"
-                        style={{ color: el.foregroundColor || '#0f172a' }}
-                      />
-                    </div>
-                  )}
-
-                  {el.type === 'BARCODE' && (
-                    <div className="w-full h-full bg-white p-2 border border-slate-200 flex flex-col items-center justify-center rounded pointer-events-none">
-                      <Barcode className="w-full h-12 text-black" />
-                      <span className="text-[10px] font-mono text-black">{activeBindingMap.employeeNumber}</span>
-                    </div>
-                  )}
-
-                  {el.type === 'SHAPE' && (
-                    <>
-                      {el.shapeType === 'TRIANGLE' && (
-                        <div
-                          style={{
-                            width: '100%',
-                            height: '100%',
-                            backgroundColor: el.fill || '#dc2626',
-                            clipPath: 'polygon(50% 0%, 0% 100%, 100% 100%)',
-                          }}
-                        />
-                      )}
-                      {el.shapeType === 'CIRCLE' && (
-                        <div
-                          style={{
-                            width: '100%',
-                            height: '100%',
-                            backgroundColor: el.fill || '#dc2626',
-                            borderRadius: '9999px',
-                          }}
-                        />
-                      )}
-                      {el.shapeType === 'DIAGONAL' && (
-                        <div
-                          style={{
-                            width: '100%',
-                            height: '100%',
-                            backgroundColor: el.fill || '#dc2626',
-                            clipPath: 'polygon(0 0, 100% 0, 80% 100%, 0% 100%)',
-                          }}
-                        />
-                      )}
-                      {el.shapeType === 'WAVE_HORIZONTAL' && (
-                        <svg className="w-full h-full pointer-events-none" viewBox="0 0 100 100" preserveAspectRatio="none">
-                          <path
-                            d="M 0 35 C 20 5, 40 85, 65 45 C 80 20, 92 10, 100 25 L 100 100 L 0 100 Z"
-                            fill={el.fill || '#dc2626'}
-                            stroke={el.stroke || 'none'}
-                            strokeWidth={el.strokeWidth || 0}
-                          />
-                        </svg>
-                      )}
-                      {el.shapeType === 'WAVE_VERTICAL' && (
-                        <svg className="w-full h-full pointer-events-none" viewBox="0 0 100 100" preserveAspectRatio="none">
-                          <path
-                            d="M 35 0 C 5 20, 85 40, 45 65 C 20 80, 10 92, 25 100 L 100 100 L 100 0 Z"
-                            fill={el.fill || '#dc2626'}
-                            stroke={el.stroke || 'none'}
-                            strokeWidth={el.strokeWidth || 0}
-                          />
-                        </svg>
-                      )}
-                      {el.shapeType === 'SMOKE' && (
-                        <div
-                          style={{
-                            width: '100%',
-                            height: '100%',
-                            background: `radial-gradient(circle, ${el.fill || '#dc2626'} 0%, rgba(255,255,255,0) 70%)`,
-                            borderRadius: '50%',
-                          }}
-                        />
-                      )}
-                      {el.shapeType === 'SIGNATURE_LINE' && (
-                        <div className="w-full h-full flex flex-col justify-end">
-                          <div className="w-full h-[1px] bg-slate-400" />
-                          <span className="text-[9px] font-mono text-slate-400 text-center mt-1">SIGNATURE</span>
-                        </div>
-                      )}
-                      {el.shapeType === 'LOGO' && (
-                        <div className="w-full h-full border-2 border-dashed border-slate-400 rounded flex items-center justify-center bg-slate-100/50">
-                          <span className="text-xs font-bold tracking-widest text-slate-500">LOGO</span>
-                        </div>
-                      )}
-                      {(!el.shapeType || el.shapeType === 'RECTANGLE' || el.shapeType === 'LINE') && (
-                        <div
-                          style={{
-                            backgroundColor: el.fill || '#dc2626',
-                            borderRadius: el.borderRadius ? `${el.borderRadius}px` : undefined,
-                          }}
-                          className="w-full h-full"
-                        />
-                      )}
-                    </>
-                  )}
-
-                  {/* 8 Interactive Canvas Resize Handles & Rotate Knob */}
-                  {isSelected && !el.isLocked && (
-                    <>
-                      {/* Top Canvas Rotate Handle Knob & Stem */}
-                      <div className="absolute -top-7 left-1/2 -translate-x-1/2 flex flex-col items-center z-50 pointer-events-auto">
-                        <div
-                          onMouseDown={(e) => handleRotateStart(e, el)}
-                          title="Drag left/right to rotate element"
-                          className="w-4 h-4 bg-indigo-600 border-2 border-white text-white rounded-full flex items-center justify-center cursor-grab active:cursor-grabbing shadow-md hover:scale-125 transition-transform"
-                        >
-                          <RotateCw className="w-2.5 h-2.5" />
-                        </div>
-                        <div className="w-[1px] h-3 bg-indigo-600/80" />
-                      </div>
-
-                      {/* Corner Handles */}
-                      <div
-                        onMouseDown={(e) => handleResizeStart(e, 'nw', el)}
-                        className="absolute -top-1.5 -left-1.5 w-3 h-3 bg-white border-2 border-red-600 rounded-full cursor-nwse-resize shadow-md z-40 hover:scale-125 transition-transform"
-                      />
-                      <div
-                        onMouseDown={(e) => handleResizeStart(e, 'ne', el)}
-                        className="absolute -top-1.5 -right-1.5 w-3 h-3 bg-white border-2 border-red-600 rounded-full cursor-nesw-resize shadow-md z-40 hover:scale-125 transition-transform"
-                      />
-                      <div
-                        onMouseDown={(e) => handleResizeStart(e, 'se', el)}
-                        className="absolute -bottom-1.5 -right-1.5 w-3 h-3 bg-white border-2 border-red-600 rounded-full cursor-nwse-resize shadow-md z-40 hover:scale-125 transition-transform"
-                      />
-                      <div
-                        onMouseDown={(e) => handleResizeStart(e, 'sw', el)}
-                        className="absolute -bottom-1.5 -left-1.5 w-3 h-3 bg-white border-2 border-red-600 rounded-full cursor-nesw-resize shadow-md z-40 hover:scale-125 transition-transform"
-                      />
-
-                      {/* Edge Handles */}
-                      <div
-                        onMouseDown={(e) => handleResizeStart(e, 'n', el)}
-                        className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-white border-2 border-red-600 rounded-full cursor-ns-resize shadow-md z-40 hover:scale-125 transition-transform"
-                      />
-                      <div
-                        onMouseDown={(e) => handleResizeStart(e, 'e', el)}
-                        className="absolute top-1/2 -translate-y-1/2 -right-1.5 w-3 h-3 bg-white border-2 border-red-600 rounded-full cursor-ew-resize shadow-md z-40 hover:scale-125 transition-transform"
-                      />
-                      <div
-                        onMouseDown={(e) => handleResizeStart(e, 's', el)}
-                        className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-white border-2 border-red-600 rounded-full cursor-ns-resize shadow-md z-40 hover:scale-125 transition-transform"
-                      />
-                      <div
-                        onMouseDown={(e) => handleResizeStart(e, 'w', el)}
-                        className="absolute top-1/2 -translate-y-1/2 -left-1.5 w-3 h-3 bg-white border-2 border-red-600 rounded-full cursor-ew-resize shadow-md z-40 hover:scale-125 transition-transform"
-                      />
-                    </>
-                  )}
+                  <button
+                    onClick={() => updateSelectedElement({ isLocked: !selectedElement.isLocked })}
+                    title={selectedElement.isLocked ? 'Unlock Element' : 'Lock Element'}
+                    className="p-1 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition"
+                  >
+                    {selectedElement.isLocked ? <Unlock className="w-3.5 h-3.5 text-amber-400" /> : <Lock className="w-3.5 h-3.5" />}
+                  </button>
+                  <button
+                    onClick={deleteSelectedElement}
+                    title="Delete Element"
+                    className="p-1 hover:bg-rose-900/60 rounded text-rose-400 hover:text-rose-200 transition"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
                 </div>
-              );
-            })}
+
+                {/* 8 Interactive Canvas Resize Handles & Rotate Knob */}
+                {!selectedElement.isLocked && (
+                  <>
+                    {/* Top Canvas Rotate Handle Knob & Stem */}
+                    <div className="absolute -top-7 left-1/2 -translate-x-1/2 flex flex-col items-center z-50 pointer-events-auto">
+                      <div
+                        onMouseDown={(e) => handleRotateStart(e, selectedElement)}
+                        title="Drag left/right to rotate element"
+                        className="w-4 h-4 bg-indigo-600 border-2 border-white text-white rounded-full flex items-center justify-center cursor-grab active:cursor-grabbing shadow-md hover:scale-125 transition-transform"
+                      >
+                        <RotateCw className="w-2.5 h-2.5" />
+                      </div>
+                      <div className="w-[1px] h-3 bg-indigo-600/80" />
+                    </div>
+
+                    {/* Corner Handles */}
+                    <div
+                      onMouseDown={(e) => handleResizeStart(e, 'nw', selectedElement)}
+                      className="absolute -top-1.5 -left-1.5 w-3 h-3 bg-white border-2 border-red-600 rounded-full cursor-nwse-resize shadow-md z-40 hover:scale-125 transition-transform pointer-events-auto"
+                    />
+                    <div
+                      onMouseDown={(e) => handleResizeStart(e, 'ne', selectedElement)}
+                      className="absolute -top-1.5 -right-1.5 w-3 h-3 bg-white border-2 border-red-600 rounded-full cursor-nesw-resize shadow-md z-40 hover:scale-125 transition-transform pointer-events-auto"
+                    />
+                    <div
+                      onMouseDown={(e) => handleResizeStart(e, 'se', selectedElement)}
+                      className="absolute -bottom-1.5 -right-1.5 w-3 h-3 bg-white border-2 border-red-600 rounded-full cursor-nwse-resize shadow-md z-40 hover:scale-125 transition-transform pointer-events-auto"
+                    />
+                    <div
+                      onMouseDown={(e) => handleResizeStart(e, 'sw', selectedElement)}
+                      className="absolute -bottom-1.5 -left-1.5 w-3 h-3 bg-white border-2 border-red-600 rounded-full cursor-nesw-resize shadow-md z-40 hover:scale-125 transition-transform pointer-events-auto"
+                    />
+
+                    {/* Edge Handles */}
+                    <div
+                      onMouseDown={(e) => handleResizeStart(e, 'n', selectedElement)}
+                      className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-white border-2 border-red-600 rounded-full cursor-ns-resize shadow-md z-40 hover:scale-125 transition-transform pointer-events-auto"
+                    />
+                    <div
+                      onMouseDown={(e) => handleResizeStart(e, 'e', selectedElement)}
+                      className="absolute top-1/2 -translate-y-1/2 -right-1.5 w-3 h-3 bg-white border-2 border-red-600 rounded-full cursor-ew-resize shadow-md z-40 hover:scale-125 transition-transform pointer-events-auto"
+                    />
+                    <div
+                      onMouseDown={(e) => handleResizeStart(e, 's', selectedElement)}
+                      className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-white border-2 border-red-600 rounded-full cursor-ns-resize shadow-md z-40 hover:scale-125 transition-transform pointer-events-auto"
+                    />
+                    <div
+                      onMouseDown={(e) => handleResizeStart(e, 'w', selectedElement)}
+                      className="absolute top-1/2 -translate-y-1/2 -left-1.5 w-3 h-3 bg-white border-2 border-red-600 rounded-full cursor-ew-resize shadow-md z-40 hover:scale-125 transition-transform pointer-events-auto"
+                    />
+                  </>
+                )}
+              </div>
+            )}
           </div>
         </main>
 
@@ -1783,7 +1808,17 @@ export default function CardDesignerPage() {
 
                   {/* Direct Image URL input */}
                   <div>
-                    <label className={`text-[10px] ${labelCls}`}>Image / Logo URL</label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className={`text-[10px] ${labelCls}`}>Image / Logo URL</label>
+                      <button
+                        type="button"
+                        onClick={() => updateSelectedElement({ src: '{{company.logoUrl}}', objectFit: 'contain' } as any)}
+                        className="text-[10px] font-mono text-emerald-400 hover:text-emerald-300 transition underline"
+                        title="Set image URL to {{company.logoUrl}}"
+                      >
+                        + Insert {"{{company.logoUrl}}"}
+                      </button>
+                    </div>
                     <input
                       type="text"
                       value={selectedElement.src || ''}
@@ -1793,45 +1828,60 @@ export default function CardDesignerPage() {
                     />
                   </div>
 
-                  {/* Sample / Preset Company Logos */}
+                  {/* Logo Color Recolor / Tinting Control */}
                   <div>
-                    <label className={`text-[10px] mb-1.5 block ${labelCls}`}>Sample Logo Gallery</label>
-                    <div className="grid grid-cols-2 gap-1.5 text-[11px]">
+                    <label className={`text-[10px] mb-1.5 block ${labelCls}`}>Logo Color (Turn Black Logo to White)</label>
+                    <div className="grid grid-cols-3 gap-1.5 text-[11px] mb-2">
                       <button
                         type="button"
-                        onClick={() => updateSelectedElement({ src: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/ca/Teleperformance_logo.svg/1280px-Teleperformance_logo.svg.png', objectFit: 'contain' } as any)}
-                        className={`p-1.5 rounded border flex items-center gap-1.5 transition ${selectedElement.src?.includes('Teleperformance') ? 'border-pink-500 bg-pink-950/30 text-pink-300' : btnBorder}`}
+                        onClick={() => updateSelectedElement({ tintColor: '#ffffff' } as any)}
+                        className={`p-1.5 rounded border flex items-center justify-center gap-1 transition ${
+                          (selectedElement as any).tintColor === '#ffffff' || (selectedElement as any).tintColor === 'white'
+                            ? 'bg-white text-slate-900 border-white font-bold shadow-sm'
+                            : btnBorder
+                        }`}
                       >
-                        <span className="font-bold text-pink-500">TP</span>
-                        <span className="truncate">Teleperformance</span>
+                        <span className="w-2.5 h-2.5 rounded-full bg-white border border-slate-400" />
+                        <span>White</span>
                       </button>
 
                       <button
                         type="button"
-                        onClick={() => updateSelectedElement({ src: 'https://raw.githubusercontent.com/shadcn.png', objectFit: 'contain' } as any)}
-                        className={`p-1.5 rounded border flex items-center gap-1.5 transition ${selectedElement.src?.includes('shadcn') ? 'border-pink-500 bg-pink-950/30 text-pink-300' : btnBorder}`}
+                        onClick={() => updateSelectedElement({ tintColor: '#000000' } as any)}
+                        className={`p-1.5 rounded border flex items-center justify-center gap-1 transition ${
+                          (selectedElement as any).tintColor === '#000000' || (selectedElement as any).tintColor === 'black'
+                            ? 'bg-slate-900 text-white border-slate-700 font-bold shadow-sm'
+                            : btnBorder
+                        }`}
                       >
-                        <Building2 className="w-3.5 h-3.5 text-blue-400" />
-                        <span className="truncate">Acme Global</span>
+                        <span className="w-2.5 h-2.5 rounded-full bg-black border border-slate-600" />
+                        <span>Black</span>
                       </button>
 
                       <button
                         type="button"
-                        onClick={() => updateSelectedElement({ src: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=500&auto=format&fit=crop&q=80', objectFit: 'contain' } as any)}
-                        className={`p-1.5 rounded border flex items-center gap-1.5 transition ${selectedElement.src?.includes('unsplash') ? 'border-pink-500 bg-pink-950/30 text-pink-300' : btnBorder}`}
+                        onClick={() => updateSelectedElement({ tintColor: 'none' } as any)}
+                        className={`p-1.5 rounded border flex items-center justify-center gap-1 transition ${
+                          !(selectedElement as any).tintColor || (selectedElement as any).tintColor === 'none'
+                            ? 'bg-indigo-600 text-white border-indigo-500 font-bold shadow-sm'
+                            : btnBorder
+                        }`}
                       >
-                        <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                        <span className="truncate">Vanguard</span>
+                        <span>Original</span>
                       </button>
+                    </div>
 
-                      <button
-                        type="button"
-                        onClick={() => updateSelectedElement({ src: '{{company.logoUrl}}', objectFit: 'contain' } as any)}
-                        className={`p-1.5 rounded border flex items-center gap-1.5 transition ${selectedElement.src === '{{company.logoUrl}}' ? 'border-pink-500 bg-pink-950/30 text-pink-300' : btnBorder}`}
-                      >
-                        <span className="font-mono text-xs text-emerald-400">{"{{}}"}</span>
-                        <span className="truncate">Dynamic Binding</span>
-                      </button>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-[10px] ${labelCls}`}>Custom Tint:</span>
+                      <input
+                        type="color"
+                        value={(selectedElement as any).tintColor && (selectedElement as any).tintColor !== 'none' ? (selectedElement as any).tintColor : '#ffffff'}
+                        onChange={(e) => updateSelectedElement({ tintColor: e.target.value } as any)}
+                        className={`w-7 h-7 rounded border cursor-pointer ${isDark ? 'border-slate-700 bg-transparent' : 'border-slate-300'}`}
+                      />
+                      <span className="text-[10px] font-mono text-slate-400">
+                        {(selectedElement as any).tintColor && (selectedElement as any).tintColor !== 'none' ? (selectedElement as any).tintColor : 'Original'}
+                      </span>
                     </div>
                   </div>
 
