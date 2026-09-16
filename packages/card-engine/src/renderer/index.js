@@ -149,6 +149,36 @@ function drawShape(ctx, el) {
         ctx.closePath();
         ctx.fill();
     }
+    else if (shapeType === 'WAVE_HORIZONTAL' || shapeType === 'HORIZONTAL_WAVE') {
+        ctx.beginPath();
+        ctx.moveTo(el.x, el.y + el.height * 0.35);
+        ctx.bezierCurveTo(el.x + el.width * 0.20, el.y + el.height * 0.05, el.x + el.width * 0.40, el.y + el.height * 0.85, el.x + el.width * 0.65, el.y + el.height * 0.45);
+        ctx.bezierCurveTo(el.x + el.width * 0.80, el.y + el.height * 0.20, el.x + el.width * 0.92, el.y + el.height * 0.10, el.x + el.width, el.y + el.height * 0.25);
+        ctx.lineTo(el.x + el.width, el.y + el.height);
+        ctx.lineTo(el.x, el.y + el.height);
+        ctx.closePath();
+        ctx.fill();
+        if (el.stroke && el.strokeWidth) {
+            ctx.strokeStyle = el.stroke;
+            ctx.lineWidth = el.strokeWidth;
+            ctx.stroke();
+        }
+    }
+    else if (shapeType === 'WAVE_VERTICAL' || shapeType === 'VERTICAL_WAVE') {
+        ctx.beginPath();
+        ctx.moveTo(el.x + el.width * 0.35, el.y);
+        ctx.bezierCurveTo(el.x + el.width * 0.05, el.y + el.height * 0.20, el.x + el.width * 0.85, el.y + el.height * 0.40, el.x + el.width * 0.45, el.y + el.height * 0.65);
+        ctx.bezierCurveTo(el.x + el.width * 0.20, el.y + el.height * 0.80, el.x + el.width * 0.10, el.y + el.height * 0.92, el.x + el.width * 0.25, el.y + el.height);
+        ctx.lineTo(el.x + el.width, el.y + el.height);
+        ctx.lineTo(el.x + el.width, el.y);
+        ctx.closePath();
+        ctx.fill();
+        if (el.stroke && el.strokeWidth) {
+            ctx.strokeStyle = el.stroke;
+            ctx.lineWidth = el.strokeWidth;
+            ctx.stroke();
+        }
+    }
     else if (shapeType === 'SMOKE') {
         const cx = el.x + el.width / 2;
         const cy = el.y + el.height / 2;

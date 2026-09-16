@@ -401,7 +401,7 @@ export declare const ShapeElementSchema: z.ZodObject<{
     zIndex: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
 } & {
     type: z.ZodLiteral<"SHAPE">;
-    shapeType: z.ZodEnum<["RECTANGLE", "CIRCLE", "LINE", "TRIANGLE", "DIAGONAL", "SMOKE", "SIGNATURE_LINE", "LOGO"]>;
+    shapeType: z.ZodEnum<["RECTANGLE", "CIRCLE", "LINE", "TRIANGLE", "DIAGONAL", "WAVE_HORIZONTAL", "WAVE_VERTICAL", "SMOKE", "SIGNATURE_LINE", "LOGO"]>;
     fill: z.ZodOptional<z.ZodDefault<z.ZodString>>;
     stroke: z.ZodOptional<z.ZodString>;
     strokeWidth: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
@@ -413,7 +413,7 @@ export declare const ShapeElementSchema: z.ZodObject<{
     width: number;
     height: number;
     type: "SHAPE";
-    shapeType: "RECTANGLE" | "CIRCLE" | "LINE" | "TRIANGLE" | "DIAGONAL" | "SMOKE" | "SIGNATURE_LINE" | "LOGO";
+    shapeType: "RECTANGLE" | "CIRCLE" | "LINE" | "TRIANGLE" | "DIAGONAL" | "WAVE_HORIZONTAL" | "WAVE_VERTICAL" | "SMOKE" | "SIGNATURE_LINE" | "LOGO";
     name?: string | undefined;
     rotation?: number | undefined;
     flipX?: boolean | undefined;
@@ -433,7 +433,7 @@ export declare const ShapeElementSchema: z.ZodObject<{
     width: number;
     height: number;
     type: "SHAPE";
-    shapeType: "RECTANGLE" | "CIRCLE" | "LINE" | "TRIANGLE" | "DIAGONAL" | "SMOKE" | "SIGNATURE_LINE" | "LOGO";
+    shapeType: "RECTANGLE" | "CIRCLE" | "LINE" | "TRIANGLE" | "DIAGONAL" | "WAVE_HORIZONTAL" | "WAVE_VERTICAL" | "SMOKE" | "SIGNATURE_LINE" | "LOGO";
     name?: string | undefined;
     rotation?: number | undefined;
     flipX?: boolean | undefined;
@@ -786,7 +786,7 @@ export declare const CardElementSchema: z.ZodDiscriminatedUnion<"type", [z.ZodOb
     zIndex: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
 } & {
     type: z.ZodLiteral<"SHAPE">;
-    shapeType: z.ZodEnum<["RECTANGLE", "CIRCLE", "LINE", "TRIANGLE", "DIAGONAL", "SMOKE", "SIGNATURE_LINE", "LOGO"]>;
+    shapeType: z.ZodEnum<["RECTANGLE", "CIRCLE", "LINE", "TRIANGLE", "DIAGONAL", "WAVE_HORIZONTAL", "WAVE_VERTICAL", "SMOKE", "SIGNATURE_LINE", "LOGO"]>;
     fill: z.ZodOptional<z.ZodDefault<z.ZodString>>;
     stroke: z.ZodOptional<z.ZodString>;
     strokeWidth: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
@@ -798,7 +798,7 @@ export declare const CardElementSchema: z.ZodDiscriminatedUnion<"type", [z.ZodOb
     width: number;
     height: number;
     type: "SHAPE";
-    shapeType: "RECTANGLE" | "CIRCLE" | "LINE" | "TRIANGLE" | "DIAGONAL" | "SMOKE" | "SIGNATURE_LINE" | "LOGO";
+    shapeType: "RECTANGLE" | "CIRCLE" | "LINE" | "TRIANGLE" | "DIAGONAL" | "WAVE_HORIZONTAL" | "WAVE_VERTICAL" | "SMOKE" | "SIGNATURE_LINE" | "LOGO";
     name?: string | undefined;
     rotation?: number | undefined;
     flipX?: boolean | undefined;
@@ -818,7 +818,7 @@ export declare const CardElementSchema: z.ZodDiscriminatedUnion<"type", [z.ZodOb
     width: number;
     height: number;
     type: "SHAPE";
-    shapeType: "RECTANGLE" | "CIRCLE" | "LINE" | "TRIANGLE" | "DIAGONAL" | "SMOKE" | "SIGNATURE_LINE" | "LOGO";
+    shapeType: "RECTANGLE" | "CIRCLE" | "LINE" | "TRIANGLE" | "DIAGONAL" | "WAVE_HORIZONTAL" | "WAVE_VERTICAL" | "SMOKE" | "SIGNATURE_LINE" | "LOGO";
     name?: string | undefined;
     rotation?: number | undefined;
     flipX?: boolean | undefined;
@@ -1233,7 +1233,7 @@ export declare const CardSurfaceSchema: z.ZodObject<{
         zIndex: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
     } & {
         type: z.ZodLiteral<"SHAPE">;
-        shapeType: z.ZodEnum<["RECTANGLE", "CIRCLE", "LINE", "TRIANGLE", "DIAGONAL", "SMOKE", "SIGNATURE_LINE", "LOGO"]>;
+        shapeType: z.ZodEnum<["RECTANGLE", "CIRCLE", "LINE", "TRIANGLE", "DIAGONAL", "WAVE_HORIZONTAL", "WAVE_VERTICAL", "SMOKE", "SIGNATURE_LINE", "LOGO"]>;
         fill: z.ZodOptional<z.ZodDefault<z.ZodString>>;
         stroke: z.ZodOptional<z.ZodString>;
         strokeWidth: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
@@ -1245,7 +1245,7 @@ export declare const CardSurfaceSchema: z.ZodObject<{
         width: number;
         height: number;
         type: "SHAPE";
-        shapeType: "RECTANGLE" | "CIRCLE" | "LINE" | "TRIANGLE" | "DIAGONAL" | "SMOKE" | "SIGNATURE_LINE" | "LOGO";
+        shapeType: "RECTANGLE" | "CIRCLE" | "LINE" | "TRIANGLE" | "DIAGONAL" | "WAVE_HORIZONTAL" | "WAVE_VERTICAL" | "SMOKE" | "SIGNATURE_LINE" | "LOGO";
         name?: string | undefined;
         rotation?: number | undefined;
         flipX?: boolean | undefined;
@@ -1265,7 +1265,7 @@ export declare const CardSurfaceSchema: z.ZodObject<{
         width: number;
         height: number;
         type: "SHAPE";
-        shapeType: "RECTANGLE" | "CIRCLE" | "LINE" | "TRIANGLE" | "DIAGONAL" | "SMOKE" | "SIGNATURE_LINE" | "LOGO";
+        shapeType: "RECTANGLE" | "CIRCLE" | "LINE" | "TRIANGLE" | "DIAGONAL" | "WAVE_HORIZONTAL" | "WAVE_VERTICAL" | "SMOKE" | "SIGNATURE_LINE" | "LOGO";
         name?: string | undefined;
         rotation?: number | undefined;
         flipX?: boolean | undefined;
@@ -1405,7 +1405,7 @@ export declare const CardSurfaceSchema: z.ZodObject<{
         width: number;
         height: number;
         type: "SHAPE";
-        shapeType: "RECTANGLE" | "CIRCLE" | "LINE" | "TRIANGLE" | "DIAGONAL" | "SMOKE" | "SIGNATURE_LINE" | "LOGO";
+        shapeType: "RECTANGLE" | "CIRCLE" | "LINE" | "TRIANGLE" | "DIAGONAL" | "WAVE_HORIZONTAL" | "WAVE_VERTICAL" | "SMOKE" | "SIGNATURE_LINE" | "LOGO";
         name?: string | undefined;
         rotation?: number | undefined;
         flipX?: boolean | undefined;
@@ -1545,7 +1545,7 @@ export declare const CardSurfaceSchema: z.ZodObject<{
         width: number;
         height: number;
         type: "SHAPE";
-        shapeType: "RECTANGLE" | "CIRCLE" | "LINE" | "TRIANGLE" | "DIAGONAL" | "SMOKE" | "SIGNATURE_LINE" | "LOGO";
+        shapeType: "RECTANGLE" | "CIRCLE" | "LINE" | "TRIANGLE" | "DIAGONAL" | "WAVE_HORIZONTAL" | "WAVE_VERTICAL" | "SMOKE" | "SIGNATURE_LINE" | "LOGO";
         name?: string | undefined;
         rotation?: number | undefined;
         flipX?: boolean | undefined;
@@ -2036,7 +2036,7 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             zIndex: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
         } & {
             type: z.ZodLiteral<"SHAPE">;
-            shapeType: z.ZodEnum<["RECTANGLE", "CIRCLE", "LINE", "TRIANGLE", "DIAGONAL", "SMOKE", "SIGNATURE_LINE", "LOGO"]>;
+            shapeType: z.ZodEnum<["RECTANGLE", "CIRCLE", "LINE", "TRIANGLE", "DIAGONAL", "WAVE_HORIZONTAL", "WAVE_VERTICAL", "SMOKE", "SIGNATURE_LINE", "LOGO"]>;
             fill: z.ZodOptional<z.ZodDefault<z.ZodString>>;
             stroke: z.ZodOptional<z.ZodString>;
             strokeWidth: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
@@ -2048,7 +2048,7 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             width: number;
             height: number;
             type: "SHAPE";
-            shapeType: "RECTANGLE" | "CIRCLE" | "LINE" | "TRIANGLE" | "DIAGONAL" | "SMOKE" | "SIGNATURE_LINE" | "LOGO";
+            shapeType: "RECTANGLE" | "CIRCLE" | "LINE" | "TRIANGLE" | "DIAGONAL" | "WAVE_HORIZONTAL" | "WAVE_VERTICAL" | "SMOKE" | "SIGNATURE_LINE" | "LOGO";
             name?: string | undefined;
             rotation?: number | undefined;
             flipX?: boolean | undefined;
@@ -2068,7 +2068,7 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             width: number;
             height: number;
             type: "SHAPE";
-            shapeType: "RECTANGLE" | "CIRCLE" | "LINE" | "TRIANGLE" | "DIAGONAL" | "SMOKE" | "SIGNATURE_LINE" | "LOGO";
+            shapeType: "RECTANGLE" | "CIRCLE" | "LINE" | "TRIANGLE" | "DIAGONAL" | "WAVE_HORIZONTAL" | "WAVE_VERTICAL" | "SMOKE" | "SIGNATURE_LINE" | "LOGO";
             name?: string | undefined;
             rotation?: number | undefined;
             flipX?: boolean | undefined;
@@ -2208,7 +2208,7 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             width: number;
             height: number;
             type: "SHAPE";
-            shapeType: "RECTANGLE" | "CIRCLE" | "LINE" | "TRIANGLE" | "DIAGONAL" | "SMOKE" | "SIGNATURE_LINE" | "LOGO";
+            shapeType: "RECTANGLE" | "CIRCLE" | "LINE" | "TRIANGLE" | "DIAGONAL" | "WAVE_HORIZONTAL" | "WAVE_VERTICAL" | "SMOKE" | "SIGNATURE_LINE" | "LOGO";
             name?: string | undefined;
             rotation?: number | undefined;
             flipX?: boolean | undefined;
@@ -2348,7 +2348,7 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             width: number;
             height: number;
             type: "SHAPE";
-            shapeType: "RECTANGLE" | "CIRCLE" | "LINE" | "TRIANGLE" | "DIAGONAL" | "SMOKE" | "SIGNATURE_LINE" | "LOGO";
+            shapeType: "RECTANGLE" | "CIRCLE" | "LINE" | "TRIANGLE" | "DIAGONAL" | "WAVE_HORIZONTAL" | "WAVE_VERTICAL" | "SMOKE" | "SIGNATURE_LINE" | "LOGO";
             name?: string | undefined;
             rotation?: number | undefined;
             flipX?: boolean | undefined;
@@ -2757,7 +2757,7 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             zIndex: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
         } & {
             type: z.ZodLiteral<"SHAPE">;
-            shapeType: z.ZodEnum<["RECTANGLE", "CIRCLE", "LINE", "TRIANGLE", "DIAGONAL", "SMOKE", "SIGNATURE_LINE", "LOGO"]>;
+            shapeType: z.ZodEnum<["RECTANGLE", "CIRCLE", "LINE", "TRIANGLE", "DIAGONAL", "WAVE_HORIZONTAL", "WAVE_VERTICAL", "SMOKE", "SIGNATURE_LINE", "LOGO"]>;
             fill: z.ZodOptional<z.ZodDefault<z.ZodString>>;
             stroke: z.ZodOptional<z.ZodString>;
             strokeWidth: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
@@ -2769,7 +2769,7 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             width: number;
             height: number;
             type: "SHAPE";
-            shapeType: "RECTANGLE" | "CIRCLE" | "LINE" | "TRIANGLE" | "DIAGONAL" | "SMOKE" | "SIGNATURE_LINE" | "LOGO";
+            shapeType: "RECTANGLE" | "CIRCLE" | "LINE" | "TRIANGLE" | "DIAGONAL" | "WAVE_HORIZONTAL" | "WAVE_VERTICAL" | "SMOKE" | "SIGNATURE_LINE" | "LOGO";
             name?: string | undefined;
             rotation?: number | undefined;
             flipX?: boolean | undefined;
@@ -2789,7 +2789,7 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             width: number;
             height: number;
             type: "SHAPE";
-            shapeType: "RECTANGLE" | "CIRCLE" | "LINE" | "TRIANGLE" | "DIAGONAL" | "SMOKE" | "SIGNATURE_LINE" | "LOGO";
+            shapeType: "RECTANGLE" | "CIRCLE" | "LINE" | "TRIANGLE" | "DIAGONAL" | "WAVE_HORIZONTAL" | "WAVE_VERTICAL" | "SMOKE" | "SIGNATURE_LINE" | "LOGO";
             name?: string | undefined;
             rotation?: number | undefined;
             flipX?: boolean | undefined;
@@ -2929,7 +2929,7 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             width: number;
             height: number;
             type: "SHAPE";
-            shapeType: "RECTANGLE" | "CIRCLE" | "LINE" | "TRIANGLE" | "DIAGONAL" | "SMOKE" | "SIGNATURE_LINE" | "LOGO";
+            shapeType: "RECTANGLE" | "CIRCLE" | "LINE" | "TRIANGLE" | "DIAGONAL" | "WAVE_HORIZONTAL" | "WAVE_VERTICAL" | "SMOKE" | "SIGNATURE_LINE" | "LOGO";
             name?: string | undefined;
             rotation?: number | undefined;
             flipX?: boolean | undefined;
@@ -3069,7 +3069,7 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             width: number;
             height: number;
             type: "SHAPE";
-            shapeType: "RECTANGLE" | "CIRCLE" | "LINE" | "TRIANGLE" | "DIAGONAL" | "SMOKE" | "SIGNATURE_LINE" | "LOGO";
+            shapeType: "RECTANGLE" | "CIRCLE" | "LINE" | "TRIANGLE" | "DIAGONAL" | "WAVE_HORIZONTAL" | "WAVE_VERTICAL" | "SMOKE" | "SIGNATURE_LINE" | "LOGO";
             name?: string | undefined;
             rotation?: number | undefined;
             flipX?: boolean | undefined;
@@ -3226,7 +3226,7 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             width: number;
             height: number;
             type: "SHAPE";
-            shapeType: "RECTANGLE" | "CIRCLE" | "LINE" | "TRIANGLE" | "DIAGONAL" | "SMOKE" | "SIGNATURE_LINE" | "LOGO";
+            shapeType: "RECTANGLE" | "CIRCLE" | "LINE" | "TRIANGLE" | "DIAGONAL" | "WAVE_HORIZONTAL" | "WAVE_VERTICAL" | "SMOKE" | "SIGNATURE_LINE" | "LOGO";
             name?: string | undefined;
             rotation?: number | undefined;
             flipX?: boolean | undefined;
@@ -3367,7 +3367,7 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             width: number;
             height: number;
             type: "SHAPE";
-            shapeType: "RECTANGLE" | "CIRCLE" | "LINE" | "TRIANGLE" | "DIAGONAL" | "SMOKE" | "SIGNATURE_LINE" | "LOGO";
+            shapeType: "RECTANGLE" | "CIRCLE" | "LINE" | "TRIANGLE" | "DIAGONAL" | "WAVE_HORIZONTAL" | "WAVE_VERTICAL" | "SMOKE" | "SIGNATURE_LINE" | "LOGO";
             name?: string | undefined;
             rotation?: number | undefined;
             flipX?: boolean | undefined;
@@ -3525,7 +3525,7 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             width: number;
             height: number;
             type: "SHAPE";
-            shapeType: "RECTANGLE" | "CIRCLE" | "LINE" | "TRIANGLE" | "DIAGONAL" | "SMOKE" | "SIGNATURE_LINE" | "LOGO";
+            shapeType: "RECTANGLE" | "CIRCLE" | "LINE" | "TRIANGLE" | "DIAGONAL" | "WAVE_HORIZONTAL" | "WAVE_VERTICAL" | "SMOKE" | "SIGNATURE_LINE" | "LOGO";
             name?: string | undefined;
             rotation?: number | undefined;
             flipX?: boolean | undefined;
@@ -3666,7 +3666,7 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             width: number;
             height: number;
             type: "SHAPE";
-            shapeType: "RECTANGLE" | "CIRCLE" | "LINE" | "TRIANGLE" | "DIAGONAL" | "SMOKE" | "SIGNATURE_LINE" | "LOGO";
+            shapeType: "RECTANGLE" | "CIRCLE" | "LINE" | "TRIANGLE" | "DIAGONAL" | "WAVE_HORIZONTAL" | "WAVE_VERTICAL" | "SMOKE" | "SIGNATURE_LINE" | "LOGO";
             name?: string | undefined;
             rotation?: number | undefined;
             flipX?: boolean | undefined;
