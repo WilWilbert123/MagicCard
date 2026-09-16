@@ -265,31 +265,43 @@ export default function ThreeCardViewer({
       (employeeNumber ? enterpriseStore.findEmployeeByNumber(employeeNumber) : null) ||
       fallbackEmployee;
 
-    let frontTex: THREE.CanvasTexture | null = null;
-    let backTex:  THREE.CanvasTexture | null = null;
-
     const activeBaseUrl = baseUrl || 'https://magic-card-trust-id.vercel.app';
+    
     const frontCanvas = document.createElement('canvas');
+    frontCanvas.width = (template.card?.width || 340) * 2;
+    frontCanvas.height = (template.card?.height || 540) * 2;
+    const frontTex = new THREE.CanvasTexture(frontCanvas);
+    frontTex.colorSpace = THREE.SRGBColorSpace;
+    frontTex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+    frontMaterial.map = frontTex;
+    frontMaterial.needsUpdate = true;
+
     renderCardToCanvas(frontCanvas, template, 'front', employee, { scale: 2, baseUrl: activeBaseUrl })
       .then(() => {
-        frontTex = new THREE.CanvasTexture(frontCanvas);
-        frontTex.colorSpace = THREE.SRGBColorSpace;
-        frontTex.anisotropy  = renderer.capabilities.getMaxAnisotropy();
-        frontMaterial.map    = frontTex;
-        frontMaterial.needsUpdate = true;
+        frontTex.needsUpdate = true;
       })
-      .catch((err) => console.warn('Front texture:', err));
+      .catch((err) => {
+        console.warn('Front texture:', err);
+        frontTex.needsUpdate = true;
+      });
 
     const backCanvas = document.createElement('canvas');
+    backCanvas.width = (template.card?.width || 340) * 2;
+    backCanvas.height = (template.card?.height || 540) * 2;
+    const backTex = new THREE.CanvasTexture(backCanvas);
+    backTex.colorSpace = THREE.SRGBColorSpace;
+    backTex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+    backMaterial.map = backTex;
+    backMaterial.needsUpdate = true;
+
     renderCardToCanvas(backCanvas, template, 'back', employee, { scale: 2, baseUrl: activeBaseUrl })
       .then(() => {
-        backTex = new THREE.CanvasTexture(backCanvas);
-        backTex.colorSpace = THREE.SRGBColorSpace;
-        backTex.anisotropy  = renderer.capabilities.getMaxAnisotropy();
-        backMaterial.map    = backTex;
-        backMaterial.needsUpdate = true;
+        backTex.needsUpdate = true;
       })
-      .catch((err) => console.warn('Back texture:', err));
+      .catch((err) => {
+        console.warn('Back texture:', err);
+        backTex.needsUpdate = true;
+      });
 
     // ── Double-click reset ─────────────────────────────────────────
     const handleDblClick = () => {
