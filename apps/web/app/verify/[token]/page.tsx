@@ -1,7 +1,7 @@
 'use client';
 
 import { use, useEffect, useState } from 'react';
-import { ShieldCheck, CheckCircle2, AlertTriangle, Lock, Award, RefreshCw } from 'lucide-react';
+import { ShieldCheck, CheckCircle2, AlertTriangle, Lock, RefreshCw } from 'lucide-react';
 import { decodeVerificationToken } from '@workspace/card-engine';
 import { enterpriseStore } from '@/lib/data/enterpriseStore';
 
@@ -110,15 +110,6 @@ export default function VerifyCardPage({ params }: { params: Promise<{ token: st
                     OFFICIALLY ISSUED & ACTIVE
                   </span>
                 </div>
-              </div>
-
-              {/* Cryptographic Trust Seal */}
-              <div className="flex items-center justify-between p-3 rounded-xl bg-zinc-900/40 border border-zinc-800 text-[11px] text-zinc-400">
-                <div className="flex items-center gap-2">
-                  <Award className="w-4 h-4 text-white shrink-0" />
-                  <span>Tamper-Proof Cryptographic Hash</span>
-                </div>
-                <span className="font-mono text-[10px] text-white font-semibold uppercase">SEAL: VERIFIED-2028</span>
               </div>
             </>
           ) : (
