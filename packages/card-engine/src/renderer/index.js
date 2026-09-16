@@ -51,31 +51,36 @@ export async function renderCardToCanvas(canvas, template, side, employee, optio
             }
             ctx.translate(-centerX, -centerY);
         }
-        switch (el.type) {
-            case 'SHAPE':
-                drawShape(ctx, el);
-                break;
-            case 'TEXT':
-                drawText(ctx, el, employee, options.baseUrl);
-                break;
-            case 'EMPLOYEE_PHOTO':
-                await drawPhoto(ctx, el, employee, options.signal);
-                break;
-            case 'IMAGE':
-                await drawImage(ctx, el, employee, options.baseUrl, options.signal);
-                break;
-            case 'QR_CODE':
-                if (!hasRenderedQR) {
-                    await drawQRCode(ctx, el, employee, options.baseUrl, options.signal);
-                    hasRenderedQR = true;
-                }
-                break;
-            case 'BARCODE':
-                if (!hasRenderedBarcode) {
-                    await drawBarcode(ctx, el, employee, options.signal);
-                    hasRenderedBarcode = true;
-                }
-                break;
+        try {
+            switch (el.type) {
+                case 'SHAPE':
+                    drawShape(ctx, el);
+                    break;
+                case 'TEXT':
+                    drawText(ctx, el, employee, options.baseUrl);
+                    break;
+                case 'EMPLOYEE_PHOTO':
+                    await drawPhoto(ctx, el, employee, options.signal);
+                    break;
+                case 'IMAGE':
+                    await drawImage(ctx, el, employee, options.baseUrl, options.signal);
+                    break;
+                case 'QR_CODE':
+                    if (!hasRenderedQR) {
+                        await drawQRCode(ctx, el, employee, options.baseUrl, options.signal);
+                        hasRenderedQR = true;
+                    }
+                    break;
+                case 'BARCODE':
+                    if (!hasRenderedBarcode) {
+                        await drawBarcode(ctx, el, employee, options.signal);
+                        hasRenderedBarcode = true;
+                    }
+                    break;
+            }
+        }
+        catch (err) {
+            console.warn(`Error rendering element ${el.id} (${el.type}):`, err);
         }
         ctx.restore();
     }
@@ -154,32 +159,36 @@ function drawShape(ctx, el) {
         ctx.fill();
     }
     else if (shapeType === 'WAVE_HORIZONTAL' || shapeType === 'HORIZONTAL_WAVE') {
-        ctx.save();
-        ctx.translate(el.x, el.y);
-        ctx.scale(el.width / 100, el.height / 100);
-        const wavePath = new Path2D("M 0 35 C 20 5, 40 85, 65 45 C 80 20, 92 10, 100 25 L 100 100 L 0 100 Z");
+        ctx.beginPath();
+        ctx.moveTo(el.x, el.y + el.height * 0.35);
+        ctx.bezierCurveTo(el.x + el.width * 0.20, el.y + el.height * 0.05, el.x + el.width * 0.40, el.y + el.height * 0.85, el.x + el.width * 0.65, el.y + el.height * 0.45);
+        ctx.bezierCurveTo(el.x + el.width * 0.80, el.y + el.height * 0.20, el.x + el.width * 0.92, el.y + el.height * 0.10, el.x + el.width, el.y + el.height * 0.25);
+        ctx.lineTo(el.x + el.width, el.y + el.height);
+        ctx.lineTo(el.x, el.y + el.height);
+        ctx.closePath();
         ctx.fillStyle = el.fill || '#dc2626';
-        ctx.fill(wavePath);
+        ctx.fill();
         if (el.stroke && el.strokeWidth) {
             ctx.strokeStyle = el.stroke;
-            ctx.lineWidth = el.strokeWidth / Math.max(0.01, (el.width + el.height) / 200);
-            ctx.stroke(wavePath);
+            ctx.lineWidth = el.strokeWidth;
+            ctx.stroke();
         }
-        ctx.restore();
     }
     else if (shapeType === 'WAVE_VERTICAL' || shapeType === 'VERTICAL_WAVE') {
-        ctx.save();
-        ctx.translate(el.x, el.y);
-        ctx.scale(el.width / 100, el.height / 100);
-        const wavePath = new Path2D("M 35 0 C 5 20, 85 40, 45 65 C 20 80, 10 92, 25 100 L 100 100 L 100 0 Z");
+        ctx.beginPath();
+        ctx.moveTo(el.x + el.width * 0.35, el.y);
+        ctx.bezierCurveTo(el.x + el.width * 0.05, el.y + el.height * 0.20, el.x + el.width * 0.85, el.y + el.height * 0.40, el.x + el.width * 0.45, el.y + el.height * 0.65);
+        ctx.bezierCurveTo(el.x + el.width * 0.20, el.y + el.height * 0.80, el.x + el.width * 0.10, el.y + el.height * 0.92, el.x + el.width * 0.25, el.y + el.height);
+        ctx.lineTo(el.x + el.width, el.y + el.height);
+        ctx.lineTo(el.x + el.width, el.y);
+        ctx.closePath();
         ctx.fillStyle = el.fill || '#dc2626';
-        ctx.fill(wavePath);
+        ctx.fill();
         if (el.stroke && el.strokeWidth) {
             ctx.strokeStyle = el.stroke;
-            ctx.lineWidth = el.strokeWidth / Math.max(0.01, (el.width + el.height) / 200);
-            ctx.stroke(wavePath);
+            ctx.lineWidth = el.strokeWidth;
+            ctx.stroke();
         }
-        ctx.restore();
     }
     else if (shapeType === 'SMOKE') {
         const cx = el.x + el.width / 2;
