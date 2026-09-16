@@ -42,6 +42,7 @@ import {
   RotateCw,
   FlipHorizontal,
   FlipVertical,
+  Waves,
 } from 'lucide-react';
 import { CardTemplateJSON, CardElement, TextElement, ShapeElement, QRCodeElement, BarcodeElement, resolveDataBinding } from '@workspace/card-engine';
 import { enterpriseStore } from '@/lib/data/enterpriseStore';
@@ -211,6 +212,26 @@ function PresetCardMiniPreview({
                         clipPath: 'polygon(0 0, 100% 0, 80% 100%, 0% 100%)',
                       }}
                     />
+                  )}
+                  {el.shapeType === 'WAVE_HORIZONTAL' && (
+                    <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+                      <path
+                        d="M 0 35 C 20 5, 40 85, 65 45 C 80 20, 92 10, 100 25 L 100 100 L 0 100 Z"
+                        fill={el.fill || '#dc2626'}
+                        stroke={el.stroke || 'none'}
+                        strokeWidth={el.strokeWidth || 0}
+                      />
+                    </svg>
+                  )}
+                  {el.shapeType === 'WAVE_VERTICAL' && (
+                    <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+                      <path
+                        d="M 35 0 C 5 20, 85 40, 45 65 C 20 80, 10 92, 25 100 L 100 100 L 100 0 Z"
+                        fill={el.fill || '#dc2626'}
+                        stroke={el.stroke || 'none'}
+                        strokeWidth={el.strokeWidth || 0}
+                      />
+                    </svg>
                   )}
                   {el.shapeType === 'SMOKE' && (
                     <div
@@ -1065,6 +1086,8 @@ export default function CardDesignerPage() {
               { label: 'Circle / Oval', icon: <Circle className="w-4 h-4 text-purple-400" />, action: () => addElement('SHAPE', { shapeType: 'CIRCLE', width: 120, height: 120, fill: '#dc2626', borderRadius: 9999 }) },
               { label: 'Divider Line', icon: <Minus className="w-4 h-4 text-slate-400" />, action: () => addElement('SHAPE', { shapeType: 'LINE', width: 300, height: 2, fill: '#cbd5e1' }) },
               { label: 'Diagonal Stripe', icon: <Square className="w-4 h-4 text-indigo-400 rotate-45" />, action: () => addElement('SHAPE', { shapeType: 'DIAGONAL', width: 250, height: 100, fill: '#dc2626' }) },
+              { label: 'Horizontal Wave', icon: <Waves className="w-4 h-4 text-cyan-400" />, action: () => addElement('SHAPE', { shapeType: 'WAVE_HORIZONTAL', width: 856, height: 160, fill: '#0284c7' }) },
+              { label: 'Vertical Wave', icon: <Waves className="w-4 h-4 text-sky-400 rotate-90" />, action: () => addElement('SHAPE', { shapeType: 'WAVE_VERTICAL', width: 180, height: 856, fill: '#0284c7' }) },
               { label: 'Signature Line', icon: <PenTool className="w-4 h-4 text-amber-400" />, action: () => addElement('SHAPE', { shapeType: 'SIGNATURE_LINE', width: 280, height: 40, fill: '#cbd5e1' }) },
               { label: 'Smoke / Blob Accent', icon: <Sparkles className="w-4 h-4 text-pink-400" />, action: () => addElement('SHAPE', { shapeType: 'SMOKE', width: 180, height: 180, fill: '#dc2626' }) },
             ].map(({ label, icon, action }) => (
@@ -1336,6 +1359,26 @@ export default function CardDesignerPage() {
                             clipPath: 'polygon(0 0, 100% 0, 80% 100%, 0% 100%)',
                           }}
                         />
+                      )}
+                      {el.shapeType === 'WAVE_HORIZONTAL' && (
+                        <svg className="w-full h-full pointer-events-none" viewBox="0 0 100 100" preserveAspectRatio="none">
+                          <path
+                            d="M 0 35 C 20 5, 40 85, 65 45 C 80 20, 92 10, 100 25 L 100 100 L 0 100 Z"
+                            fill={el.fill || '#dc2626'}
+                            stroke={el.stroke || 'none'}
+                            strokeWidth={el.strokeWidth || 0}
+                          />
+                        </svg>
+                      )}
+                      {el.shapeType === 'WAVE_VERTICAL' && (
+                        <svg className="w-full h-full pointer-events-none" viewBox="0 0 100 100" preserveAspectRatio="none">
+                          <path
+                            d="M 35 0 C 5 20, 85 40, 45 65 C 20 80, 10 92, 25 100 L 100 100 L 100 0 Z"
+                            fill={el.fill || '#dc2626'}
+                            stroke={el.stroke || 'none'}
+                            strokeWidth={el.strokeWidth || 0}
+                          />
+                        </svg>
                       )}
                       {el.shapeType === 'SMOKE' && (
                         <div
@@ -1795,6 +1838,8 @@ export default function CardDesignerPage() {
                       <option value="CIRCLE">Circle / Oval</option>
                       <option value="TRIANGLE">Triangle</option>
                       <option value="DIAGONAL">Diagonal Stripe</option>
+                      <option value="WAVE_HORIZONTAL">Horizontal Wave</option>
+                      <option value="WAVE_VERTICAL">Vertical Wave</option>
                       <option value="SMOKE">Smoke Gradient</option>
                       <option value="LINE">Line</option>
                       <option value="SIGNATURE_LINE">Signature Line</option>

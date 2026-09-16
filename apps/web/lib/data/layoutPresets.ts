@@ -14,6 +14,304 @@ export interface LayoutPreset {
 
 export const LAYOUT_PRESETS: LayoutPreset[] = [
   {
+    "id": "preset-0-wave-flow",
+    "name": "Modern Wave Crest (Waves)",
+    "description": "Fluid modern design featuring smooth horizontal and vertical organic wave design elements for a sleek, high-tech corporate ID badge.",
+    "badgeBg": "bg-cyan-100 text-cyan-800",
+    "badgeText": "text-cyan-800",
+    "frontElementsH": [
+      {
+        "id": "h-w-wave-top",
+        "type": "SHAPE",
+        "shapeType": "WAVE_HORIZONTAL",
+        "x": 0,
+        "y": 0,
+        "width": 856,
+        "height": 180,
+        "fill": "#0284c7",
+        "rotation": 180,
+        "flipX": true
+      },
+      {
+        "id": "h-w-wave-accent",
+        "type": "SHAPE",
+        "shapeType": "WAVE_HORIZONTAL",
+        "x": 0,
+        "y": 380,
+        "width": 856,
+        "height": 160,
+        "fill": "#0369a1",
+        "opacity": 0.85
+      },
+      {
+        "id": "h-w-comp",
+        "type": "TEXT",
+        "text": "PACIFIC WAVE CORP",
+        "x": 50,
+        "y": 25,
+        "width": 450,
+        "height": 28,
+        "fontSize": 15,
+        "color": "#ffffff",
+        "fontWeight": "bold",
+        "textAlign": "left"
+      },
+      {
+        "id": "h-w-photo",
+        "type": "EMPLOYEE_PHOTO",
+        "x": 50,
+        "y": 100,
+        "width": 165,
+        "height": 210,
+        "borderRadius": 14,
+        "borderWidth": 3,
+        "borderColor": "#0284c7"
+      },
+      {
+        "id": "h-w-name",
+        "type": "TEXT",
+        "text": "{{employee.fullName}}",
+        "x": 245,
+        "y": 115,
+        "width": 420,
+        "height": 38,
+        "fontSize": 26,
+        "color": "#0f172a",
+        "fontWeight": "bold",
+        "textAlign": "left"
+      },
+      {
+        "id": "h-w-pos",
+        "type": "TEXT",
+        "text": "{{employee.position}}",
+        "x": 245,
+        "y": 155,
+        "width": 420,
+        "height": 26,
+        "fontSize": 16,
+        "color": "#0284c7",
+        "fontWeight": "600",
+        "textAlign": "left"
+      },
+      {
+        "id": "h-w-id",
+        "type": "TEXT",
+        "text": "ID: {{employee.employeeNumber}}",
+        "x": 245,
+        "y": 195,
+        "width": 420,
+        "height": 22,
+        "fontSize": 14,
+        "color": "#475569",
+        "fontWeight": "medium",
+        "textAlign": "left"
+      },
+      {
+        "id": "h-w-dept",
+        "type": "TEXT",
+        "text": "DEPT: {{employee.department}}",
+        "x": 245,
+        "y": 225,
+        "width": 420,
+        "height": 22,
+        "fontSize": 13,
+        "color": "#64748b",
+        "fontWeight": "normal",
+        "textAlign": "left"
+      },
+      {
+        "id": "h-w-qr",
+        "type": "QR_CODE",
+        "data": "{{system.verificationUrl}}",
+        "x": 680,
+        "y": 330,
+        "width": 135,
+        "height": 135
+      }
+    ],
+    "backElementsH": [
+      {
+        "id": "h-w-b-wave",
+        "type": "SHAPE",
+        "shapeType": "WAVE_HORIZONTAL",
+        "x": 0,
+        "y": 0,
+        "width": 856,
+        "height": 120,
+        "fill": "#0284c7",
+        "rotation": 180
+      },
+      {
+        "id": "h-w-b-comp",
+        "type": "TEXT",
+        "text": "PACIFIC WAVE CORP",
+        "x": 50,
+        "y": 15,
+        "width": 756,
+        "height": 22,
+        "fontSize": 13,
+        "color": "#ffffff",
+        "fontWeight": "bold",
+        "textAlign": "center"
+      },
+      {
+        "id": "h-w-b-disc",
+        "type": "TEXT",
+        "text": "THIS BADGE IS PROPERTY OF ISSUING ORGANIZATION. PLEASE RETURN TO SECURITY DESK IF FOUND.",
+        "x": 50,
+        "y": 140,
+        "width": 756,
+        "height": 24,
+        "fontSize": 11,
+        "color": "#64748b",
+        "fontWeight": "medium",
+        "textAlign": "center"
+      },
+      {
+        "id": "h-w-b-barcode",
+        "type": "BARCODE",
+        "data": "{{employee.employeeNumber}}",
+        "format": "CODE128",
+        "x": 228,
+        "y": 240,
+        "width": 400,
+        "height": 75
+      }
+    ],
+    "frontElementsV": [
+      {
+        "id": "v-w-top-wave",
+        "type": "SHAPE",
+        "shapeType": "WAVE_HORIZONTAL",
+        "x": 0,
+        "y": 0,
+        "width": 540,
+        "height": 220,
+        "fill": "#0284c7",
+        "rotation": 180
+      },
+      {
+        "id": "v-w-side-wave",
+        "type": "SHAPE",
+        "shapeType": "WAVE_VERTICAL",
+        "x": 380,
+        "y": 180,
+        "width": 160,
+        "height": 676,
+        "fill": "#0369a1",
+        "opacity": 0.35
+      },
+      {
+        "id": "v-w-comp",
+        "type": "TEXT",
+        "text": "PACIFIC WAVE CORP",
+        "x": 20,
+        "y": 25,
+        "width": 500,
+        "height": 24,
+        "fontSize": 14,
+        "color": "#ffffff",
+        "fontWeight": "bold",
+        "textAlign": "center"
+      },
+      {
+        "id": "v-w-photo",
+        "type": "EMPLOYEE_PHOTO",
+        "x": 185,
+        "y": 95,
+        "width": 170,
+        "height": 215,
+        "borderRadius": 14,
+        "borderWidth": 4,
+        "borderColor": "#0284c7"
+      },
+      {
+        "id": "v-w-name",
+        "type": "TEXT",
+        "text": "{{employee.fullName}}",
+        "x": 20,
+        "y": 335,
+        "width": 500,
+        "height": 40,
+        "fontSize": 28,
+        "color": "#0f172a",
+        "fontWeight": "bold",
+        "textAlign": "center"
+      },
+      {
+        "id": "v-w-pos",
+        "type": "TEXT",
+        "text": "{{employee.position}}",
+        "x": 20,
+        "y": 380,
+        "width": 500,
+        "height": 26,
+        "fontSize": 17,
+        "color": "#0284c7",
+        "fontWeight": "600",
+        "textAlign": "center"
+      },
+      {
+        "id": "v-w-id",
+        "type": "TEXT",
+        "text": "ID: {{employee.employeeNumber}}",
+        "x": 20,
+        "y": 420,
+        "width": 500,
+        "height": 24,
+        "fontSize": 14,
+        "color": "#475569",
+        "fontWeight": "medium",
+        "textAlign": "center"
+      },
+      {
+        "id": "v-w-dept",
+        "type": "TEXT",
+        "text": "DEPT: {{employee.department}}",
+        "x": 20,
+        "y": 455,
+        "width": 500,
+        "height": 24,
+        "fontSize": 13,
+        "color": "#64748b",
+        "fontWeight": "normal",
+        "textAlign": "center"
+      },
+      {
+        "id": "v-w-qr",
+        "type": "QR_CODE",
+        "data": "{{system.verificationUrl}}",
+        "x": 200,
+        "y": 630,
+        "width": 140,
+        "height": 140
+      }
+    ],
+    "backElementsV": [
+      {
+        "id": "v-w-b-top",
+        "type": "SHAPE",
+        "shapeType": "WAVE_HORIZONTAL",
+        "x": 0,
+        "y": 0,
+        "width": 540,
+        "height": 150,
+        "fill": "#0284c7",
+        "rotation": 180
+      },
+      {
+        "id": "v-w-b-barcode",
+        "type": "BARCODE",
+        "data": "{{employee.employeeNumber}}",
+        "format": "CODE128",
+        "x": 80,
+        "y": 300,
+        "width": 380,
+        "height": 90
+      }
+    ]
+  },
+  {
     "id": "preset-1-exec-gold",
     "name": "Executive Prestige (Circle)",
     "description": "High-level executive badge featuring a circular portrait with gold trim, deep navy banner, and balanced centered hierarchy.",

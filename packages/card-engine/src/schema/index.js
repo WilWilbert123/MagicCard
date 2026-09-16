@@ -92,7 +92,7 @@ export const BarcodeElementSchema = BaseElementSchema.extend({
 });
 export const ShapeElementSchema = BaseElementSchema.extend({
     type: z.literal('SHAPE'),
-    shapeType: z.enum(['RECTANGLE', 'CIRCLE', 'LINE', 'TRIANGLE', 'DIAGONAL', 'SMOKE', 'SIGNATURE_LINE', 'LOGO']),
+    shapeType: z.enum(['RECTANGLE', 'CIRCLE', 'LINE', 'TRIANGLE', 'DIAGONAL', 'WAVE_HORIZONTAL', 'WAVE_VERTICAL', 'SMOKE', 'SIGNATURE_LINE', 'LOGO']),
     fill: z.string().default('#dc2626').optional(),
     stroke: z.string().optional(),
     strokeWidth: z.number().default(0).optional(),
