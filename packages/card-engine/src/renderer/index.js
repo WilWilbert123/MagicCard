@@ -326,10 +326,20 @@ async function drawBarcode(ctx, el, employee, signal) {
 }
 function drawImageFromUrl(ctx, src, x, y, width, height, borderRadius = 0, borderWidth = 0, borderColor = 'transparent', signal, objectFit = 'cover', tintColor) {
     return new Promise((resolve) => {
-        if (signal?.aborted) {
+        if (signal?.aborted || !src) {
             resolve();
             return;
         }
+        let isResolved = false;
+        const safeResolve = () => {
+            if (!isResolved) {
+                isResolved = true;
+                resolve();
+            }
+        };
+        const timeoutId = setTimeout(() => {
+            safeResolve();
+        }, 2000);
         // If running in browser environment
         if (typeof window !== 'undefined' && typeof Image !== 'undefined') {
             const tryRenderImage = (useCrossOrigin) => {
@@ -338,8 +348,9 @@ function drawImageFromUrl(ctx, src, x, y, width, height, borderRadius = 0, borde
                     img.crossOrigin = 'anonymous';
                 }
                 img.onload = () => {
+                    clearTimeout(timeoutId);
                     if (signal?.aborted) {
-                        resolve();
+                        safeResolve();
                         return;
                     }
                     ctx.save();
@@ -403,14 +414,15 @@ function drawImageFromUrl(ctx, src, x, y, width, height, borderRadius = 0, borde
                         }
                         ctx.restore();
                     }
-                    resolve();
+                    safeResolve();
                 };
                 img.onerror = () => {
                     if (useCrossOrigin) {
                         tryRenderImage(false);
                     }
                     else {
-                        resolve();
+                        clearTimeout(timeoutId);
+                        safeResolve();
                     }
                 };
                 img.src = src;
@@ -418,7 +430,8 @@ function drawImageFromUrl(ctx, src, x, y, width, height, borderRadius = 0, borde
             tryRenderImage(true);
         }
         else {
-            resolve();
+            clearTimeout(timeoutId);
+            safeResolve();
         }
     });
 }

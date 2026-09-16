@@ -430,10 +430,23 @@ function drawImageFromUrl(
   tintColor?: string
 ): Promise<void> {
   return new Promise((resolve) => {
-    if (signal?.aborted) {
+    if (signal?.aborted || !src) {
       resolve();
       return;
     }
+
+    let isResolved = false;
+    const safeResolve = () => {
+      if (!isResolved) {
+        isResolved = true;
+        resolve();
+      }
+    };
+
+    const timeoutId = setTimeout(() => {
+      safeResolve();
+    }, 2000);
+
     // If running in browser environment
     if (typeof window !== 'undefined' && typeof Image !== 'undefined') {
       const tryRenderImage = (useCrossOrigin: boolean) => {
@@ -442,8 +455,9 @@ function drawImageFromUrl(
           img.crossOrigin = 'anonymous';
         }
         img.onload = () => {
+          clearTimeout(timeoutId);
           if (signal?.aborted) {
-            resolve();
+            safeResolve();
             return;
           }
           ctx.save();
@@ -507,14 +521,15 @@ function drawImageFromUrl(
             }
             ctx.restore();
           }
-          resolve();
+          safeResolve();
         };
 
         img.onerror = () => {
           if (useCrossOrigin) {
             tryRenderImage(false);
           } else {
-            resolve();
+            clearTimeout(timeoutId);
+            safeResolve();
           }
         };
 
@@ -523,7 +538,8 @@ function drawImageFromUrl(
 
       tryRenderImage(true);
     } else {
-      resolve();
+      clearTimeout(timeoutId);
+      safeResolve();
     }
   });
 }
