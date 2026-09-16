@@ -212,6 +212,7 @@ export default function ThreeCardViewer({
     const frontPlaneGeo = createFaceGeometry(faceWidth, faceHeight, faceRadius);
     const frontMaterial = new THREE.MeshBasicMaterial({
       color: 0xffffff,
+      transparent: true,
       polygonOffset: true,
       polygonOffsetFactor: -1,
     });
@@ -223,6 +224,7 @@ export default function ThreeCardViewer({
     const backPlaneGeo = createFaceGeometry(faceWidth, faceHeight, faceRadius);
     const backMaterial = new THREE.MeshBasicMaterial({
       color: 0xffffff,
+      transparent: true,
       polygonOffset: true,
       polygonOffsetFactor: -1,
     });

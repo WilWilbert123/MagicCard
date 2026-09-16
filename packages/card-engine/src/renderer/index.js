@@ -21,8 +21,9 @@ export async function renderCardToCanvas(canvas, template, side, employee, optio
     const cardRadius = template.card.borderRadius ?? (baseHeight > baseWidth ? 18 : 24);
     drawRoundedRect(ctx, 0, 0, baseWidth, baseHeight, cardRadius);
     ctx.clip();
-    if (surface.background.color) {
-        ctx.fillStyle = surface.background.color;
+    const bgColor = surface?.background?.color || '#ffffff';
+    if (bgColor !== 'transparent' && bgColor !== 'none') {
+        ctx.fillStyle = bgColor;
         ctx.fillRect(0, 0, baseWidth, baseHeight);
     }
     // 2. Draw Elements in order of z-index / array sequence
