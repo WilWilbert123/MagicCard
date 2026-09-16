@@ -40,7 +40,11 @@ export async function renderCardToCanvas(
 
   const surface = side === 'front' ? template.front : template.back;
 
-  // 1. Draw Background
+  // 1. Clip card surface to rounded bounds & draw Background
+  const cardRadius = (template.card as any).borderRadius ?? (baseHeight > baseWidth ? 18 : 24);
+  drawRoundedRect(ctx, 0, 0, baseWidth, baseHeight, cardRadius);
+  ctx.clip();
+
   if (surface.background.color) {
     ctx.fillStyle = surface.background.color;
     ctx.fillRect(0, 0, baseWidth, baseHeight);
@@ -350,7 +354,8 @@ async function drawImage(
     el.borderWidth,
     el.borderColor,
     signal,
-    el.objectFit
+    el.objectFit,
+    el.tintColor
   );
 }
 
@@ -411,7 +416,8 @@ function drawImageFromUrl(
   borderWidth = 0,
   borderColor = 'transparent',
   signal?: AbortSignal,
-  objectFit: 'cover' | 'contain' | 'fill' = 'cover'
+  objectFit: 'cover' | 'contain' | 'fill' = 'cover',
+  tintColor?: string
 ): Promise<void> {
   return new Promise((resolve) => {
     if (signal?.aborted) {
@@ -433,13 +439,14 @@ function drawImageFromUrl(
           ctx.clip();
         }
 
+        let renderW = width;
+        let renderH = height;
+        let renderX = x;
+        let renderY = y;
+
         if (objectFit === 'contain' && img.naturalWidth && img.naturalHeight) {
           const imgRatio = img.naturalWidth / img.naturalHeight;
           const boxRatio = width / height;
-          let renderW = width;
-          let renderH = height;
-          let renderX = x;
-          let renderY = y;
           if (imgRatio > boxRatio) {
             renderH = width / imgRatio;
             renderY = y + (height - renderH) / 2;
@@ -447,9 +454,25 @@ function drawImageFromUrl(
             renderW = height * imgRatio;
             renderX = x + (width - renderW) / 2;
           }
-          ctx.drawImage(img, renderX, renderY, renderW, renderH);
+        }
+
+        if (tintColor && tintColor !== 'none' && tintColor !== 'transparent') {
+          const lowerTint = tintColor.toLowerCase();
+          const offCanvas = document.createElement('canvas');
+          offCanvas.width = Math.max(1, Math.round(renderW));
+          offCanvas.height = Math.max(1, Math.round(renderH));
+          const offCtx = offCanvas.getContext('2d');
+          if (offCtx) {
+            offCtx.drawImage(img, 0, 0, offCanvas.width, offCanvas.height);
+            offCtx.globalCompositeOperation = 'source-in';
+            offCtx.fillStyle = (lowerTint === 'white' ? '#ffffff' : lowerTint === 'black' ? '#000000' : tintColor);
+            offCtx.fillRect(0, 0, offCanvas.width, offCanvas.height);
+            ctx.drawImage(offCanvas, renderX, renderY);
+          } else {
+            ctx.drawImage(img, renderX, renderY, renderW, renderH);
+          }
         } else {
-          ctx.drawImage(img, x, y, width, height);
+          ctx.drawImage(img, renderX, renderY, renderW, renderH);
         }
 
         ctx.restore();

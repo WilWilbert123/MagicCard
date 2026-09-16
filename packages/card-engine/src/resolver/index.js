@@ -86,7 +86,6 @@ export function buildResolutionDictionary(employee, baseUrl = 'https://magic-car
         'employee.dateHired': employee.dateHired || new Date().toISOString().split('T')[0],
         'employee.photoUrl': employee.photoUrl || '',
         'company.logoUrl': empAny.companyLogoUrl || empAny.logoUrl || '',
-        'system.logoUrl': empAny.companyLogoUrl || empAny.logoUrl || '',
         'system.currentDate': new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
         'system.verificationUrl': verificationUrl,
     };

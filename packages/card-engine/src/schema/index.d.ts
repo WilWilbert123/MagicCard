@@ -12,7 +12,7 @@ export declare const CR80_DIMENSIONS: {
     printWidthPx: number;
     printHeightPx: number;
 };
-export declare const ALLOWED_DATA_BINDINGS: readonly ["employee.fullName", "employee.firstName", "employee.lastName", "employee.employeeNumber", "employee.department", "employee.position", "employee.branch", "employee.email", "employee.contactNumber", "employee.dateHired", "employee.photoUrl", "company.logoUrl", "system.logoUrl", "system.currentDate", "system.verificationUrl"];
+export declare const ALLOWED_DATA_BINDINGS: readonly ["employee.fullName", "employee.firstName", "employee.lastName", "employee.employeeNumber", "employee.department", "employee.position", "employee.branch", "employee.email", "employee.contactNumber", "employee.dateHired", "employee.photoUrl", "company.logoUrl", "system.currentDate", "system.verificationUrl"];
 export type AllowedDataBinding = typeof ALLOWED_DATA_BINDINGS[number];
 export declare const BaseElementSchema: z.ZodObject<{
     id: z.ZodString;
@@ -213,6 +213,7 @@ export declare const ImageElementSchema: z.ZodObject<{
 } & {
     type: z.ZodLiteral<"IMAGE">;
     src: z.ZodString;
+    tintColor: z.ZodOptional<z.ZodString>;
     borderRadius: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
     borderWidth: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
     borderColor: z.ZodOptional<z.ZodDefault<z.ZodString>>;
@@ -237,6 +238,7 @@ export declare const ImageElementSchema: z.ZodObject<{
     borderWidth?: number | undefined;
     borderColor?: string | undefined;
     objectFit?: "fill" | "cover" | "contain" | undefined;
+    tintColor?: string | undefined;
 }, {
     id: string;
     x: number;
@@ -257,6 +259,7 @@ export declare const ImageElementSchema: z.ZodObject<{
     borderWidth?: number | undefined;
     borderColor?: string | undefined;
     objectFit?: "fill" | "cover" | "contain" | undefined;
+    tintColor?: string | undefined;
 }>;
 export declare const QRCodeElementSchema: z.ZodObject<{
     id: z.ZodString;
@@ -601,6 +604,7 @@ export declare const CardElementSchema: z.ZodDiscriminatedUnion<"type", [z.ZodOb
 } & {
     type: z.ZodLiteral<"IMAGE">;
     src: z.ZodString;
+    tintColor: z.ZodOptional<z.ZodString>;
     borderRadius: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
     borderWidth: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
     borderColor: z.ZodOptional<z.ZodDefault<z.ZodString>>;
@@ -625,6 +629,7 @@ export declare const CardElementSchema: z.ZodDiscriminatedUnion<"type", [z.ZodOb
     borderWidth?: number | undefined;
     borderColor?: string | undefined;
     objectFit?: "fill" | "cover" | "contain" | undefined;
+    tintColor?: string | undefined;
 }, {
     id: string;
     x: number;
@@ -645,6 +650,7 @@ export declare const CardElementSchema: z.ZodDiscriminatedUnion<"type", [z.ZodOb
     borderWidth?: number | undefined;
     borderColor?: string | undefined;
     objectFit?: "fill" | "cover" | "contain" | undefined;
+    tintColor?: string | undefined;
 }>, z.ZodObject<{
     id: z.ZodString;
     name: z.ZodOptional<z.ZodString>;
@@ -1048,6 +1054,7 @@ export declare const CardSurfaceSchema: z.ZodObject<{
     } & {
         type: z.ZodLiteral<"IMAGE">;
         src: z.ZodString;
+        tintColor: z.ZodOptional<z.ZodString>;
         borderRadius: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
         borderWidth: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
         borderColor: z.ZodOptional<z.ZodDefault<z.ZodString>>;
@@ -1072,6 +1079,7 @@ export declare const CardSurfaceSchema: z.ZodObject<{
         borderWidth?: number | undefined;
         borderColor?: string | undefined;
         objectFit?: "fill" | "cover" | "contain" | undefined;
+        tintColor?: string | undefined;
     }, {
         id: string;
         x: number;
@@ -1092,6 +1100,7 @@ export declare const CardSurfaceSchema: z.ZodObject<{
         borderWidth?: number | undefined;
         borderColor?: string | undefined;
         objectFit?: "fill" | "cover" | "contain" | undefined;
+        tintColor?: string | undefined;
     }>, z.ZodObject<{
         id: z.ZodString;
         name: z.ZodOptional<z.ZodString>;
@@ -1357,6 +1366,7 @@ export declare const CardSurfaceSchema: z.ZodObject<{
         borderWidth?: number | undefined;
         borderColor?: string | undefined;
         objectFit?: "fill" | "cover" | "contain" | undefined;
+        tintColor?: string | undefined;
     } | {
         id: string;
         x: number;
@@ -1497,6 +1507,7 @@ export declare const CardSurfaceSchema: z.ZodObject<{
         borderWidth?: number | undefined;
         borderColor?: string | undefined;
         objectFit?: "fill" | "cover" | "contain" | undefined;
+        tintColor?: string | undefined;
     } | {
         id: string;
         x: number;
@@ -1851,6 +1862,7 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
         } & {
             type: z.ZodLiteral<"IMAGE">;
             src: z.ZodString;
+            tintColor: z.ZodOptional<z.ZodString>;
             borderRadius: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
             borderWidth: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
             borderColor: z.ZodOptional<z.ZodDefault<z.ZodString>>;
@@ -1875,6 +1887,7 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             borderWidth?: number | undefined;
             borderColor?: string | undefined;
             objectFit?: "fill" | "cover" | "contain" | undefined;
+            tintColor?: string | undefined;
         }, {
             id: string;
             x: number;
@@ -1895,6 +1908,7 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             borderWidth?: number | undefined;
             borderColor?: string | undefined;
             objectFit?: "fill" | "cover" | "contain" | undefined;
+            tintColor?: string | undefined;
         }>, z.ZodObject<{
             id: z.ZodString;
             name: z.ZodOptional<z.ZodString>;
@@ -2160,6 +2174,7 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             borderWidth?: number | undefined;
             borderColor?: string | undefined;
             objectFit?: "fill" | "cover" | "contain" | undefined;
+            tintColor?: string | undefined;
         } | {
             id: string;
             x: number;
@@ -2300,6 +2315,7 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             borderWidth?: number | undefined;
             borderColor?: string | undefined;
             objectFit?: "fill" | "cover" | "contain" | undefined;
+            tintColor?: string | undefined;
         } | {
             id: string;
             x: number;
@@ -2572,6 +2588,7 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
         } & {
             type: z.ZodLiteral<"IMAGE">;
             src: z.ZodString;
+            tintColor: z.ZodOptional<z.ZodString>;
             borderRadius: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
             borderWidth: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
             borderColor: z.ZodOptional<z.ZodDefault<z.ZodString>>;
@@ -2596,6 +2613,7 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             borderWidth?: number | undefined;
             borderColor?: string | undefined;
             objectFit?: "fill" | "cover" | "contain" | undefined;
+            tintColor?: string | undefined;
         }, {
             id: string;
             x: number;
@@ -2616,6 +2634,7 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             borderWidth?: number | undefined;
             borderColor?: string | undefined;
             objectFit?: "fill" | "cover" | "contain" | undefined;
+            tintColor?: string | undefined;
         }>, z.ZodObject<{
             id: z.ZodString;
             name: z.ZodOptional<z.ZodString>;
@@ -2881,6 +2900,7 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             borderWidth?: number | undefined;
             borderColor?: string | undefined;
             objectFit?: "fill" | "cover" | "contain" | undefined;
+            tintColor?: string | undefined;
         } | {
             id: string;
             x: number;
@@ -3021,6 +3041,7 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             borderWidth?: number | undefined;
             borderColor?: string | undefined;
             objectFit?: "fill" | "cover" | "contain" | undefined;
+            tintColor?: string | undefined;
         } | {
             id: string;
             x: number;
@@ -3178,6 +3199,7 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             borderWidth?: number | undefined;
             borderColor?: string | undefined;
             objectFit?: "fill" | "cover" | "contain" | undefined;
+            tintColor?: string | undefined;
         } | {
             id: string;
             x: number;
@@ -3319,6 +3341,7 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             borderWidth?: number | undefined;
             borderColor?: string | undefined;
             objectFit?: "fill" | "cover" | "contain" | undefined;
+            tintColor?: string | undefined;
         } | {
             id: string;
             x: number;
@@ -3477,6 +3500,7 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             borderWidth?: number | undefined;
             borderColor?: string | undefined;
             objectFit?: "fill" | "cover" | "contain" | undefined;
+            tintColor?: string | undefined;
         } | {
             id: string;
             x: number;
@@ -3618,6 +3642,7 @@ export declare const CardTemplateJSONSchema: z.ZodObject<{
             borderWidth?: number | undefined;
             borderColor?: string | undefined;
             objectFit?: "fill" | "cover" | "contain" | undefined;
+            tintColor?: string | undefined;
         } | {
             id: string;
             x: number;
