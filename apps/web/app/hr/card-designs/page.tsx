@@ -57,6 +57,67 @@ interface CardTemplateItem {
   versions: TemplateVersionItem[];
 }
 
+function colorToRgba(colorStr: string | undefined, alpha: number): string {
+  if (!colorStr) return `rgba(220, 38, 38, ${alpha})`;
+  const str = colorStr.trim().toLowerCase();
+
+  if (str.startsWith('#')) {
+    let hex = str.slice(1);
+    if (hex.length === 3) {
+      hex = hex.split('').map((c) => c + c).join('');
+    }
+    if (hex.length === 6) {
+      const r = parseInt(hex.slice(0, 2), 16);
+      const g = parseInt(hex.slice(2, 4), 16);
+      const b = parseInt(hex.slice(4, 6), 16);
+      if (!isNaN(r) && !isNaN(g) && !isNaN(b)) {
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+      }
+    }
+    if (hex.length === 8) {
+      const r = parseInt(hex.slice(0, 2), 16);
+      const g = parseInt(hex.slice(2, 4), 16);
+      const b = parseInt(hex.slice(4, 6), 16);
+      const origAlpha = parseInt(hex.slice(6, 8), 16) / 255;
+      if (!isNaN(r) && !isNaN(g) && !isNaN(b)) {
+        return `rgba(${r}, ${g}, ${b}, ${origAlpha * alpha})`;
+      }
+    }
+  }
+
+  const rgbMatch = str.match(/rgba?\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:\s*,\s*([\d.]+))?\s*\)/);
+  if (rgbMatch) {
+    const r = parseInt(rgbMatch[1], 10);
+    const g = parseInt(rgbMatch[2], 10);
+    const b = parseInt(rgbMatch[3], 10);
+    const origAlpha = rgbMatch[4] !== undefined ? parseFloat(rgbMatch[4]) : 1;
+    return `rgba(${r}, ${g}, ${b}, ${origAlpha * alpha})`;
+  }
+
+  const colorMap: Record<string, [number, number, number]> = {
+    red: [239, 68, 68],
+    pink: [236, 72, 153],
+    purple: [168, 85, 247],
+    violet: [139, 92, 246],
+    blue: [59, 130, 246],
+    cyan: [6, 182, 212],
+    teal: [20, 184, 166],
+    green: [34, 197, 94],
+    yellow: [234, 179, 8],
+    orange: [249, 115, 22],
+    white: [255, 255, 255],
+    black: [0, 0, 0],
+    slate: [100, 116, 139],
+  };
+
+  if (colorMap[str]) {
+    const [r, g, b] = colorMap[str];
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  }
+
+  return alpha === 0 ? 'rgba(0,0,0,0)' : str;
+}
+
 function MiniCard2DPreview({ layout }: { layout?: any }) {
   const [activeSide, setActiveSide] = useState<'front' | 'back'>('front');
 
@@ -193,17 +254,29 @@ function MiniCard2DPreview({ layout }: { layout?: any }) {
                   />
                 )}
 
-                {el.type === 'IMAGE' && el.src && (
+                {el.type === 'IMAGE' && (el.src || (el as any).data) && (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={el.src}
+                    src={resolveDataBinding(el.src || '', {
+                      employeeNumber: 'EMP-000125',
+                      fullName: 'Michael Brown',
+                      firstName: 'Michael',
+                      lastName: 'Brown',
+                      companyLogoUrl: 'https://teleperformance.com/logo.png',
+                    } as any) || el.src}
                     alt="Image"
                     style={{
+                      filter: ((el as any).tintColor === '#ffffff' || (el as any).tintColor === 'white')
+                        ? 'brightness(0) invert(1)'
+                        : ((el as any).tintColor === '#000000' || (el as any).tintColor === 'black')
+                        ? 'brightness(0)'
+                        : undefined,
                       borderRadius: el.borderRadius ? `${el.borderRadius}px` : undefined,
                       borderWidth: el.borderWidth ? `${el.borderWidth}px` : undefined,
                       borderColor: el.borderColor,
+                      objectFit: el.objectFit || 'contain',
                     }}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full"
                   />
                 )}
 
@@ -252,12 +325,32 @@ function MiniCard2DPreview({ layout }: { layout?: any }) {
                         }}
                       />
                     )}
+                    {el.shapeType === 'WAVE_HORIZONTAL' && (
+                      <svg className="w-full h-full pointer-events-none" viewBox="0 0 100 100" preserveAspectRatio="none">
+                        <path
+                          d="M 0 35 C 20 5, 40 85, 65 45 C 80 20, 92 10, 100 25 L 100 100 L 0 100 Z"
+                          fill={el.fill || '#dc2626'}
+                          stroke={el.stroke || 'none'}
+                          strokeWidth={el.strokeWidth || 0}
+                        />
+                      </svg>
+                    )}
+                    {el.shapeType === 'WAVE_VERTICAL' && (
+                      <svg className="w-full h-full pointer-events-none" viewBox="0 0 100 100" preserveAspectRatio="none">
+                        <path
+                          d="M 35 0 C 5 20, 85 40, 45 65 C 20 80, 10 92, 25 100 L 100 100 L 100 0 Z"
+                          fill={el.fill || '#dc2626'}
+                          stroke={el.stroke || 'none'}
+                          strokeWidth={el.strokeWidth || 0}
+                        />
+                      </svg>
+                    )}
                     {el.shapeType === 'SMOKE' && (
                       <div
                         style={{
                           width: '100%',
                           height: '100%',
-                          background: `radial-gradient(circle, ${el.fill || '#dc2626'} 0%, rgba(255,255,255,0) 70%)`,
+                          background: `radial-gradient(circle at center, ${colorToRgba(el.fill || '#dc2626', 1)} 0%, ${colorToRgba(el.fill || '#dc2626', 0.5)} 45%, ${colorToRgba(el.fill || '#dc2626', 0)} 70%)`,
                           borderRadius: '50%',
                         }}
                       />
