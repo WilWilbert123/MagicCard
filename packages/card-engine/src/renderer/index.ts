@@ -45,8 +45,9 @@ export async function renderCardToCanvas(
   drawRoundedRect(ctx, 0, 0, baseWidth, baseHeight, cardRadius);
   ctx.clip();
 
-  if (surface.background.color) {
-    ctx.fillStyle = surface.background.color;
+  const bgColor = surface?.background?.color || '#ffffff';
+  if (bgColor !== 'transparent' && bgColor !== 'none') {
+    ctx.fillStyle = bgColor;
     ctx.fillRect(0, 0, baseWidth, baseHeight);
   }
 
