@@ -1285,8 +1285,16 @@ export default function CardDesignerPage() {
                   )}
 
                   {el.type === 'QR_CODE' && (
-                    <div className="w-full h-full bg-white p-2 border border-slate-200 flex flex-col items-center justify-center rounded pointer-events-none">
-                      <QrCode className="w-full h-full text-slate-900" />
+                    <div
+                      className="w-full h-full p-2 border border-slate-200/50 flex flex-col items-center justify-center rounded pointer-events-none transition-colors"
+                      style={{
+                        backgroundColor: el.backgroundColor === 'transparent' || el.backgroundColor === 'none' ? 'transparent' : (el.backgroundColor || '#ffffff'),
+                      }}
+                    >
+                      <QrCode
+                        className="w-full h-full"
+                        style={{ color: el.foregroundColor || '#0f172a' }}
+                      />
                     </div>
                   )}
 
@@ -1819,6 +1827,118 @@ export default function CardDesignerPage() {
                       value={(selectedElement as any).borderRadius || 0}
                       onChange={(e) => updateSelectedElement({ borderRadius: parseInt(e.target.value) || 0 } as any)}
                       className={`w-full border rounded px-2 py-1 text-xs ${inputCls}`}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Properties for QR_CODE */}
+              {selectedElement.type === 'QR_CODE' && (
+                <div className={`p-3 rounded-lg border space-y-3 ${cardRow}`}>
+                  <span className={`font-semibold block text-[10px] uppercase ${sectionHdr}`}>Verification QR Properties</span>
+
+                  <div>
+                    <label className={`text-[10px] ${labelCls}`}>QR Pattern Color</label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={(selectedElement as any).foregroundColor || '#0f172a'}
+                        onChange={(e) => updateSelectedElement({ foregroundColor: e.target.value } as any)}
+                        className={`w-7 h-7 rounded border cursor-pointer ${isDark ? 'border-slate-700 bg-transparent' : 'border-slate-300'}`}
+                      />
+                      <input
+                        type="text"
+                        value={(selectedElement as any).foregroundColor || '#0f172a'}
+                        onChange={(e) => updateSelectedElement({ foregroundColor: e.target.value } as any)}
+                        className={`flex-1 border rounded px-2 py-1 text-xs font-mono ${inputCls}`}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className={`text-[10px] ${labelCls}`}>Background Color</label>
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <input
+                        type="color"
+                        value={(selectedElement as any).backgroundColor && (selectedElement as any).backgroundColor !== 'transparent' && (selectedElement as any).backgroundColor !== 'none' ? (selectedElement as any).backgroundColor : '#ffffff'}
+                        onChange={(e) => updateSelectedElement({ backgroundColor: e.target.value } as any)}
+                        className={`w-7 h-7 rounded border cursor-pointer ${isDark ? 'border-slate-700 bg-transparent' : 'border-slate-300'}`}
+                      />
+                      <input
+                        type="text"
+                        value={(selectedElement as any).backgroundColor || '#ffffff'}
+                        onChange={(e) => updateSelectedElement({ backgroundColor: e.target.value } as any)}
+                        className={`flex-1 border rounded px-2 py-1 text-xs font-mono ${inputCls}`}
+                      />
+                    </div>
+
+                    <div className="flex items-center gap-1.5 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => updateSelectedElement({ backgroundColor: '#ffffff' } as any)}
+                        className={`px-2 py-1 text-[10px] font-medium rounded border ${
+                          (selectedElement as any).backgroundColor === '#ffffff' || !(selectedElement as any).backgroundColor
+                            ? 'bg-indigo-600 text-white border-indigo-500'
+                            : btnBorder
+                        }`}
+                      >
+                        White Box
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => updateSelectedElement({ backgroundColor: 'transparent' } as any)}
+                        className={`px-2 py-1 text-[10px] font-medium rounded border ${
+                          (selectedElement as any).backgroundColor === 'transparent' || (selectedElement as any).backgroundColor === 'none'
+                            ? 'bg-indigo-600 text-white border-indigo-500'
+                            : btnBorder
+                        }`}
+                      >
+                        Transparent
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => updateSelectedElement({ backgroundColor: '#000000' } as any)}
+                        className={`px-2 py-1 text-[10px] font-medium rounded border ${
+                          (selectedElement as any).backgroundColor === '#000000'
+                            ? 'bg-indigo-600 text-white border-indigo-500'
+                            : btnBorder
+                        }`}
+                      >
+                        Black Box
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className={`text-[10px] ${labelCls}`}>Error Correction Level</label>
+                    <select
+                      value={(selectedElement as any).errorCorrectionLevel || 'M'}
+                      onChange={(e) => updateSelectedElement({ errorCorrectionLevel: e.target.value as any } as any)}
+                      className={`w-full border rounded px-2 py-1 text-xs ${inputCls}`}
+                    >
+                      <option value="L">Low (7% recovery)</option>
+                      <option value="M">Medium (15% recovery)</option>
+                      <option value="Q">Quartile (25% recovery)</option>
+                      <option value="H">High (30% recovery)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className={`text-[10px] ${labelCls}`}>Verification Source / URL</label>
+                      <button
+                        type="button"
+                        onClick={() => updateSelectedElement({ data: '{{system.verificationUrl}}' } as any)}
+                        className="text-[9px] text-indigo-400 hover:text-indigo-300 underline"
+                      >
+                        Set Layout Verification URL
+                      </button>
+                    </div>
+                    <input
+                      type="text"
+                      value={(selectedElement as any).data || '{{system.verificationUrl}}'}
+                      onChange={(e) => updateSelectedElement({ data: e.target.value } as any)}
+                      className={`w-full border rounded px-2 py-1 text-xs font-mono ${inputCls}`}
                     />
                   </div>
                 </div>

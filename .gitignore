@@ -10,6 +10,7 @@ apps/web/build/
 
 # Production builds
 dist/
+**/dist/
 build/
 
 # Environment variables

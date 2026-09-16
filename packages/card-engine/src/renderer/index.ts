@@ -303,10 +303,9 @@ async function drawQRCode(
   signal?: AbortSignal
 ) {
   const resolvedData = resolveDataBinding(el.data, employee, baseUrl);
-  // Force transparent background (#00000000) unless a custom non-white color is explicitly defined
-  let lightColor = '#00000000';
-  if (el.backgroundColor && el.backgroundColor !== '#ffffff' && el.backgroundColor !== 'transparent' && el.backgroundColor !== 'none') {
-    lightColor = el.backgroundColor;
+  let lightColor = el.backgroundColor || '#ffffff';
+  if (lightColor === 'transparent' || lightColor === 'none') {
+    lightColor = '#00000000';
   }
 
   const dataUrl = await generateQRCodeDataUrl(resolvedData, {
