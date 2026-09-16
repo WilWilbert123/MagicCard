@@ -415,9 +415,30 @@ async function drawBarcode(
   await drawImageFromUrl(ctx, svgDataUrl, el.x, el.y, el.width, el.height, 0, 0, 'transparent', signal);
 }
 
+async function safeLoadImageDataUrl(src: string): Promise<string> {
+  if (!src || src.startsWith('data:') || src.startsWith('blob:')) {
+    return src;
+  }
+  try {
+    const res = await fetch(src, { mode: 'cors' });
+    if (res.ok) {
+      const blob = await res.blob();
+      return await new Promise<string>((resFn) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resFn((reader.result as string) || src);
+        reader.onerror = () => resFn(src);
+        reader.readAsDataURL(blob);
+      });
+    }
+  } catch {
+    // If CORS fetch fails, fall back to raw URL
+  }
+  return src;
+}
+
 function drawImageFromUrl(
   ctx: CanvasRenderingContext2D,
-  src: string,
+  rawSrc: string,
   x: number,
   y: number,
   width: number,
@@ -429,8 +450,8 @@ function drawImageFromUrl(
   objectFit: 'cover' | 'contain' | 'fill' = 'cover',
   tintColor?: string
 ): Promise<void> {
-  return new Promise((resolve) => {
-    if (signal?.aborted || !src) {
+  return new Promise(async (resolve) => {
+    if (signal?.aborted || !rawSrc) {
       resolve();
       return;
     }
@@ -445,13 +466,15 @@ function drawImageFromUrl(
 
     const timeoutId = setTimeout(() => {
       safeResolve();
-    }, 2000);
+    }, 3500);
+
+    const src = await safeLoadImageDataUrl(rawSrc);
 
     // If running in browser environment
     if (typeof window !== 'undefined' && typeof Image !== 'undefined') {
       const tryRenderImage = (useCrossOrigin: boolean) => {
         const img = new Image();
-        if (useCrossOrigin) {
+        if (useCrossOrigin && !src.startsWith('data:') && !src.startsWith('blob:')) {
           img.crossOrigin = 'anonymous';
         }
         img.onload = () => {
@@ -525,7 +548,7 @@ function drawImageFromUrl(
         };
 
         img.onerror = () => {
-          if (useCrossOrigin) {
+          if (useCrossOrigin && !src.startsWith('data:')) {
             tryRenderImage(false);
           } else {
             clearTimeout(timeoutId);
@@ -536,7 +559,7 @@ function drawImageFromUrl(
         img.src = src;
       };
 
-      tryRenderImage(true);
+      tryRenderImage(!src.startsWith('data:'));
     } else {
       clearTimeout(timeoutId);
       safeResolve();

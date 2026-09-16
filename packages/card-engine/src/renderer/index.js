@@ -324,9 +324,30 @@ async function drawBarcode(ctx, el, employee, signal) {
     const svgDataUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
     await drawImageFromUrl(ctx, svgDataUrl, el.x, el.y, el.width, el.height, 0, 0, 'transparent', signal);
 }
-function drawImageFromUrl(ctx, src, x, y, width, height, borderRadius = 0, borderWidth = 0, borderColor = 'transparent', signal, objectFit = 'cover', tintColor) {
-    return new Promise((resolve) => {
-        if (signal?.aborted || !src) {
+async function safeLoadImageDataUrl(src) {
+    if (!src || src.startsWith('data:') || src.startsWith('blob:')) {
+        return src;
+    }
+    try {
+        const res = await fetch(src, { mode: 'cors' });
+        if (res.ok) {
+            const blob = await res.blob();
+            return await new Promise((resFn) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resFn(reader.result || src);
+                reader.onerror = () => resFn(src);
+                reader.readAsDataURL(blob);
+            });
+        }
+    }
+    catch {
+        // If CORS fetch fails, fall back to raw URL
+    }
+    return src;
+}
+function drawImageFromUrl(ctx, rawSrc, x, y, width, height, borderRadius = 0, borderWidth = 0, borderColor = 'transparent', signal, objectFit = 'cover', tintColor) {
+    return new Promise(async (resolve) => {
+        if (signal?.aborted || !rawSrc) {
             resolve();
             return;
         }
@@ -339,12 +360,13 @@ function drawImageFromUrl(ctx, src, x, y, width, height, borderRadius = 0, borde
         };
         const timeoutId = setTimeout(() => {
             safeResolve();
-        }, 2000);
+        }, 3500);
+        const src = await safeLoadImageDataUrl(rawSrc);
         // If running in browser environment
         if (typeof window !== 'undefined' && typeof Image !== 'undefined') {
             const tryRenderImage = (useCrossOrigin) => {
                 const img = new Image();
-                if (useCrossOrigin) {
+                if (useCrossOrigin && !src.startsWith('data:') && !src.startsWith('blob:')) {
                     img.crossOrigin = 'anonymous';
                 }
                 img.onload = () => {
@@ -417,7 +439,7 @@ function drawImageFromUrl(ctx, src, x, y, width, height, borderRadius = 0, borde
                     safeResolve();
                 };
                 img.onerror = () => {
-                    if (useCrossOrigin) {
+                    if (useCrossOrigin && !src.startsWith('data:')) {
                         tryRenderImage(false);
                     }
                     else {
@@ -427,7 +449,7 @@ function drawImageFromUrl(ctx, src, x, y, width, height, borderRadius = 0, borde
                 };
                 img.src = src;
             };
-            tryRenderImage(true);
+            tryRenderImage(!src.startsWith('data:'));
         }
         else {
             clearTimeout(timeoutId);
