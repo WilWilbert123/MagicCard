@@ -227,8 +227,11 @@ function drawShape(ctx: CanvasRenderingContext2D, el: Extract<CardElement, { typ
     const cy = el.y + el.height / 2;
     const r = Math.max(el.width, el.height) / 2;
     const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
-    grad.addColorStop(0, el.fill || '#dc2626');
-    grad.addColorStop(1, 'rgba(255,255,255,0)');
+    const fillColor = el.fill || '#dc2626';
+    grad.addColorStop(0, colorToRgba(fillColor, 1));
+    grad.addColorStop(0.45, colorToRgba(fillColor, 0.5));
+    grad.addColorStop(0.7, colorToRgba(fillColor, 0));
+    grad.addColorStop(1, colorToRgba(fillColor, 0));
     ctx.fillStyle = grad;
     ctx.fillRect(el.x, el.y, el.width, el.height);
   } else if (shapeType === 'SIGNATURE_LINE') {
@@ -525,4 +528,65 @@ function drawRoundedRect(
   ctx.arcTo(x, y + height, x, y, r);
   ctx.arcTo(x, y, x + width, y, r);
   ctx.closePath();
+}
+
+function colorToRgba(colorStr: string | undefined, alpha: number): string {
+  if (!colorStr) return `rgba(220, 38, 38, ${alpha})`;
+  const str = colorStr.trim().toLowerCase();
+
+  if (str.startsWith('#')) {
+    let hex = str.slice(1);
+    if (hex.length === 3) {
+      hex = hex.split('').map((c) => c + c).join('');
+    }
+    if (hex.length === 6) {
+      const r = parseInt(hex.slice(0, 2), 16);
+      const g = parseInt(hex.slice(2, 4), 16);
+      const b = parseInt(hex.slice(4, 6), 16);
+      if (!isNaN(r) && !isNaN(g) && !isNaN(b)) {
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+      }
+    }
+    if (hex.length === 8) {
+      const r = parseInt(hex.slice(0, 2), 16);
+      const g = parseInt(hex.slice(2, 4), 16);
+      const b = parseInt(hex.slice(4, 6), 16);
+      const origAlpha = parseInt(hex.slice(6, 8), 16) / 255;
+      if (!isNaN(r) && !isNaN(g) && !isNaN(b)) {
+        return `rgba(${r}, ${g}, ${b}, ${origAlpha * alpha})`;
+      }
+    }
+  }
+
+  const rgbMatch = str.match(/rgba?\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:\s*,\s*([\d.]+))?\s*\)/);
+  if (rgbMatch) {
+    const r = parseInt(rgbMatch[1], 10);
+    const g = parseInt(rgbMatch[2], 10);
+    const b = parseInt(rgbMatch[3], 10);
+    const origAlpha = rgbMatch[4] !== undefined ? parseFloat(rgbMatch[4]) : 1;
+    return `rgba(${r}, ${g}, ${b}, ${origAlpha * alpha})`;
+  }
+
+  const colorMap: Record<string, [number, number, number]> = {
+    red: [239, 68, 68],
+    pink: [236, 72, 153],
+    purple: [168, 85, 247],
+    violet: [139, 92, 246],
+    blue: [59, 130, 246],
+    cyan: [6, 182, 212],
+    teal: [20, 184, 166],
+    green: [34, 197, 94],
+    yellow: [234, 179, 8],
+    orange: [249, 115, 22],
+    white: [255, 255, 255],
+    black: [0, 0, 0],
+    slate: [100, 116, 139],
+  };
+
+  if (colorMap[str]) {
+    const [r, g, b] = colorMap[str];
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  }
+
+  return alpha === 0 ? 'rgba(0,0,0,0)' : str;
 }
