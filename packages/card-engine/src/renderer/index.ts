@@ -179,49 +179,31 @@ function drawShape(ctx: CanvasRenderingContext2D, el: Extract<CardElement, { typ
     ctx.closePath();
     ctx.fill();
   } else if (shapeType === 'WAVE_HORIZONTAL' || (shapeType as string) === 'HORIZONTAL_WAVE') {
-    ctx.beginPath();
-    ctx.moveTo(el.x, el.y + el.height * 0.35);
-    ctx.bezierCurveTo(
-      el.x + el.width * 0.20, el.y + el.height * 0.05,
-      el.x + el.width * 0.40, el.y + el.height * 0.85,
-      el.x + el.width * 0.65, el.y + el.height * 0.45
-    );
-    ctx.bezierCurveTo(
-      el.x + el.width * 0.80, el.y + el.height * 0.20,
-      el.x + el.width * 0.92, el.y + el.height * 0.10,
-      el.x + el.width, el.y + el.height * 0.25
-    );
-    ctx.lineTo(el.x + el.width, el.y + el.height);
-    ctx.lineTo(el.x, el.y + el.height);
-    ctx.closePath();
-    ctx.fill();
+    ctx.save();
+    ctx.translate(el.x, el.y);
+    ctx.scale(el.width / 100, el.height / 100);
+    const wavePath = new Path2D("M 0 35 C 20 5, 40 85, 65 45 C 80 20, 92 10, 100 25 L 100 100 L 0 100 Z");
+    ctx.fillStyle = el.fill || '#dc2626';
+    ctx.fill(wavePath);
     if (el.stroke && el.strokeWidth) {
       ctx.strokeStyle = el.stroke;
-      ctx.lineWidth = el.strokeWidth;
-      ctx.stroke();
+      ctx.lineWidth = el.strokeWidth / Math.max(0.01, (el.width + el.height) / 200);
+      ctx.stroke(wavePath);
     }
+    ctx.restore();
   } else if (shapeType === 'WAVE_VERTICAL' || (shapeType as string) === 'VERTICAL_WAVE') {
-    ctx.beginPath();
-    ctx.moveTo(el.x + el.width * 0.35, el.y);
-    ctx.bezierCurveTo(
-      el.x + el.width * 0.05, el.y + el.height * 0.20,
-      el.x + el.width * 0.85, el.y + el.height * 0.40,
-      el.x + el.width * 0.45, el.y + el.height * 0.65
-    );
-    ctx.bezierCurveTo(
-      el.x + el.width * 0.20, el.y + el.height * 0.80,
-      el.x + el.width * 0.10, el.y + el.height * 0.92,
-      el.x + el.width * 0.25, el.y + el.height
-    );
-    ctx.lineTo(el.x + el.width, el.y + el.height);
-    ctx.lineTo(el.x + el.width, el.y);
-    ctx.closePath();
-    ctx.fill();
+    ctx.save();
+    ctx.translate(el.x, el.y);
+    ctx.scale(el.width / 100, el.height / 100);
+    const wavePath = new Path2D("M 35 0 C 5 20, 85 40, 45 65 C 20 80, 10 92, 25 100 L 100 100 L 100 0 Z");
+    ctx.fillStyle = el.fill || '#dc2626';
+    ctx.fill(wavePath);
     if (el.stroke && el.strokeWidth) {
       ctx.strokeStyle = el.stroke;
-      ctx.lineWidth = el.strokeWidth;
-      ctx.stroke();
+      ctx.lineWidth = el.strokeWidth / Math.max(0.01, (el.width + el.height) / 200);
+      ctx.stroke(wavePath);
     }
+    ctx.restore();
   } else if (shapeType === 'SMOKE') {
     const cx = el.x + el.width / 2;
     const cy = el.y + el.height / 2;
@@ -429,76 +411,92 @@ function drawImageFromUrl(
     }
     // If running in browser environment
     if (typeof window !== 'undefined' && typeof Image !== 'undefined') {
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      img.onload = () => {
-        if (signal?.aborted) {
-          resolve();
-          return;
+      const tryRenderImage = (useCrossOrigin: boolean) => {
+        const img = new Image();
+        if (useCrossOrigin) {
+          img.crossOrigin = 'anonymous';
         }
-        ctx.save();
-        if (borderRadius > 0) {
-          drawRoundedRect(ctx, x, y, width, height, borderRadius);
-          ctx.clip();
-        }
-
-        let renderW = width;
-        let renderH = height;
-        let renderX = x;
-        let renderY = y;
-
-        if (objectFit === 'contain' && img.naturalWidth && img.naturalHeight) {
-          const imgRatio = img.naturalWidth / img.naturalHeight;
-          const boxRatio = width / height;
-          if (imgRatio > boxRatio) {
-            renderH = width / imgRatio;
-            renderY = y + (height - renderH) / 2;
-          } else {
-            renderW = height * imgRatio;
-            renderX = x + (width - renderW) / 2;
+        img.onload = () => {
+          if (signal?.aborted) {
+            resolve();
+            return;
           }
-        }
+          ctx.save();
+          if (borderRadius > 0) {
+            drawRoundedRect(ctx, x, y, width, height, borderRadius);
+            ctx.clip();
+          }
 
-        if (tintColor && tintColor !== 'none' && tintColor !== 'transparent') {
-          const lowerTint = tintColor.toLowerCase();
-          const offCanvas = document.createElement('canvas');
-          offCanvas.width = Math.max(1, Math.round(renderW));
-          offCanvas.height = Math.max(1, Math.round(renderH));
-          const offCtx = offCanvas.getContext('2d');
-          if (offCtx) {
-            offCtx.drawImage(img, 0, 0, offCanvas.width, offCanvas.height);
-            offCtx.globalCompositeOperation = 'source-in';
-            offCtx.fillStyle = (lowerTint === 'white' ? '#ffffff' : lowerTint === 'black' ? '#000000' : tintColor);
-            offCtx.fillRect(0, 0, offCanvas.width, offCanvas.height);
-            ctx.drawImage(offCanvas, renderX, renderY);
+          let renderW = width;
+          let renderH = height;
+          let renderX = x;
+          let renderY = y;
+
+          if (objectFit === 'contain' && img.naturalWidth && img.naturalHeight) {
+            const imgRatio = img.naturalWidth / img.naturalHeight;
+            const boxRatio = width / height;
+            if (imgRatio > boxRatio) {
+              renderH = width / imgRatio;
+              renderY = y + (height - renderH) / 2;
+            } else {
+              renderW = height * imgRatio;
+              renderX = x + (width - renderW) / 2;
+            }
+          }
+
+          if (tintColor && tintColor !== 'none' && tintColor !== 'transparent') {
+            const lowerTint = tintColor.toLowerCase();
+            const targetColor = lowerTint === 'white' ? '#ffffff' : lowerTint === 'black' ? '#000000' : tintColor;
+            try {
+              const offCanvas = document.createElement('canvas');
+              offCanvas.width = Math.max(1, Math.round(renderW));
+              offCanvas.height = Math.max(1, Math.round(renderH));
+              const offCtx = offCanvas.getContext('2d');
+              if (offCtx) {
+                offCtx.drawImage(img, 0, 0, offCanvas.width, offCanvas.height);
+                offCtx.globalCompositeOperation = 'source-in';
+                offCtx.fillStyle = targetColor;
+                offCtx.fillRect(0, 0, offCanvas.width, offCanvas.height);
+                ctx.drawImage(offCanvas, renderX, renderY);
+              } else {
+                ctx.drawImage(img, renderX, renderY, renderW, renderH);
+              }
+            } catch (e) {
+              ctx.drawImage(img, renderX, renderY, renderW, renderH);
+            }
           } else {
             ctx.drawImage(img, renderX, renderY, renderW, renderH);
           }
-        } else {
-          ctx.drawImage(img, renderX, renderY, renderW, renderH);
-        }
 
-        ctx.restore();
-
-        if (borderWidth > 0 && borderColor && borderColor !== 'transparent') {
-          ctx.save();
-          ctx.strokeStyle = borderColor;
-          ctx.lineWidth = borderWidth;
-          if (borderRadius > 0) {
-            drawRoundedRect(ctx, x, y, width, height, borderRadius);
-            ctx.stroke();
-          } else {
-            ctx.strokeRect(x, y, width, height);
-          }
           ctx.restore();
-        }
-        resolve();
+
+          if (borderWidth > 0 && borderColor && borderColor !== 'transparent') {
+            ctx.save();
+            ctx.strokeStyle = borderColor;
+            ctx.lineWidth = borderWidth;
+            if (borderRadius > 0) {
+              drawRoundedRect(ctx, x, y, width, height, borderRadius);
+              ctx.stroke();
+            } else {
+              ctx.strokeRect(x, y, width, height);
+            }
+            ctx.restore();
+          }
+          resolve();
+        };
+
+        img.onerror = () => {
+          if (useCrossOrigin) {
+            tryRenderImage(false);
+          } else {
+            resolve();
+          }
+        };
+
+        img.src = src;
       };
-      img.onerror = () => {
-        // Do not draw any opaque box on image error
-        resolve();
-      };
-      img.src = src;
+
+      tryRenderImage(true);
     } else {
       resolve();
     }
