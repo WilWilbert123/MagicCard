@@ -154,11 +154,10 @@ function MiniCard2DPreview({ layout }: { layout?: any }) {
             e.stopPropagation();
             setActiveSide('front');
           }}
-          className={`px-2 py-0.5 rounded font-semibold transition ${
-            activeSide === 'front'
+          className={`px-2 py-0.5 rounded font-semibold transition ${activeSide === 'front'
               ? 'bg-red-600 text-white shadow-xs'
               : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-          }`}
+            }`}
         >
           Front ({frontCount})
         </button>
@@ -167,11 +166,10 @@ function MiniCard2DPreview({ layout }: { layout?: any }) {
             e.stopPropagation();
             setActiveSide('back');
           }}
-          className={`px-2 py-0.5 rounded font-semibold transition ${
-            activeSide === 'back'
+          className={`px-2 py-0.5 rounded font-semibold transition ${activeSide === 'back'
               ? 'bg-red-600 text-white shadow-xs'
               : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-          }`}
+            }`}
         >
           Back ({backCount})
         </button>
@@ -255,7 +253,7 @@ function MiniCard2DPreview({ layout }: { layout?: any }) {
                 )}
 
                 {el.type === 'IMAGE' && (el.src || (el as any).data) && (
-                  // eslint-disable-next-line @next/next/no-img-element
+
                   <img
                     src={resolveDataBinding(el.src || '', {
                       employeeNumber: 'EMP-000125',
@@ -269,8 +267,8 @@ function MiniCard2DPreview({ layout }: { layout?: any }) {
                       filter: ((el as any).tintColor === '#ffffff' || (el as any).tintColor === 'white')
                         ? 'brightness(0) invert(1)'
                         : ((el as any).tintColor === '#000000' || (el as any).tintColor === 'black')
-                        ? 'brightness(0)'
-                        : undefined,
+                          ? 'brightness(0)'
+                          : undefined,
                       borderRadius: el.borderRadius ? `${el.borderRadius}px` : undefined,
                       borderWidth: el.borderWidth ? `${el.borderWidth}px` : undefined,
                       borderColor: el.borderColor,
@@ -616,11 +614,10 @@ export default function HrCardDesignsPage() {
               <div
                 key={tpl.id}
                 onClick={() => setActiveTemplateId(tpl.id)}
-                className={`rounded-2xl bg-white dark:bg-[#111827]/95 border transition-all duration-200 p-6 cursor-pointer shadow-sm hover:shadow-xl flex flex-col justify-between min-h-[620px] relative ${
-                  isSelected
+                className={`rounded-2xl bg-white dark:bg-[#111827]/95 border transition-all duration-200 p-6 cursor-pointer shadow-sm hover:shadow-xl flex flex-col justify-between min-h-[620px] relative ${isSelected
                     ? 'border-red-500/80 ring-2 ring-red-500/30 shadow-red-500/5'
                     : 'border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
-                }`}
+                  }`}
               >
                 {/* Top Section: Header Badges & Small History Button */}
                 <div className="space-y-3">
@@ -781,11 +778,10 @@ export default function HrCardDesignsPage() {
                 historyTemplate.versions.map((ver) => (
                   <div
                     key={ver.id}
-                    className={`p-3.5 rounded-xl border text-xs transition ${
-                      ver.status === 'PUBLISHED'
+                    className={`p-3.5 rounded-xl border text-xs transition ${ver.status === 'PUBLISHED'
                         ? 'bg-red-50/60 border-red-200 dark:bg-red-950/30 dark:border-red-800/80'
                         : 'bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center justify-between mb-1.5">
                       <span className="font-bold text-slate-900 dark:text-white flex items-center gap-2 text-xs">
