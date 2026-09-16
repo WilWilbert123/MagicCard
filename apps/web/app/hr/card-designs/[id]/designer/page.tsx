@@ -43,6 +43,9 @@ import {
   FlipHorizontal,
   FlipVertical,
   Waves,
+  Upload,
+  Landmark,
+  Building2,
 } from 'lucide-react';
 import { CardTemplateJSON, CardElement, TextElement, ShapeElement, QRCodeElement, BarcodeElement, resolveDataBinding } from '@workspace/card-engine';
 import { enterpriseStore } from '@/lib/data/enterpriseStore';
@@ -289,6 +292,45 @@ export default function CardDesignerPage() {
   const [publishChangelog, setPublishChangelog] = useState('');
   const [saveSuccessNotice, setSaveSuccessNotice] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  // Logo file upload state & ref
+  const logoFileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+
+  const handleLogoFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setIsUploadingLogo(true);
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const json = await res.json();
+      if (!res.ok || !json.url) {
+        throw new Error(json.error || 'Failed to upload logo');
+      }
+
+      updateSelectedElement({ src: json.url } as any);
+      toast.success('Logo uploaded and saved to Supabase storage!');
+    } catch (err: any) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (reader.result) {
+          updateSelectedElement({ src: reader.result as string } as any);
+          toast.success('Logo loaded from local file!');
+        }
+      };
+      reader.readAsDataURL(file);
+    } finally {
+      setIsUploadingLogo(false);
+    }
+  };
 
   // Dynamic Template Metadata from API
   const [templateMeta, setTemplateMeta] = useState<{
@@ -776,6 +818,25 @@ export default function CardDesignerPage() {
         isHidden: false,
         zIndex: currentSurface.elements.length + 1,
       };
+    } else if (type === 'IMAGE') {
+      newEl = {
+        id: newId,
+        type: 'IMAGE',
+        x: preset?.x ?? (isVertical ? 130 : 50),
+        y: preset?.y ?? 30,
+        width: preset?.width ?? 280,
+        height: preset?.height ?? 65,
+        src: preset?.src ?? 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/ca/Teleperformance_logo.svg/1280px-Teleperformance_logo.svg.png',
+        borderRadius: preset?.borderRadius ?? 0,
+        borderWidth: preset?.borderWidth ?? 0,
+        borderColor: preset?.borderColor ?? 'transparent',
+        objectFit: preset?.objectFit ?? 'contain',
+        rotation: 0,
+        opacity: 1,
+        isLocked: false,
+        isHidden: false,
+        zIndex: currentSurface.elements.length + 1,
+      };
     } else {
       // Shape Element
       const shapeType = preset && 'shapeType' in preset ? (preset.shapeType as any) : 'RECTANGLE';
@@ -1078,6 +1139,7 @@ export default function CardDesignerPage() {
               { label: 'Employee ID No.', icon: <Type className="w-4 h-4 text-blue-400" />, action: () => addElement('TEXT', { text: 'ID: {{employee.employeeNumber}}', fontSize: 16, color: '#64748b' }) },
               { label: 'Department', icon: <Type className="w-4 h-4 text-amber-400" />, action: () => addElement('TEXT', { text: 'DEPT: {{employee.department}}', fontSize: 14, color: '#64748b' }) },
               { label: 'Position Title', icon: <Type className="w-4 h-4 text-purple-400" />, action: () => addElement('TEXT', { text: '{{employee.position}}', fontSize: 18, color: '#dc2626', fontWeight: 'bold' }) },
+              { label: 'Company Logo / Image', icon: <Landmark className="w-4 h-4 text-pink-400" />, action: () => addElement('IMAGE') },
               { label: 'Employee Photo', icon: <ImageIcon className="w-4 h-4 text-red-500" />, action: () => addElement('EMPLOYEE_PHOTO') },
               { label: 'Verification QR', icon: <QrCode className="w-4 h-4 text-indigo-500" />, action: () => addElement('QR_CODE') },
               { label: 'Code128 Barcode', icon: <Barcode className="w-4 h-4 text-slate-500" />, action: () => addElement('BARCODE') },
@@ -1292,8 +1354,8 @@ export default function CardDesignerPage() {
                   {(el.type === 'EMPLOYEE_PHOTO' || el.type === 'IMAGE') && (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
-                      src={el.type === 'IMAGE' && el.src ? el.src : activePhotoSrc}
-                      alt="Preview Avatar"
+                      src={el.type === 'IMAGE' ? (resolveDataBinding(el.src || '', activeBindingMap) || el.src) : activePhotoSrc}
+                      alt="Preview Image"
                       style={{
                         borderRadius: (el.borderRadius !== undefined && el.borderRadius !== null)
                           ? (el.borderRadius >= 9999 || el.borderRadius >= Math.min(el.width, el.height) / 2 ? '50%' : `${el.borderRadius}px`)
@@ -1301,7 +1363,7 @@ export default function CardDesignerPage() {
                         borderWidth: `${el.borderWidth || 0}px`,
                         borderColor: el.borderColor || 'transparent',
                         borderStyle: (el.borderWidth || 0) > 0 ? 'solid' : 'none',
-                        objectFit: el.objectFit || 'cover',
+                        objectFit: el.objectFit || (el.type === 'IMAGE' ? 'contain' : 'cover'),
                       }}
                       className="w-full h-full shadow-sm pointer-events-none"
                     />
@@ -1694,8 +1756,129 @@ export default function CardDesignerPage() {
                 </div>
               )}
 
-              {/* Properties for EMPLOYEE_PHOTO & IMAGE */}
-              {(selectedElement.type === 'EMPLOYEE_PHOTO' || selectedElement.type === 'IMAGE') && (
+              {/* Properties for IMAGE (Company Logo / Image) */}
+              {selectedElement.type === 'IMAGE' && (
+                <div className={`p-3 rounded-lg border space-y-3 ${cardRow}`}>
+                  <span className={`font-semibold block text-[10px] uppercase ${sectionHdr}`}>Company Logo & Image Settings</span>
+
+                  {/* Hidden File Input for Supabase Upload */}
+                  <input
+                    type="file"
+                    ref={logoFileInputRef}
+                    accept="image/*"
+                    onChange={handleLogoFileUpload}
+                    className="hidden"
+                  />
+
+                  {/* Upload to Supabase Button */}
+                  <button
+                    type="button"
+                    onClick={() => logoFileInputRef.current?.click()}
+                    disabled={isUploadingLogo}
+                    className="w-full py-2 px-3 rounded-lg bg-pink-600 hover:bg-pink-500 text-white font-semibold text-xs transition flex items-center justify-center gap-2 shadow-sm"
+                  >
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>{isUploadingLogo ? 'Uploading to Supabase...' : 'Upload Logo File (Supabase Storage)'}</span>
+                  </button>
+
+                  {/* Direct Image URL input */}
+                  <div>
+                    <label className={`text-[10px] ${labelCls}`}>Image / Logo URL</label>
+                    <input
+                      type="text"
+                      value={selectedElement.src || ''}
+                      onChange={(e) => updateSelectedElement({ src: e.target.value } as any)}
+                      placeholder="https://... or {{company.logoUrl}}"
+                      className={`w-full border rounded px-2 py-1 text-xs font-mono ${inputCls}`}
+                    />
+                  </div>
+
+                  {/* Sample / Preset Company Logos */}
+                  <div>
+                    <label className={`text-[10px] mb-1.5 block ${labelCls}`}>Sample Logo Gallery</label>
+                    <div className="grid grid-cols-2 gap-1.5 text-[11px]">
+                      <button
+                        type="button"
+                        onClick={() => updateSelectedElement({ src: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/ca/Teleperformance_logo.svg/1280px-Teleperformance_logo.svg.png', objectFit: 'contain' } as any)}
+                        className={`p-1.5 rounded border flex items-center gap-1.5 transition ${selectedElement.src?.includes('Teleperformance') ? 'border-pink-500 bg-pink-950/30 text-pink-300' : btnBorder}`}
+                      >
+                        <span className="font-bold text-pink-500">TP</span>
+                        <span className="truncate">Teleperformance</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => updateSelectedElement({ src: 'https://raw.githubusercontent.com/shadcn.png', objectFit: 'contain' } as any)}
+                        className={`p-1.5 rounded border flex items-center gap-1.5 transition ${selectedElement.src?.includes('shadcn') ? 'border-pink-500 bg-pink-950/30 text-pink-300' : btnBorder}`}
+                      >
+                        <Building2 className="w-3.5 h-3.5 text-blue-400" />
+                        <span className="truncate">Acme Global</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => updateSelectedElement({ src: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=500&auto=format&fit=crop&q=80', objectFit: 'contain' } as any)}
+                        className={`p-1.5 rounded border flex items-center gap-1.5 transition ${selectedElement.src?.includes('unsplash') ? 'border-pink-500 bg-pink-950/30 text-pink-300' : btnBorder}`}
+                      >
+                        <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                        <span className="truncate">Vanguard</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => updateSelectedElement({ src: '{{company.logoUrl}}', objectFit: 'contain' } as any)}
+                        className={`p-1.5 rounded border flex items-center gap-1.5 transition ${selectedElement.src === '{{company.logoUrl}}' ? 'border-pink-500 bg-pink-950/30 text-pink-300' : btnBorder}`}
+                      >
+                        <span className="font-mono text-xs text-emerald-400">{"{{}}"}</span>
+                        <span className="truncate">Dynamic Binding</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Object Fit */}
+                  <div>
+                    <label className={`text-[10px] ${labelCls}`}>Object Fit</label>
+                    <select
+                      value={(selectedElement as any).objectFit || 'contain'}
+                      onChange={(e) => updateSelectedElement({ objectFit: e.target.value as any } as any)}
+                      className={`w-full border rounded px-2 py-1 text-xs ${inputCls}`}
+                    >
+                      <option value="contain">Contain (Fit Whole Logo - Recommended)</option>
+                      <option value="cover">Cover (Fill & Crop Box)</option>
+                      <option value="fill">Fill (Stretch)</option>
+                    </select>
+                  </div>
+
+                  {/* Corner Radius & Border Controls */}
+                  <div className="pt-2 border-t border-slate-800/40 space-y-2">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className={`text-[10px] ${labelCls}`}>Corner Radius</label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={selectedElement.borderRadius || 0}
+                          onChange={(e) => updateSelectedElement({ borderRadius: parseInt(e.target.value) || 0 } as any)}
+                          className={`w-full border rounded px-2 py-1 text-xs ${inputCls}`}
+                        />
+                      </div>
+                      <div>
+                        <label className={`text-[10px] ${labelCls}`}>Border Width</label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={(selectedElement as any).borderWidth ?? 0}
+                          onChange={(e) => updateSelectedElement({ borderWidth: parseInt(e.target.value) || 0 } as any)}
+                          className={`w-full border rounded px-2 py-1 text-xs ${inputCls}`}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Properties for EMPLOYEE_PHOTO */}
+              {selectedElement.type === 'EMPLOYEE_PHOTO' && (
                 <div className={`p-3 rounded-lg border space-y-3 ${cardRow}`}>
                   <span className={`font-semibold block text-[10px] uppercase ${sectionHdr}`}>Picture Shape & Style</span>
 

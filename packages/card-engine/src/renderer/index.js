@@ -58,7 +58,7 @@ export async function renderCardToCanvas(canvas, template, side, employee, optio
                 await drawPhoto(ctx, el, employee, options.signal);
                 break;
             case 'IMAGE':
-                await drawImage(ctx, el, options.signal);
+                await drawImage(ctx, el, employee, options.baseUrl, options.signal);
                 break;
             case 'QR_CODE':
                 if (!hasRenderedQR) {
@@ -274,10 +274,11 @@ async function drawPhoto(ctx, el, employee, signal) {
     }
     await drawImageFromUrl(ctx, photoUrl, el.x, el.y, el.width, el.height, el.borderRadius, el.borderWidth, el.borderColor, signal);
 }
-async function drawImage(ctx, el, signal) {
+async function drawImage(ctx, el, employee, baseUrl, signal) {
     if (!el.src)
         return;
-    await drawImageFromUrl(ctx, el.src, el.x, el.y, el.width, el.height, el.borderRadius, el.borderWidth, el.borderColor, signal);
+    const resolvedSrc = resolveDataBinding(el.src, employee, baseUrl);
+    await drawImageFromUrl(ctx, resolvedSrc || el.src, el.x, el.y, el.width, el.height, el.borderRadius, el.borderWidth, el.borderColor, signal, el.objectFit);
 }
 async function drawQRCode(ctx, el, employee, baseUrl, signal) {
     const resolvedData = resolveDataBinding(el.data, employee, baseUrl);
@@ -309,7 +310,7 @@ async function drawBarcode(ctx, el, employee, signal) {
     const svgDataUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
     await drawImageFromUrl(ctx, svgDataUrl, el.x, el.y, el.width, el.height, 0, 0, 'transparent', signal);
 }
-function drawImageFromUrl(ctx, src, x, y, width, height, borderRadius = 0, borderWidth = 0, borderColor = 'transparent', signal) {
+function drawImageFromUrl(ctx, src, x, y, width, height, borderRadius = 0, borderWidth = 0, borderColor = 'transparent', signal, objectFit = 'cover') {
     return new Promise((resolve) => {
         if (signal?.aborted) {
             resolve();
@@ -329,7 +330,26 @@ function drawImageFromUrl(ctx, src, x, y, width, height, borderRadius = 0, borde
                     drawRoundedRect(ctx, x, y, width, height, borderRadius);
                     ctx.clip();
                 }
-                ctx.drawImage(img, x, y, width, height);
+                if (objectFit === 'contain' && img.naturalWidth && img.naturalHeight) {
+                    const imgRatio = img.naturalWidth / img.naturalHeight;
+                    const boxRatio = width / height;
+                    let renderW = width;
+                    let renderH = height;
+                    let renderX = x;
+                    let renderY = y;
+                    if (imgRatio > boxRatio) {
+                        renderH = width / imgRatio;
+                        renderY = y + (height - renderH) / 2;
+                    }
+                    else {
+                        renderW = height * imgRatio;
+                        renderX = x + (width - renderW) / 2;
+                    }
+                    ctx.drawImage(img, renderX, renderY, renderW, renderH);
+                }
+                else {
+                    ctx.drawImage(img, x, y, width, height);
+                }
                 ctx.restore();
                 if (borderWidth > 0 && borderColor && borderColor !== 'transparent') {
                     ctx.save();

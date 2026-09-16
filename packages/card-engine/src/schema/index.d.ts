@@ -12,7 +12,7 @@ export declare const CR80_DIMENSIONS: {
     printWidthPx: number;
     printHeightPx: number;
 };
-export declare const ALLOWED_DATA_BINDINGS: readonly ["employee.fullName", "employee.firstName", "employee.lastName", "employee.employeeNumber", "employee.department", "employee.position", "employee.branch", "employee.email", "employee.contactNumber", "employee.dateHired", "employee.photoUrl", "system.currentDate", "system.verificationUrl"];
+export declare const ALLOWED_DATA_BINDINGS: readonly ["employee.fullName", "employee.firstName", "employee.lastName", "employee.employeeNumber", "employee.department", "employee.position", "employee.branch", "employee.email", "employee.contactNumber", "employee.dateHired", "employee.photoUrl", "company.logoUrl", "system.logoUrl", "system.currentDate", "system.verificationUrl"];
 export type AllowedDataBinding = typeof ALLOWED_DATA_BINDINGS[number];
 export declare const BaseElementSchema: z.ZodObject<{
     id: z.ZodString;

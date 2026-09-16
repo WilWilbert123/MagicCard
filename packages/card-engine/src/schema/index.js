@@ -26,6 +26,8 @@ export const ALLOWED_DATA_BINDINGS = [
     'employee.contactNumber',
     'employee.dateHired',
     'employee.photoUrl',
+    'company.logoUrl',
+    'system.logoUrl',
     'system.currentDate',
     'system.verificationUrl',
 ];
