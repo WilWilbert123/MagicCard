@@ -1,8 +1,7 @@
 'use client';
 
 import { use, useEffect, useState } from 'react';
-import Link from 'next/link';
-import { ShieldCheck, CheckCircle2, AlertTriangle, Lock, Award, Calendar, RefreshCw } from 'lucide-react';
+import { ShieldCheck, CheckCircle2, AlertTriangle, Lock, Award, RefreshCw } from 'lucide-react';
 import { decodeVerificationToken } from '@workspace/card-engine';
 import { enterpriseStore } from '@/lib/data/enterpriseStore';
 
@@ -52,9 +51,6 @@ export default function VerifyCardPage({ params }: { params: Promise<{ token: st
           <h1 className="text-xl font-bold tracking-tight text-white">
             Identity Verification Portal
           </h1>
-          <p className="text-zinc-400 text-xs mt-1">
-            Official BISMAC Digital Credentials & Trust Network
-          </p>
         </div>
 
         {/* Status Card */}
@@ -107,18 +103,11 @@ export default function VerifyCardPage({ params }: { params: Promise<{ token: st
                   <span className="text-zinc-400 font-medium">Branch Location</span>
                   <span className="font-semibold text-zinc-200">{empBranch}</span>
                 </div>
-                <div className="flex justify-between py-1.5 border-b border-zinc-800/60">
+                <div className="flex justify-between py-1.5">
                   <span className="text-zinc-400 font-medium">Authorization Status</span>
                   <span className="font-semibold text-white flex items-center gap-1.5">
                     <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
                     OFFICIALLY ISSUED & ACTIVE
-                  </span>
-                </div>
-                <div className="flex justify-between py-1.5">
-                  <span className="text-zinc-400 font-medium">Security Validity</span>
-                  <span className="font-semibold text-zinc-300 flex items-center gap-1">
-                    <Calendar className="w-3.5 h-3.5 text-zinc-400" />
-                    Valid through January 2028
                   </span>
                 </div>
               </div>
@@ -145,18 +134,11 @@ export default function VerifyCardPage({ params }: { params: Promise<{ token: st
               </div>
             </div>
           )}
-
-          {/* Minimal Footer */}
-          <div className="pt-4 border-t border-zinc-900 flex items-center justify-between text-[11px] text-zinc-500">
-            <span>© 2026 BISMAC Security Trust</span>
-            <Link href="/" className="hover:text-zinc-300 transition-colors">
-              Portal Home
-            </Link>
-          </div>
         </div>
       </div>
     </div>
   );
 }
+
 
 
