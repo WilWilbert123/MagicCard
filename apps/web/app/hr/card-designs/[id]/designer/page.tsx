@@ -47,6 +47,7 @@ import {
   Landmark,
   Building2,
   Calendar,
+  Mail,
 } from 'lucide-react';
 import { CardTemplateJSON, CardElement, TextElement, ShapeElement, QRCodeElement, BarcodeElement, resolveDataBinding } from '@workspace/card-engine';
 import { enterpriseStore } from '@/lib/data/enterpriseStore';
@@ -1231,6 +1232,7 @@ export default function CardDesignerPage() {
               { label: 'Employee ID No.', icon: <Type className="w-4 h-4 text-blue-400" />, action: () => addElement('TEXT', { text: 'ID: {{employee.employeeNumber}}', fontSize: 16, color: '#64748b' }) },
               { label: 'Department', icon: <Type className="w-4 h-4 text-amber-400" />, action: () => addElement('TEXT', { text: 'DEPT: {{employee.department}}', fontSize: 14, color: '#64748b' }) },
               { label: 'Position Title', icon: <Type className="w-4 h-4 text-purple-400" />, action: () => addElement('TEXT', { text: '{{employee.position}}', fontSize: 18, color: '#dc2626', fontWeight: 'bold' }) },
+              { label: 'Corporate Email', icon: <Mail className="w-4 h-4 text-violet-400" />, action: () => addElement('TEXT', { text: '{{employee.email}}', fontSize: 13, color: '#475569' }) },
               { label: 'Date Hired', icon: <Calendar className="w-4 h-4 text-orange-400" />, action: () => addElement('TEXT', { text: 'HIRED: {{employee.dateHired}}', fontSize: 13, color: '#475569' }) },
               { label: 'Residential Address', icon: <Type className="w-4 h-4 text-sky-400" />, action: () => addElement('TEXT', { text: 'ADDR: {{employee.address}}', fontSize: 13, color: '#475569' }) },
               { label: 'SSS Number', icon: <Type className="w-4 h-4 text-teal-400" />, action: () => addElement('TEXT', { text: 'SSS: {{employee.sssNumber}}', fontSize: 13, color: '#475569' }) },
@@ -1830,6 +1832,7 @@ export default function CardDesignerPage() {
                         defaultValue=""
                       >
                         <option value="" disabled>+ Insert Dynamic Field...</option>
+                        <option value="{{employee.email}}">{"Corporate Email ({{employee.email}})"}</option>
                         <option value="{{employee.dateHired}}">{"Date Hired ({{employee.dateHired}})"}</option>
                         <option value="{{employee.fullName}}">{"Full Name ({{employee.fullName}})"}</option>
                         <option value="{{employee.callName}}">{"Call Name ({{employee.callName}})"}</option>
