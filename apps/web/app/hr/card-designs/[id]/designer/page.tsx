@@ -46,6 +46,7 @@ import {
   Upload,
   Landmark,
   Building2,
+  Calendar,
 } from 'lucide-react';
 import { CardTemplateJSON, CardElement, TextElement, ShapeElement, QRCodeElement, BarcodeElement, resolveDataBinding } from '@workspace/card-engine';
 import { enterpriseStore } from '@/lib/data/enterpriseStore';
@@ -1230,6 +1231,7 @@ export default function CardDesignerPage() {
               { label: 'Employee ID No.', icon: <Type className="w-4 h-4 text-blue-400" />, action: () => addElement('TEXT', { text: 'ID: {{employee.employeeNumber}}', fontSize: 16, color: '#64748b' }) },
               { label: 'Department', icon: <Type className="w-4 h-4 text-amber-400" />, action: () => addElement('TEXT', { text: 'DEPT: {{employee.department}}', fontSize: 14, color: '#64748b' }) },
               { label: 'Position Title', icon: <Type className="w-4 h-4 text-purple-400" />, action: () => addElement('TEXT', { text: '{{employee.position}}', fontSize: 18, color: '#dc2626', fontWeight: 'bold' }) },
+              { label: 'Date Hired', icon: <Calendar className="w-4 h-4 text-orange-400" />, action: () => addElement('TEXT', { text: 'HIRED: {{employee.dateHired}}', fontSize: 13, color: '#475569' }) },
               { label: 'Residential Address', icon: <Type className="w-4 h-4 text-sky-400" />, action: () => addElement('TEXT', { text: 'ADDR: {{employee.address}}', fontSize: 13, color: '#475569' }) },
               { label: 'SSS Number', icon: <Type className="w-4 h-4 text-teal-400" />, action: () => addElement('TEXT', { text: 'SSS: {{employee.sssNumber}}', fontSize: 13, color: '#475569' }) },
               { label: 'TIN Number', icon: <Type className="w-4 h-4 text-cyan-400" />, action: () => addElement('TEXT', { text: 'TIN: {{employee.tinNumber}}', fontSize: 13, color: '#475569' }) },
@@ -1814,6 +1816,35 @@ export default function CardDesignerPage() {
                       onChange={(e) => updateSelectedElement({ text: e.target.value })}
                       className={`w-full border rounded px-2 py-1 text-xs ${inputCls}`}
                     />
+                    <div className="mt-1.5">
+                      <select
+                        onChange={(e) => {
+                          if (!e.target.value) return;
+                          const current = selectedElement.text || '';
+                          const tag = e.target.value;
+                          const newText = current ? `${current} ${tag}` : tag;
+                          updateSelectedElement({ text: newText });
+                          e.target.value = '';
+                        }}
+                        className={`w-full border rounded px-1.5 py-1 text-[11px] ${inputCls}`}
+                        defaultValue=""
+                      >
+                        <option value="" disabled>+ Insert Dynamic Field...</option>
+                        <option value="{{employee.dateHired}}">{"Date Hired ({{employee.dateHired}})"}</option>
+                        <option value="{{employee.fullName}}">{"Full Name ({{employee.fullName}})"}</option>
+                        <option value="{{employee.callName}}">{"Call Name ({{employee.callName}})"}</option>
+                        <option value="{{employee.employeeNumber}}">{"Employee ID ({{employee.employeeNumber}})"}</option>
+                        <option value="{{employee.department}}">{"Department ({{employee.department}})"}</option>
+                        <option value="{{employee.position}}">{"Position Title ({{employee.position}})"}</option>
+                        <option value="{{employee.branch}}">{"Branch ({{employee.branch}})"}</option>
+                        <option value="{{employee.address}}">{"Address ({{employee.address}})"}</option>
+                        <option value="{{employee.sssNumber}}">{"SSS Number ({{employee.sssNumber}})"}</option>
+                        <option value="{{employee.tinNumber}}">{"TIN Number ({{employee.tinNumber}})"}</option>
+                        <option value="{{employee.emergencyContactName}}">{"Emergency Contact Name ({{employee.emergencyContactName}})"}</option>
+                        <option value="{{employee.emergencyContactPhone}}">{"Emergency Contact Phone ({{employee.emergencyContactPhone}})"}</option>
+                        <option value="{{system.currentDate}}">{"System Date ({{system.currentDate}})"}</option>
+                      </select>
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-2">
