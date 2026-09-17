@@ -31,6 +31,7 @@ import dynamic from 'next/dynamic';
 import { Employee, Branch, Department, DEFAULT_CR80_TEMPLATE } from '@/lib/data/enterpriseStore';
 import { toast } from '@/components/ui/Toast';
 import PhotoPreviewCrop from '@/components/employee/PhotoPreviewCrop';
+import SignatureUpload from '@/components/employee/SignatureUpload';
 
 const ThreeCardViewer = dynamic(() => import('@/components/three/ThreeCardViewer'), {
   ssr: false,
@@ -153,13 +154,24 @@ export default function HrEmployeesPage() {
   const [formData, setFormData] = useState({
     employeeNumber: `EMP-${Math.floor(100000 + Math.random() * 900000)}`,
     firstName: '',
+    middleName: '',
     lastName: '',
+    suffix: '',
+    callName: '',
     email: '',
     contactNumber: '',
     branchId: '',
     departmentId: '',
     positionTitle: 'Software Engineer',
     photoUrl: '',
+    dateHired: new Date().toISOString().split('T')[0],
+    address: '',
+    sssNumber: '',
+    tinNumber: '',
+    emergencyContactName: '',
+    emergencyContactPhone: '',
+    signatureUrl: '',
+    hrSignatureUrl: '',
   });
 
   // Edit Employee Form state
@@ -170,12 +182,21 @@ export default function HrEmployeesPage() {
     middleName: '',
     lastName: '',
     suffix: '',
+    callName: '',
     email: '',
     contactNumber: '',
     branchId: '',
     departmentId: '',
     positionTitle: '',
     photoUrl: '',
+    dateHired: '',
+    address: '',
+    sssNumber: '',
+    tinNumber: '',
+    emergencyContactName: '',
+    emergencyContactPhone: '',
+    signatureUrl: '',
+    hrSignatureUrl: '',
     employmentStatus: 'ACTIVE' as 'ACTIVE' | 'INACTIVE' | 'SUSPENDED',
     cardStatus: 'NOT_ISSUED' as 'NOT_ISSUED' | 'PRINTED' | 'ISSUED' | 'REPRINT_REQUESTED',
   });
@@ -188,12 +209,21 @@ export default function HrEmployeesPage() {
       middleName: emp.middleName || '',
       lastName: emp.lastName || '',
       suffix: emp.suffix || '',
+      callName: emp.callName || '',
       email: emp.email || '',
       contactNumber: emp.contactNumber || '',
       branchId: emp.branchId || branches[0]?.id || '',
       departmentId: emp.departmentId || departments[0]?.id || '',
       positionTitle: emp.positionTitle || '',
       photoUrl: emp.photoUrl || '',
+      dateHired: emp.dateHired || '',
+      address: emp.address || '',
+      sssNumber: emp.sssNumber || '',
+      tinNumber: emp.tinNumber || '',
+      emergencyContactName: emp.emergencyContactName || '',
+      emergencyContactPhone: emp.emergencyContactPhone || '',
+      signatureUrl: emp.signatureUrl || '',
+      hrSignatureUrl: emp.hrSignatureUrl || '',
       employmentStatus: emp.employmentStatus || 'ACTIVE',
       cardStatus: emp.cardStatus || 'NOT_ISSUED',
     });
@@ -334,13 +364,24 @@ export default function HrEmployeesPage() {
         body: JSON.stringify({
           employeeNumber: formData.employeeNumber,
           firstName: formData.firstName,
+          middleName: formData.middleName,
           lastName: formData.lastName,
+          suffix: formData.suffix,
+          callName: formData.callName,
           email: formData.email,
           contactNumber: formData.contactNumber,
           branchId: formData.branchId || branches[0]?.id,
           departmentId: formData.departmentId || departments[0]?.id,
           positionTitle: formData.positionTitle,
           photoUrl: formData.photoUrl,
+          dateHired: formData.dateHired,
+          address: formData.address,
+          sssNumber: formData.sssNumber,
+          tinNumber: formData.tinNumber,
+          emergencyContactName: formData.emergencyContactName,
+          emergencyContactPhone: formData.emergencyContactPhone,
+          signatureUrl: formData.signatureUrl,
+          hrSignatureUrl: formData.hrSignatureUrl,
         }),
       });
 
@@ -352,13 +393,24 @@ export default function HrEmployeesPage() {
       setFormData({
         employeeNumber: `EMP-${Math.floor(100000 + Math.random() * 900000)}`,
         firstName: '',
+        middleName: '',
         lastName: '',
+        suffix: '',
+        callName: '',
         email: '',
         contactNumber: '',
         branchId: branches[0]?.id || '',
         departmentId: departments[0]?.id || '',
         positionTitle: 'Specialist',
         photoUrl: '',
+        dateHired: new Date().toISOString().split('T')[0],
+        address: '',
+        sssNumber: '',
+        tinNumber: '',
+        emergencyContactName: '',
+        emergencyContactPhone: '',
+        signatureUrl: '',
+        hrSignatureUrl: '',
       });
       loadData();
     } catch (err: any) {
@@ -381,12 +433,19 @@ export default function HrEmployeesPage() {
       'positionTitle',
       'photoUrl',
       'employmentStatus',
-      'dateHired'
+      'dateHired',
+      'address',
+      'sssNumber',
+      'tinNumber',
+      'emergencyContactName',
+      'emergencyContactPhone',
+      'signatureUrl',
+      'hrSignatureUrl'
     ].join(',');
 
-    const row1 = 'EMP-100001,John,Alexander,Smith,,john.smith@magiccard.corp,+1 (555) 123-4567,Engineering & Technology,Global Headquarters (NYC),Senior Systems Architect,,ACTIVE,2024-01-15';
-    const row2 = 'EMP-100002,Maria,,Garcia,Jr,maria.garcia@magiccard.corp,+1 (555) 987-6543,Corporate Security,Global Headquarters (NYC),Security Operations Specialist,,ACTIVE,2024-02-01';
-    const row3 = 'EMP-100003,David,Robert,Chen,,david.chen@magiccard.corp,+1 (555) 456-7890,Operations & Facilities,West Coast Tech Campus (SF),Operations Lead,,ACTIVE,2024-03-10';
+    const row1 = 'EMP-100001,John,Alexander,Smith,,john.smith@magiccard.corp,+1 (555) 123-4567,Engineering & Technology,Global Headquarters (NYC),Senior Systems Architect,,ACTIVE,2024-01-15,"123 Main St, New York",SSS-01-2345678-9,TIN-123-456-789-000,Jane Smith,+1 (555) 999-1111,,';
+    const row2 = 'EMP-100002,Maria,,Garcia,Jr,maria.garcia@magiccard.corp,+1 (555) 987-6543,Corporate Security,Global Headquarters (NYC),Security Operations Specialist,,ACTIVE,2024-02-01,"456 Oak Ave, NYC",SSS-02-9876543-1,TIN-987-654-321-000,Carlos Garcia,+1 (555) 888-2222,,';
+    const row3 = 'EMP-100003,David,Robert,Chen,,david.chen@magiccard.corp,+1 (555) 456-7890,Operations & Facilities,West Coast Tech Campus (SF),Operations Lead,,ACTIVE,2024-03-10,"789 Pine Rd, SF",SSS-03-4567890-2,TIN-456-789-012-000,Sarah Chen,+1 (555) 777-3333,,';
 
     const csvContent = `${headers}\r\n${row1}\r\n${row2}\r\n${row3}\r\n`;
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -418,22 +477,36 @@ export default function HrEmployeesPage() {
       'positionTitle',
       'cardStatus',
       'employmentStatus',
-      'dateHired'
+      'dateHired',
+      'address',
+      'sssNumber',
+      'tinNumber',
+      'emergencyContactName',
+      'emergencyContactPhone',
+      'signatureUrl',
+      'hrSignatureUrl'
     ].join(',');
 
     const rows = employees.map((e) =>
       [
-        `"${e.employeeNumber}"`,
-        `"${e.firstName}"`,
-        `"${e.lastName}"`,
-        `"${e.email}"`,
-        `"${e.contactNumber}"`,
-        `"${e.departmentName}"`,
-        `"${e.branchName}"`,
-        `"${e.positionTitle}"`,
-        `"${e.cardStatus}"`,
-        `"${e.employmentStatus}"`,
-        `"${e.dateHired}"`
+        `"${e.employeeNumber || ''}"`,
+        `"${e.firstName || ''}"`,
+        `"${e.lastName || ''}"`,
+        `"${e.email || ''}"`,
+        `"${e.contactNumber || ''}"`,
+        `"${e.departmentName || ''}"`,
+        `"${e.branchName || ''}"`,
+        `"${e.positionTitle || ''}"`,
+        `"${e.cardStatus || ''}"`,
+        `"${e.employmentStatus || ''}"`,
+        `"${e.dateHired || ''}"`,
+        `"${(e.address || '').replace(/"/g, '""')}"`,
+        `"${e.sssNumber || ''}"`,
+        `"${e.tinNumber || ''}"`,
+        `"${e.emergencyContactName || ''}"`,
+        `"${e.emergencyContactPhone || ''}"`,
+        `"${e.signatureUrl || ''}"`,
+        `"${e.hrSignatureUrl || ''}"`
       ].join(',')
     );
 
@@ -500,6 +573,13 @@ export default function HrEmployeesPage() {
           const photo = headerMap['photourl'] !== undefined ? cols[headerMap['photourl']] : '';
           const status = (headerMap['employmentstatus'] !== undefined && cols[headerMap['employmentstatus']]?.toUpperCase() === 'INACTIVE') ? 'INACTIVE' : 'ACTIVE';
           const dateHired = headerMap['datehired'] !== undefined ? cols[headerMap['datehired']] : new Date().toISOString().split('T')[0];
+          const address = headerMap['address'] !== undefined ? cols[headerMap['address']] : '';
+          const sssNumber = headerMap['sssnumber'] !== undefined ? cols[headerMap['sssnumber']] : '';
+          const tinNumber = headerMap['tinnumber'] !== undefined ? cols[headerMap['tinnumber']] : '';
+          const emergencyContactName = headerMap['emergencycontactname'] !== undefined ? cols[headerMap['emergencycontactname']] : '';
+          const emergencyContactPhone = headerMap['emergencycontactphone'] !== undefined ? cols[headerMap['emergencycontactphone']] : '';
+          const signatureUrl = headerMap['signatureurl'] !== undefined ? cols[headerMap['signatureurl']] : '';
+          const hrSignatureUrl = headerMap['hrsignatureurl'] !== undefined ? cols[headerMap['hrsignatureurl']] : '';
 
           if (firstName && lastName) {
             parsed.push({
@@ -521,6 +601,13 @@ export default function HrEmployeesPage() {
               employmentStatus: status,
               cardStatus: 'NOT_ISSUED',
               dateHired,
+              address,
+              sssNumber,
+              tinNumber,
+              emergencyContactName,
+              emergencyContactPhone,
+              signatureUrl,
+              hrSignatureUrl,
             });
           }
         }
@@ -874,131 +961,252 @@ export default function HrEmployeesPage() {
 
       {/* Add Employee Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-lg rounded-2xl bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 p-6 shadow-2xl transition-colors duration-200">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="w-full max-w-2xl rounded-2xl bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 p-6 shadow-2xl my-8 transition-colors duration-200">
             <div className="flex items-center justify-between mb-4 border-b border-slate-200 dark:border-slate-800 pb-3">
-              <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <Plus className="w-5 h-5 text-red-500" />
-                Add Corporate Employee
-              </h2>
+              <div>
+                <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <Plus className="w-5 h-5 text-red-500" />
+                  Add Corporate Employee
+                </h2>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                  Enter official employee details, government IDs, and signature images.
+                </p>
+              </div>
               <button onClick={() => setShowAddModal(false)} className="text-slate-400 hover:text-slate-700 dark:hover:text-white transition">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleCreateEmployee} className="space-y-4 text-xs">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">First Name *</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.firstName}
-                    onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition"
-                  />
+            <form onSubmit={handleCreateEmployee} className="space-y-4 text-xs max-h-[75vh] overflow-y-auto pr-1">
+              {/* Section 1: Basic Identity & Work */}
+              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-3">
+                <span className="text-[11px] font-bold text-red-600 dark:text-red-400 uppercase tracking-wider block">
+                  1. Official Employee Identification
+                </span>
+                
+                <div className="grid grid-cols-5 gap-2">
+                  <div>
+                    <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">First Name *</label>
+                    <input
+                      type="text"
+                      required
+                      value={formData.firstName}
+                      onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                      className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-900 dark:text-white focus:outline-none focus:border-red-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Call / Nick Name</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Wilbert"
+                      value={formData.callName}
+                      onChange={(e) => setFormData({ ...formData, callName: e.target.value })}
+                      className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-900 dark:text-white focus:outline-none focus:border-red-500 font-medium"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Middle Name</label>
+                    <input
+                      type="text"
+                      value={formData.middleName}
+                      onChange={(e) => setFormData({ ...formData, middleName: e.target.value })}
+                      className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-900 dark:text-white focus:outline-none focus:border-red-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Last Name *</label>
+                    <input
+                      type="text"
+                      required
+                      value={formData.lastName}
+                      onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                      className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-900 dark:text-white focus:outline-none focus:border-red-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Suffix</label>
+                    <input
+                      type="text"
+                      placeholder="Jr / III"
+                      value={formData.suffix}
+                      onChange={(e) => setFormData({ ...formData, suffix: e.target.value })}
+                      className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-900 dark:text-white focus:outline-none focus:border-red-500"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Last Name *</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.lastName}
-                    onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition"
-                  />
+
+                <div className="grid grid-cols-3 gap-2.5">
+                  <div>
+                    <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Employee ID *</label>
+                    <input
+                      type="text"
+                      required
+                      value={formData.employeeNumber}
+                      onChange={(e) => setFormData({ ...formData, employeeNumber: e.target.value })}
+                      className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 font-mono text-slate-900 dark:text-white focus:outline-none focus:border-red-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Corporate Email *</label>
+                    <input
+                      type="email"
+                      required
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-900 dark:text-white focus:outline-none focus:border-red-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Date Hired</label>
+                    <input
+                      type="date"
+                      value={formData.dateHired}
+                      onChange={(e) => setFormData({ ...formData, dateHired: e.target.value })}
+                      className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-900 dark:text-white focus:outline-none focus:border-red-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2.5">
+                  <div>
+                    <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Branch</label>
+                    <select
+                      value={formData.branchId}
+                      onChange={(e) => setFormData({ ...formData, branchId: e.target.value })}
+                      className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-900 dark:text-white focus:outline-none focus:border-red-500"
+                    >
+                      {branches.map((b) => (
+                        <option key={b.id} value={b.id}>{b.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Department</label>
+                    <select
+                      value={formData.departmentId}
+                      onChange={(e) => setFormData({ ...formData, departmentId: e.target.value })}
+                      className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-900 dark:text-white focus:outline-none focus:border-red-500"
+                    >
+                      {departments.map((d) => (
+                        <option key={d.id} value={d.id}>{d.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Job Title</label>
+                    <input
+                      type="text"
+                      required
+                      value={formData.positionTitle}
+                      onChange={(e) => setFormData({ ...formData, positionTitle: e.target.value })}
+                      className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-900 dark:text-white focus:outline-none focus:border-red-500"
+                    />
+                  </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              {/* Section 2: Address & Government IDs */}
+              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-3">
+                <span className="text-[11px] font-bold text-red-600 dark:text-red-400 uppercase tracking-wider block">
+                  2. Residential Address & Government IDs (For ID Back side)
+                </span>
+
                 <div>
-                  <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Employee ID *</label>
+                  <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Residential Address</label>
                   <input
                     type="text"
-                    required
-                    value={formData.employeeNumber}
-                    onChange={(e) => setFormData({ ...formData, employeeNumber: e.target.value })}
-                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white font-mono placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition"
+                    placeholder="123 Corporate Blvd, Suite 400, City, Country"
+                    value={formData.address}
+                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                    className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-900 dark:text-white focus:outline-none focus:border-red-500"
                   />
                 </div>
-                <div>
-                  <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Corporate Email *</label>
-                  <input
-                    type="email"
-                    required
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition"
-                  />
+
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">SSS No.</label>
+                    <input
+                      type="text"
+                      placeholder="01-2345678-9"
+                      value={formData.sssNumber}
+                      onChange={(e) => setFormData({ ...formData, sssNumber: e.target.value })}
+                      className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 font-mono text-slate-900 dark:text-white focus:outline-none focus:border-red-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">TIN No.</label>
+                    <input
+                      type="text"
+                      placeholder="123-456-789-000"
+                      value={formData.tinNumber}
+                      onChange={(e) => setFormData({ ...formData, tinNumber: e.target.value })}
+                      className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 font-mono text-slate-900 dark:text-white focus:outline-none focus:border-red-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">In Case of Emergency (Contact Name)</label>
+                    <input
+                      type="text"
+                      placeholder="Jane Doe (Spouse / Relative)"
+                      value={formData.emergencyContactName}
+                      onChange={(e) => setFormData({ ...formData, emergencyContactName: e.target.value })}
+                      className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-900 dark:text-white focus:outline-none focus:border-red-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Emergency Phone</label>
+                    <input
+                      type="text"
+                      placeholder="+1 (555) 999-0000"
+                      value={formData.emergencyContactPhone}
+                      onChange={(e) => setFormData({ ...formData, emergencyContactPhone: e.target.value })}
+                      className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-900 dark:text-white focus:outline-none focus:border-red-500"
+                    />
+                  </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Branch</label>
-                  <select
-                    value={formData.branchId}
-                    onChange={(e) => setFormData({ ...formData, branchId: e.target.value })}
-                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition"
-                  >
-                    {branches.map((b) => (
-                      <option key={b.id} value={b.id} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">{b.name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Department</label>
-                  <select
-                    value={formData.departmentId}
-                    onChange={(e) => setFormData({ ...formData, departmentId: e.target.value })}
-                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition"
-                  >
-                    {departments.map((d) => (
-                      <option key={d.id} value={d.id} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">{d.name}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
+              {/* Section 3: Photo & Signatures */}
+              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-3">
+                <span className="text-[11px] font-bold text-red-600 dark:text-red-400 uppercase tracking-wider block">
+                  3. Employee Photo & Official Signatures
+                </span>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Job Title</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.positionTitle}
-                    onChange={(e) => setFormData({ ...formData, positionTitle: e.target.value })}
-                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition"
+                <PhotoPreviewCrop
+                  photoUrl={formData.photoUrl}
+                  onChange={(url) => setFormData({ ...formData, photoUrl: url })}
+                />
+
+                <div className="grid grid-cols-2 gap-3 pt-2">
+                  <SignatureUpload
+                    label="Employee Signature"
+                    signatureUrl={formData.signatureUrl}
+                    onChange={(url) => setFormData({ ...formData, signatureUrl: url })}
                   />
-                </div>
-                <div>
-                  <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Contact Phone</label>
-                  <input
-                    type="text"
-                    placeholder="+1 (555) 000-0000"
-                    value={formData.contactNumber}
-                    onChange={(e) => setFormData({ ...formData, contactNumber: e.target.value })}
-                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition"
+                  <SignatureUpload
+                    label="HR Manager Signature"
+                    signatureUrl={formData.hrSignatureUrl}
+                    onChange={(url) => setFormData({ ...formData, hrSignatureUrl: url })}
                   />
                 </div>
               </div>
-
-              <PhotoPreviewCrop
-                photoUrl={formData.photoUrl}
-                onChange={(url) => setFormData({ ...formData, photoUrl: url })}
-              />
 
               <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                  className="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition font-semibold"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white font-semibold shadow-md shadow-red-600/30 transition"
+                  className="px-5 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white font-semibold shadow-md shadow-red-600/30 transition"
                 >
                   Save Employee
                 </button>
@@ -1010,158 +1218,273 @@ export default function HrEmployeesPage() {
 
       {/* Edit Employee Modal */}
       {showEditModal && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-lg rounded-2xl bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 p-6 shadow-2xl transition-colors duration-200">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="w-full max-w-2xl rounded-2xl bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 p-6 shadow-2xl my-8 transition-colors duration-200">
             <div className="flex items-center justify-between mb-4 border-b border-slate-200 dark:border-slate-800 pb-3">
-              <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <Edit className="w-5 h-5 text-red-500" />
-                Edit Employee Details
-              </h2>
+              <div>
+                <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <Edit className="w-5 h-5 text-red-500" />
+                  Edit Employee Profile
+                </h2>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                  Update employee details, government numbers, and signatures.
+                </p>
+              </div>
               <button onClick={() => setShowEditModal(false)} className="text-slate-400 hover:text-slate-700 dark:hover:text-white transition">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleUpdateEmployee} className="space-y-4 text-xs">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">First Name *</label>
-                  <input
-                    type="text"
-                    required
-                    value={editFormData.firstName}
-                    onChange={(e) => setEditFormData({ ...editFormData, firstName: e.target.value })}
-                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition"
-                  />
+            <form onSubmit={handleUpdateEmployee} className="space-y-4 text-xs max-h-[75vh] overflow-y-auto pr-1">
+              {/* Section 1: Basic Identity & Status */}
+              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-3">
+                <span className="text-[11px] font-bold text-red-600 dark:text-red-400 uppercase tracking-wider block">
+                  1. Identity & Card Status
+                </span>
+
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Employment Status</label>
+                    <select
+                      value={editFormData.employmentStatus}
+                      onChange={(e) => setEditFormData({ ...editFormData, employmentStatus: e.target.value as any })}
+                      className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-900 dark:text-white focus:outline-none focus:border-red-500"
+                    >
+                      <option value="ACTIVE">Active</option>
+                      <option value="INACTIVE">Inactive</option>
+                      <option value="SUSPENDED">Suspended</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Card Status</label>
+                    <select
+                      value={editFormData.cardStatus}
+                      onChange={(e) => setEditFormData({ ...editFormData, cardStatus: e.target.value as any })}
+                      className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-900 dark:text-white focus:outline-none focus:border-red-500 font-bold"
+                    >
+                      <option value="NOT_ISSUED">Pending / Not Issued</option>
+                      <option value="PRINTED">Issued / Printed</option>
+                      <option value="REPRINT_REQUESTED">Reprint Requested</option>
+                    </select>
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Last Name *</label>
-                  <input
-                    type="text"
-                    required
-                    value={editFormData.lastName}
-                    onChange={(e) => setEditFormData({ ...editFormData, lastName: e.target.value })}
-                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition"
-                  />
+                
+                <div className="grid grid-cols-5 gap-2">
+                  <div>
+                    <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">First Name *</label>
+                    <input
+                      type="text"
+                      required
+                      value={editFormData.firstName}
+                      onChange={(e) => setEditFormData({ ...editFormData, firstName: e.target.value })}
+                      className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-900 dark:text-white focus:outline-none focus:border-red-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Call / Nick Name</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Wilbert"
+                      value={editFormData.callName}
+                      onChange={(e) => setEditFormData({ ...editFormData, callName: e.target.value })}
+                      className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-900 dark:text-white focus:outline-none focus:border-red-500 font-medium"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Middle Name</label>
+                    <input
+                      type="text"
+                      value={editFormData.middleName}
+                      onChange={(e) => setEditFormData({ ...editFormData, middleName: e.target.value })}
+                      className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-900 dark:text-white focus:outline-none focus:border-red-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Last Name *</label>
+                    <input
+                      type="text"
+                      required
+                      value={editFormData.lastName}
+                      onChange={(e) => setEditFormData({ ...editFormData, lastName: e.target.value })}
+                      className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-900 dark:text-white focus:outline-none focus:border-red-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Suffix</label>
+                    <input
+                      type="text"
+                      value={editFormData.suffix}
+                      onChange={(e) => setEditFormData({ ...editFormData, suffix: e.target.value })}
+                      className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-900 dark:text-white focus:outline-none focus:border-red-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2.5">
+                  <div>
+                    <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Employee ID *</label>
+                    <input
+                      type="text"
+                      required
+                      value={editFormData.employeeNumber}
+                      onChange={(e) => setEditFormData({ ...editFormData, employeeNumber: e.target.value })}
+                      className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 font-mono text-slate-900 dark:text-white focus:outline-none focus:border-red-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Corporate Email *</label>
+                    <input
+                      type="email"
+                      required
+                      value={editFormData.email}
+                      onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
+                      className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-900 dark:text-white focus:outline-none focus:border-red-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Date Hired</label>
+                    <input
+                      type="date"
+                      value={editFormData.dateHired}
+                      onChange={(e) => setEditFormData({ ...editFormData, dateHired: e.target.value })}
+                      className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-900 dark:text-white focus:outline-none focus:border-red-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2.5">
+                  <div>
+                    <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Branch</label>
+                    <select
+                      value={editFormData.branchId}
+                      onChange={(e) => setEditFormData({ ...editFormData, branchId: e.target.value })}
+                      className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-900 dark:text-white focus:outline-none focus:border-red-500"
+                    >
+                      {branches.map((b) => (
+                        <option key={b.id} value={b.id}>{b.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Department</label>
+                    <select
+                      value={editFormData.departmentId}
+                      onChange={(e) => setEditFormData({ ...editFormData, departmentId: e.target.value })}
+                      className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-900 dark:text-white focus:outline-none focus:border-red-500"
+                    >
+                      {departments.map((d) => (
+                        <option key={d.id} value={d.id}>{d.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Job Title</label>
+                    <input
+                      type="text"
+                      required
+                      value={editFormData.positionTitle}
+                      onChange={(e) => setEditFormData({ ...editFormData, positionTitle: e.target.value })}
+                      className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-900 dark:text-white focus:outline-none focus:border-red-500"
+                    />
+                  </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              {/* Section 2: Address & Government IDs */}
+              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-3">
+                <span className="text-[11px] font-bold text-red-600 dark:text-red-400 uppercase tracking-wider block">
+                  2. Residential Address & Government IDs
+                </span>
+
                 <div>
-                  <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Employee ID *</label>
+                  <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Residential Address</label>
                   <input
                     type="text"
-                    required
-                    value={editFormData.employeeNumber}
-                    onChange={(e) => setEditFormData({ ...editFormData, employeeNumber: e.target.value })}
-                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white font-mono placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition"
+                    value={editFormData.address}
+                    onChange={(e) => setEditFormData({ ...editFormData, address: e.target.value })}
+                    className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-900 dark:text-white focus:outline-none focus:border-red-500"
                   />
                 </div>
-                <div>
-                  <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Corporate Email *</label>
-                  <input
-                    type="email"
-                    required
-                    value={editFormData.email}
-                    onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
-                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition"
-                  />
+
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">SSS No.</label>
+                    <input
+                      type="text"
+                      value={editFormData.sssNumber}
+                      onChange={(e) => setEditFormData({ ...editFormData, sssNumber: e.target.value })}
+                      className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 font-mono text-slate-900 dark:text-white focus:outline-none focus:border-red-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">TIN No.</label>
+                    <input
+                      type="text"
+                      value={editFormData.tinNumber}
+                      onChange={(e) => setEditFormData({ ...editFormData, tinNumber: e.target.value })}
+                      className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 font-mono text-slate-900 dark:text-white focus:outline-none focus:border-red-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">In Case of Emergency (Contact Name)</label>
+                    <input
+                      type="text"
+                      value={editFormData.emergencyContactName}
+                      onChange={(e) => setEditFormData({ ...editFormData, emergencyContactName: e.target.value })}
+                      className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-900 dark:text-white focus:outline-none focus:border-red-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Emergency Phone</label>
+                    <input
+                      type="text"
+                      value={editFormData.emergencyContactPhone}
+                      onChange={(e) => setEditFormData({ ...editFormData, emergencyContactPhone: e.target.value })}
+                      className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-900 dark:text-white focus:outline-none focus:border-red-500"
+                    />
+                  </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Branch</label>
-                  <select
-                    value={editFormData.branchId}
-                    onChange={(e) => setEditFormData({ ...editFormData, branchId: e.target.value })}
-                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition"
-                  >
-                    {branches.map((b) => (
-                      <option key={b.id} value={b.id} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">{b.name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Department</label>
-                  <select
-                    value={editFormData.departmentId}
-                    onChange={(e) => setEditFormData({ ...editFormData, departmentId: e.target.value })}
-                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition"
-                  >
-                    {departments.map((d) => (
-                      <option key={d.id} value={d.id} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">{d.name}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
+              {/* Section 3: Photo & Signatures */}
+              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-3">
+                <span className="text-[11px] font-bold text-red-600 dark:text-red-400 uppercase tracking-wider block">
+                  3. Photo & Signatures
+                </span>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Job Title</label>
-                  <input
-                    type="text"
-                    required
-                    value={editFormData.positionTitle}
-                    onChange={(e) => setEditFormData({ ...editFormData, positionTitle: e.target.value })}
-                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition"
+                <PhotoPreviewCrop
+                  photoUrl={editFormData.photoUrl}
+                  onChange={(url) => setEditFormData({ ...editFormData, photoUrl: url })}
+                />
+
+                <div className="grid grid-cols-2 gap-3 pt-2">
+                  <SignatureUpload
+                    label="Employee Signature"
+                    signatureUrl={editFormData.signatureUrl}
+                    onChange={(url) => setEditFormData({ ...editFormData, signatureUrl: url })}
                   />
-                </div>
-                <div>
-                  <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Contact Phone</label>
-                  <input
-                    type="text"
-                    placeholder="+1 (555) 000-0000"
-                    value={editFormData.contactNumber}
-                    onChange={(e) => setEditFormData({ ...editFormData, contactNumber: e.target.value })}
-                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition"
+                  <SignatureUpload
+                    label="HR Manager Signature"
+                    signatureUrl={editFormData.hrSignatureUrl}
+                    onChange={(url) => setEditFormData({ ...editFormData, hrSignatureUrl: url })}
                   />
                 </div>
               </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Employment Status</label>
-                  <select
-                    value={editFormData.employmentStatus}
-                    onChange={(e) => setEditFormData({ ...editFormData, employmentStatus: e.target.value as any })}
-                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition"
-                  >
-                    <option value="ACTIVE" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">Active</option>
-                    <option value="INACTIVE" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">Inactive</option>
-                    <option value="SUSPENDED" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">Suspended</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Card Status</label>
-                  <select
-                    value={editFormData.cardStatus}
-                    onChange={(e) => setEditFormData({ ...editFormData, cardStatus: e.target.value as any })}
-                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition"
-                  >
-                    <option value="NOT_ISSUED" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">Pending / Not Issued</option>
-                    <option value="PRINTED" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">Issued / Printed</option>
-                    <option value="REPRINT_REQUESTED" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">Reprint Requested</option>
-                  </select>
-                </div>
-              </div>
-
-              <PhotoPreviewCrop
-                photoUrl={editFormData.photoUrl}
-                onChange={(url) => setEditFormData({ ...editFormData, photoUrl: url })}
-              />
 
               <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setShowEditModal(false)}
-                  className="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                  className="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition font-semibold"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white font-semibold shadow-md shadow-red-600/30 transition"
+                  className="px-5 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white font-semibold shadow-md shadow-red-600/30 transition"
                 >
                   Update Employee
                 </button>

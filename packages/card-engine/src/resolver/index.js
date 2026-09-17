@@ -58,6 +58,7 @@ export function buildResolutionDictionary(employee, baseUrl = 'https://magic-car
             .filter(Boolean)
             .join(' ');
     const empAny = employee;
+    const resolvedCallName = employee.callName || empAny.call_name || empAny.callName || employee.nickname || empAny.nickname || employee.firstName || '';
     const rawBase = (baseUrl && baseUrl !== 'https://verify.acmecorp.com')
         ? baseUrl
         : 'https://magic-card-trust-id.vercel.app';
@@ -77,6 +78,8 @@ export function buildResolutionDictionary(employee, baseUrl = 'https://magic-car
         'employee.fullName': constructedFullName,
         'employee.firstName': employee.firstName || '',
         'employee.lastName': employee.lastName || '',
+        'employee.callName': resolvedCallName,
+        'employee.nickname': resolvedCallName,
         'employee.employeeNumber': employee.employeeNumber || '',
         'employee.department': employee.department || empAny.departmentName || 'N/A',
         'employee.position': employee.position || empAny.positionTitle || 'Employee',
@@ -85,6 +88,13 @@ export function buildResolutionDictionary(employee, baseUrl = 'https://magic-car
         'employee.contactNumber': employee.contactNumber || '',
         'employee.dateHired': employee.dateHired || new Date().toISOString().split('T')[0],
         'employee.photoUrl': employee.photoUrl || '',
+        'employee.address': employee.address || empAny.address || '',
+        'employee.sssNumber': employee.sssNumber || empAny.sss_number || empAny.sssNumber || '',
+        'employee.tinNumber': employee.tinNumber || empAny.tin_number || empAny.tinNumber || '',
+        'employee.emergencyContactName': employee.emergencyContactName || empAny.emergency_contact_name || empAny.emergencyContactName || '',
+        'employee.emergencyContactPhone': employee.emergencyContactPhone || empAny.emergency_contact_phone || empAny.emergencyContactPhone || '',
+        'employee.signatureUrl': employee.signatureUrl || empAny.signature_url || empAny.signatureUrl || '',
+        'employee.hrSignatureUrl': employee.hrSignatureUrl || empAny.hr_signature_url || empAny.hrSignatureUrl || '',
         'company.logoUrl': empAny.companyLogoUrl || empAny.logoUrl || '',
         'system.currentDate': new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
         'system.verificationUrl': verificationUrl,
