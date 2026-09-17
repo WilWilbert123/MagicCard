@@ -31,14 +31,14 @@ const fallbackEmployee = {
   branch: 'Headquarters',
   branchName: 'Headquarters',
   email: 'm.brown@magiccard.corp',
-  contactNumber: '',
-  dateHired: '',
+  contactNumber: '09876432344',
+  dateHired: '2023-07-15',
   photoUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500&auto=format&fit=crop&q=80',
-  address: '',
-  sssNumber: '',
-  tinNumber: '',
-  emergencyContactName: '',
-  emergencyContactPhone: '',
+  address: '333, 1423 Jacinto St.. Brgy. Poblacion, Taguig City',
+  sssNumber: '04-1702223-2',
+  tinNumber: '666-133-887',
+  emergencyContactName: 'Elon Musk',
+  emergencyContactPhone: '09328713806',
   status: 'active' as const,
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
@@ -81,7 +81,7 @@ export default function ThreeCardViewer({
 
     // ── Camera ─────────────────────────────────────────────────────
     const isVertical = template?.card?.orientation === 'vertical' || (template?.card?.height > template?.card?.width);
-    const width  = container.clientWidth  || 800;
+    const width = container.clientWidth || 800;
     const height = container.clientHeight || 520;
     const camera = new THREE.PerspectiveCamera(36, width / height, 0.1, 100);
     camera.position.set(0, 0, isVertical ? 5.2 : 4.4);
@@ -162,10 +162,10 @@ export default function ThreeCardViewer({
       return s;
     };
 
-    const cardWidth     = isVertical ? 2.14 : 3.4;
-    const cardHeight    = isVertical ? 3.4 : 2.14;
+    const cardWidth = isVertical ? 2.14 : 3.4;
+    const cardHeight = isVertical ? 3.4 : 2.14;
     const cardThickness = 0.035;
-    const cornerRadius  = 0.16; // Standard CR80 ID card ratio
+    const cornerRadius = 0.16; // Standard CR80 ID card ratio
 
     const bodyShape = createCardShape(cardWidth, cardHeight, cornerRadius);
 
@@ -243,16 +243,16 @@ export default function ThreeCardViewer({
     cardGroup.add(backMesh);
 
     // ── Contact Shadow (soft blob under card) ──────────────────────
-    const shadowGeo    = new THREE.PlaneGeometry(isVertical ? 3.0 : 4.4, isVertical ? 4.2 : 2.8);
+    const shadowGeo = new THREE.PlaneGeometry(isVertical ? 3.0 : 4.4, isVertical ? 4.2 : 2.8);
     const shadowCanvas = document.createElement('canvas');
-    shadowCanvas.width  = 256;
+    shadowCanvas.width = 256;
     shadowCanvas.height = 256;
     const sCtx = shadowCanvas.getContext('2d');
     if (sCtx) {
       const grad = sCtx.createRadialGradient(128, 128, 10, 128, 128, 118);
-      grad.addColorStop(0,    'rgba(0,0,0,0.18)');
+      grad.addColorStop(0, 'rgba(0,0,0,0.18)');
       grad.addColorStop(0.50, 'rgba(0,0,0,0.05)');
-      grad.addColorStop(1,    'rgba(0,0,0,0)');
+      grad.addColorStop(1, 'rgba(0,0,0,0)');
       sCtx.fillStyle = grad;
       sCtx.fillRect(0, 0, 256, 256);
     }
@@ -275,7 +275,7 @@ export default function ThreeCardViewer({
       fallbackEmployee;
 
     const activeBaseUrl = baseUrl || 'https://magic-card-trust-id.vercel.app';
-    
+
     const frontCanvas = document.createElement('canvas');
     frontCanvas.width = (template.card?.width || 340) * 2;
     frontCanvas.height = (template.card?.height || 540) * 2;
@@ -336,7 +336,7 @@ export default function ThreeCardViewer({
     // ── Animation loop ─────────────────────────────────────────────
     const animate = () => {
       animationFrameId = requestAnimationFrame(animate);
-      const delta   = clock.getDelta();
+      const delta = clock.getDelta();
       const elapsed = clock.getElapsedTime();
 
       // Smooth flip — rest positions have a slight angle so depth is always visible
@@ -368,7 +368,7 @@ export default function ThreeCardViewer({
       backMaterial.dispose();
       shadowMat.dispose();
       if (frontTex) frontTex.dispose();
-      if (backTex)  backTex.dispose();
+      if (backTex) backTex.dispose();
       shadowTex.dispose();
       envTexture.dispose();
       renderer.dispose();
@@ -379,22 +379,20 @@ export default function ThreeCardViewer({
 
     <div
       ref={containerRef}
-      className={`relative w-full h-[520px] rounded-2xl border overflow-hidden select-none transition-colors duration-500 ${
-        stageTheme === 'light'
-          ? 'bg-gradient-to-br from-[#c8d4e0] via-[#b8c8da] to-[#a8bad0] border-slate-400 shadow-xl'
-          : 'bg-gradient-to-br from-[#111827] via-[#0a1020] to-[#060c18] border-slate-800/80 shadow-2xl'
-      }`}
+      className={`relative w-full h-[520px] rounded-2xl border overflow-hidden select-none transition-colors duration-500 ${stageTheme === 'light'
+        ? 'bg-gradient-to-br from-[#c8d4e0] via-[#b8c8da] to-[#a8bad0] border-slate-400 shadow-xl'
+        : 'bg-gradient-to-br from-[#111827] via-[#0a1020] to-[#060c18] border-slate-800/80 shadow-2xl'
+        }`}
     >
       {/* Icon-Only Controls Overlay */}
       <div className="absolute top-4 left-4 z-10 flex items-center gap-2">
         <button
           onClick={() => setIsFlipped(!isFlipped)}
           title={isFlipped ? 'Flip to Front (Obverse)' : 'Flip to Back (Reverse)'}
-          className={`p-2.5 rounded-xl border backdrop-blur shadow-md transition active:scale-95 flex items-center justify-center ${
-            stageTheme === 'light'
-              ? 'bg-white/90 hover:bg-white text-slate-800 border-slate-300'
-              : 'bg-slate-900/80 hover:bg-slate-800 text-white border-slate-700'
-          }`}
+          className={`p-2.5 rounded-xl border backdrop-blur shadow-md transition active:scale-95 flex items-center justify-center ${stageTheme === 'light'
+            ? 'bg-white/90 hover:bg-white text-slate-800 border-slate-300'
+            : 'bg-slate-900/80 hover:bg-slate-800 text-white border-slate-700'
+            }`}
         >
           <RotateCcw className="w-4 h-4" />
         </button>
@@ -402,13 +400,12 @@ export default function ThreeCardViewer({
         <button
           onClick={() => setRotating(!rotating)}
           title={rotating ? 'Pause 3D Auto Rotation' : 'Start 3D Auto Rotation'}
-          className={`p-2.5 rounded-xl border backdrop-blur shadow-md transition active:scale-95 flex items-center justify-center ${
-            rotating
-              ? 'bg-red-600 border-red-600 text-white shadow-red-600/30'
-              : stageTheme === 'light'
+          className={`p-2.5 rounded-xl border backdrop-blur shadow-md transition active:scale-95 flex items-center justify-center ${rotating
+            ? 'bg-red-600 border-red-600 text-white shadow-red-600/30'
+            : stageTheme === 'light'
               ? 'bg-white/90 hover:bg-white text-slate-800 border-slate-300'
               : 'bg-slate-900/80 hover:bg-slate-800 text-white border-slate-700'
-          }`}
+            }`}
         >
           {rotating ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
         </button>
@@ -416,11 +413,10 @@ export default function ThreeCardViewer({
         <button
           onClick={() => setStageTheme(stageTheme === 'light' ? 'dark' : 'light')}
           title={stageTheme === 'light' ? 'Switch to Dark Studio Environment' : 'Switch to Light Studio Environment'}
-          className={`p-2.5 rounded-xl border backdrop-blur shadow-md transition active:scale-95 flex items-center justify-center ${
-            stageTheme === 'light'
-              ? 'bg-white/90 hover:bg-white text-amber-600 border-slate-300'
-              : 'bg-slate-900/80 hover:bg-slate-800 text-amber-400 border-slate-700'
-          }`}
+          className={`p-2.5 rounded-xl border backdrop-blur shadow-md transition active:scale-95 flex items-center justify-center ${stageTheme === 'light'
+            ? 'bg-white/90 hover:bg-white text-amber-600 border-slate-300'
+            : 'bg-slate-900/80 hover:bg-slate-800 text-amber-400 border-slate-700'
+            }`}
         >
           {stageTheme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
         </button>
