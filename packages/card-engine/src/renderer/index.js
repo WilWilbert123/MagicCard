@@ -233,8 +233,10 @@ function drawText(ctx, el, employee, baseUrl) {
     const resolved = resolveDataBinding(el.text, employee, baseUrl);
     const fontSize = el.fontSize || 16;
     const fontWeight = el.fontWeight || 'normal';
+    const fontStyle = el.fontStyle || 'normal';
     const fontFamily = el.fontFamily || 'Inter, sans-serif';
-    ctx.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
+    const stylePrefix = fontStyle !== 'normal' ? `${fontStyle} ` : '';
+    ctx.font = `${stylePrefix}${fontWeight} ${fontSize}px ${fontFamily}`;
     ctx.fillStyle = el.color || '#000000';
     let drawX = el.x;
     if (el.textAlign === 'center') {

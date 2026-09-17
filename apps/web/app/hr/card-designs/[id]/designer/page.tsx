@@ -1356,6 +1356,7 @@ export default function CardDesignerPage() {
                           fontSize: `${el.fontSize}px`,
                           color: el.color,
                           fontWeight: el.fontWeight,
+                          fontStyle: (el as any).fontStyle || 'normal',
                           textAlign: el.textAlign,
                           fontFamily: el.fontFamily || 'Inter',
                         }}
@@ -1850,9 +1851,29 @@ export default function CardDesignerPage() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className={`text-[10px] ${labelCls}`}>Font Family</label>
+                    <select
+                      value={selectedElement.fontFamily || 'Inter'}
+                      onChange={(e) => updateSelectedElement({ fontFamily: e.target.value })}
+                      className={`w-full border rounded px-2 py-1 text-xs font-semibold ${inputCls}`}
+                    >
+                      <option value="Inter">Inter (Sans-Serif Modern)</option>
+                      <option value="Outfit">Outfit (Clean Geometric)</option>
+                      <option value="Roboto">Roboto (Standard Corporate)</option>
+                      <option value="Poppins">Poppins (Friendly Geometric)</option>
+                      <option value="Montserrat">Montserrat (Bold Modern)</option>
+                      <option value="Playfair Display">Playfair Display (Elegant Serif)</option>
+                      <option value="Cinzel">Cinzel (Classic Imperial)</option>
+                      <option value="Bebas Neue">Bebas Neue (Condensed Display)</option>
+                      <option value="Oswald">Oswald (Strong Tall Sans)</option>
+                      <option value="Courier New">Courier New (Technical Monospace)</option>
+                    </select>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2">
                     <div>
-                      <label className={`text-[10px] ${labelCls}`}>Font Size</label>
+                      <label className={`text-[10px] ${labelCls}`}>Size (px)</label>
                       <input
                         type="number"
                         value={selectedElement.fontSize}
@@ -1861,9 +1882,20 @@ export default function CardDesignerPage() {
                       />
                     </div>
                     <div>
+                      <label className={`text-[10px] ${labelCls}`}>Font Style</label>
+                      <select
+                        value={(selectedElement as any).fontStyle || 'normal'}
+                        onChange={(e) => updateSelectedElement({ fontStyle: e.target.value } as any)}
+                        className={`w-full border rounded px-2 py-1 text-xs ${inputCls}`}
+                      >
+                        <option value="normal">Normal</option>
+                        <option value="italic">Italic</option>
+                      </select>
+                    </div>
+                    <div>
                       <label className={`text-[10px] ${labelCls}`}>Weight</label>
                       <select
-                        value={selectedElement.fontWeight}
+                        value={selectedElement.fontWeight || 'normal'}
                         onChange={(e) => updateSelectedElement({ fontWeight: e.target.value as any })}
                         className={`w-full border rounded px-2 py-1 text-xs ${inputCls}`}
                       >
@@ -1871,6 +1903,7 @@ export default function CardDesignerPage() {
                         <option value="medium">Medium</option>
                         <option value="600">Semibold</option>
                         <option value="bold">Bold</option>
+                        <option value="800">Extra Bold</option>
                       </select>
                     </div>
                   </div>
