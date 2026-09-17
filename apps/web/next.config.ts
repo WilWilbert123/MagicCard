@@ -6,6 +6,7 @@ import type { NextConfig } from 'next';
 loadEnvConfig(path.resolve(__dirname, '../..'));
 
 const nextConfig: NextConfig = {
+  outputFileTracingRoot: path.resolve(__dirname, '../..'),
   reactStrictMode: true,
   transpilePackages: ['@workspace/card-engine'],
   images: {

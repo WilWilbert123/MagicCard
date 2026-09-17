@@ -8,6 +8,8 @@ import { CardTemplateJSON, renderCardToCanvas } from '@workspace/card-engine';
 import { enterpriseStore } from '@/lib/data/enterpriseStore';
 import { RotateCcw, Play, Pause, Sun, Moon } from 'lucide-react';
 
+import { DEFAULT_AVATAR_PLACEHOLDER } from '@/lib/data/enterpriseStore';
+
 interface ThreeCardViewerProps {
   template: CardTemplateJSON;
   employeeNumber?: string;
@@ -33,7 +35,7 @@ const fallbackEmployee = {
   email: 'm.brown@magiccard.corp',
   contactNumber: '09876432344',
   dateHired: '2023-07-15',
-  photoUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500&auto=format&fit=crop&q=80',
+  photoUrl: DEFAULT_AVATAR_PLACEHOLDER,
   address: '333, 1423 Jacinto St.. Brgy. Poblacion, Taguig City',
   sssNumber: '04-1702223-2',
   tinNumber: '666-133-887',

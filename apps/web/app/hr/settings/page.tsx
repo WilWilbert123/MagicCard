@@ -22,12 +22,14 @@ import {
   UserPlus,
   AlertCircle,
   HelpCircle,
-  ShieldCheck
+  ShieldCheck,
+  Upload,
+  Image as ImageIcon
 } from 'lucide-react';
 import { Branch, Department } from '@/lib/data/enterpriseStore';
 
 export default function HrSettingsPage() {
-  const [activeTab, setActiveTab] = useState<'POLICIES' | 'BRANCHES' | 'DEPARTMENTS' | 'ACCOUNT'>('POLICIES');
+  const [activeTab, setActiveTab] = useState<'POLICIES' | 'BRANCHES' | 'DEPARTMENTS' | 'POSITIONS' | 'ACCOUNT'>('POLICIES');
   const [saved, setSaved] = useState(false);
   const [accountSaving, setAccountSaving] = useState(false);
   const [accountForm, setAccountForm] = useState({
@@ -57,6 +59,14 @@ export default function HrSettingsPage() {
   const [defaultBleedMm, setDefaultBleedMm] = useState(1.5);
   const [defaultSafeMarginMm, setDefaultSafeMarginMm] = useState(3.0);
   const [verificationBaseUrl, setVerificationBaseUrl] = useState('https://magic-card-trust-id.vercel.app');
+  const [defaultPreviewPhotoUrl, setDefaultPreviewPhotoUrl] = useState('');
+  const [defaultCompanyLogoUrl, setDefaultCompanyLogoUrl] = useState('');
+  const [defaultPreviewName, setDefaultPreviewName] = useState('Michael Brown');
+  const [defaultPreviewEmployeeNumber, setDefaultPreviewEmployeeNumber] = useState('EMP-000125');
+  const [defaultPreviewDepartment, setDefaultPreviewDepartment] = useState('Global Operations');
+  const [defaultPreviewPosition, setDefaultPreviewPosition] = useState('Software Engineer');
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
   const [policiesSaving, setPoliciesSaving] = useState(false);
 
   // Branches States
@@ -92,6 +102,16 @@ export default function HrSettingsPage() {
     id: '',
     name: '',
     code: '',
+  });
+
+  // Positions States
+  const [positions, setPositions] = useState<any[]>([]);
+  const [positionsLoading, setPositionsLoading] = useState(true);
+  const [showAddPosModal, setShowAddPosModal] = useState(false);
+  const [posForm, setPosForm] = useState({
+    title: '',
+    departmentId: '',
+    level: 'STANDARD',
   });
 
   // Load real data from Supabase on mount
@@ -145,6 +165,15 @@ export default function HrSettingsPage() {
       })
       .catch(() => toast.error('Failed to load departments.'))
       .finally(() => setDeptsLoading(false));
+
+    fetch('/api/positions', { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((json) => {
+        setPositions(json.data || []);
+      })
+      .catch(() => {})
+      .finally(() => setPositionsLoading(false));
+
     fetch('/api/settings', { cache: 'no-store' })
       .then((r) => r.json())
       .then((json) => {
@@ -154,6 +183,12 @@ export default function HrSettingsPage() {
           setDefaultBleedMm(json.data.defaultBleedMm ?? 1.5);
           setDefaultSafeMarginMm(json.data.defaultSafeMarginMm ?? 3.0);
           setVerificationBaseUrl(json.data.verificationBaseUrl ?? 'https://magic-card-trust-id.vercel.app');
+          setDefaultPreviewPhotoUrl(json.data.defaultPreviewPhotoUrl ?? '');
+          setDefaultCompanyLogoUrl(json.data.defaultCompanyLogoUrl ?? '');
+          setDefaultPreviewName(json.data.defaultPreviewName ?? 'Michael Brown');
+          setDefaultPreviewEmployeeNumber(json.data.defaultPreviewEmployeeNumber ?? 'EMP-000125');
+          setDefaultPreviewDepartment(json.data.defaultPreviewDepartment ?? 'Global Operations');
+          setDefaultPreviewPosition(json.data.defaultPreviewPosition ?? 'Software Engineer');
         }
       })
       .catch(() => toast.error('Failed to load system settings.'));
@@ -176,6 +211,50 @@ export default function HrSettingsPage() {
     }
   };
 
+  const handleUploadPhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingPhoto(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Failed to upload photo');
+      setDefaultPreviewPhotoUrl(json.url);
+      toast.success('Default preview photo uploaded to Supabase Storage!');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to upload image.');
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
+  const handleUploadLogo = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingLogo(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Failed to upload logo');
+      setDefaultCompanyLogoUrl(json.url);
+      toast.success('Default company logo uploaded to Supabase Storage!');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to upload logo.');
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
+
   const handleSavePolicies = async (e: React.FormEvent) => {
     e.preventDefault();
     setPoliciesSaving(true);
@@ -189,6 +268,12 @@ export default function HrSettingsPage() {
           defaultBleedMm,
           defaultSafeMarginMm,
           verificationBaseUrl,
+          defaultPreviewPhotoUrl,
+          defaultCompanyLogoUrl,
+          defaultPreviewName,
+          defaultPreviewEmployeeNumber,
+          defaultPreviewDepartment,
+          defaultPreviewPosition,
         }),
       });
       const json = await res.json();
@@ -534,6 +619,16 @@ export default function HrSettingsPage() {
           }`}
         >
           <Briefcase className="w-4 h-4" /> Departments ({departments.length})
+        </button>
+        <button
+          onClick={() => setActiveTab('POSITIONS')}
+          className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition flex items-center gap-2 ${
+            activeTab === 'POSITIONS'
+              ? 'border-red-600 text-red-600 dark:border-red-500 dark:text-red-400 font-bold'
+              : 'border-transparent text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
+          }`}
+        >
+          <Layers className="w-4 h-4" /> Job Positions ({positions.length})
         </button>
         <button
           onClick={() => setActiveTab('ACCOUNT')}
@@ -889,6 +984,116 @@ export default function HrSettingsPage() {
               <span className="text-[11px] text-slate-500 dark:text-slate-400 mt-1.5 block">
                 This domain is encoded into printed QR codes. When scanned by a phone, it redirects to your identity verification portal (e.g. <code className="text-red-500 font-mono">{verificationBaseUrl || 'https://yourdomain.com'}/verify/EMP-303943</code>).
               </span>
+            </div>
+          </div>
+
+          {/* Default Badge Preview Assets & Sample Data */}
+          <div className="rounded-xl bg-white dark:bg-[#111827]/90 border border-slate-200/80 dark:border-slate-800 p-6 space-y-5 shadow-sm">
+            <div>
+              <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <ImageIcon className="w-4 h-4 text-red-500" />
+                Badge Preview Assets & Template Defaults (Saved to Supabase)
+              </h2>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+                Configure default photo placeholder, company logo, and preview details shown in the 2D & 3D card designers when no specific employee record is selected.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+              {/* Default Preview Photo */}
+              <div className="space-y-2">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">Default Preview Badge Photo</label>
+                <div className="flex items-center gap-3">
+                  <div className="w-16 h-16 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden bg-slate-100 dark:bg-slate-800 shrink-0 flex items-center justify-center">
+                    {defaultPreviewPhotoUrl ? (
+                      <img src={defaultPreviewPhotoUrl} alt="Preview photo default" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="text-[10px] text-slate-400 text-center font-medium px-1">SVG Placeholder</div>
+                    )}
+                  </div>
+                  <div className="space-y-2 flex-1">
+                    <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-medium cursor-pointer transition">
+                      <Upload className="w-3.5 h-3.5" />
+                      {uploadingPhoto ? 'Uploading...' : 'Upload Preview Photo'}
+                      <input type="file" accept="image/*" onChange={handleUploadPhoto} className="hidden" disabled={uploadingPhoto} />
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Or paste photo URL..."
+                      value={defaultPreviewPhotoUrl}
+                      onChange={(e) => setDefaultPreviewPhotoUrl(e.target.value)}
+                      className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1 text-xs text-slate-900 dark:text-white font-mono"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Default Company Logo */}
+              <div className="space-y-2">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">Default Company Logo Asset</label>
+                <div className="flex items-center gap-3">
+                  <div className="w-16 h-16 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden bg-slate-100 dark:bg-slate-800 shrink-0 flex items-center justify-center p-2">
+                    {defaultCompanyLogoUrl ? (
+                      <img src={defaultCompanyLogoUrl} alt="Company logo default" className="max-w-full max-h-full object-contain" />
+                    ) : (
+                      <div className="text-[10px] text-slate-400 text-center font-medium">No Logo</div>
+                    )}
+                  </div>
+                  <div className="space-y-2 flex-1">
+                    <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-medium cursor-pointer transition">
+                      <Upload className="w-3.5 h-3.5" />
+                      {uploadingLogo ? 'Uploading...' : 'Upload Company Logo'}
+                      <input type="file" accept="image/*" onChange={handleUploadLogo} className="hidden" disabled={uploadingLogo} />
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Or paste logo URL..."
+                      value={defaultCompanyLogoUrl}
+                      onChange={(e) => setDefaultCompanyLogoUrl(e.target.value)}
+                      className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1 text-xs text-slate-900 dark:text-white font-mono"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="border-t border-slate-200/80 dark:border-slate-800 pt-4 grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Default Preview Full Name</label>
+                <input
+                  type="text"
+                  value={defaultPreviewName}
+                  onChange={(e) => setDefaultPreviewName(e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-slate-900 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Default Preview Employee ID</label>
+                <input
+                  type="text"
+                  value={defaultPreviewEmployeeNumber}
+                  onChange={(e) => setDefaultPreviewEmployeeNumber(e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-slate-900 dark:text-white font-mono"
+                />
+              </div>
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Default Department Name</label>
+                <input
+                  type="text"
+                  value={defaultPreviewDepartment}
+                  onChange={(e) => setDefaultPreviewDepartment(e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-slate-900 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Default Job Position / Title</label>
+                <input
+                  type="text"
+                  value={defaultPreviewPosition}
+                  onChange={(e) => setDefaultPreviewPosition(e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-slate-900 dark:text-white"
+                />
+              </div>
             </div>
           </div>
 
