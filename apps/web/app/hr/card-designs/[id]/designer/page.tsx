@@ -426,22 +426,51 @@ export default function CardDesignerPage() {
 
   const activeBindingMap = previewEmployee
     ? {
-        employeeNumber: previewEmployee.employeeNumber || 'EMP-000125',
-        fullName: previewEmployee.fullName || `${previewEmployee.firstName || ''} ${previewEmployee.lastName || ''}`.trim(),
-        firstName: previewEmployee.firstName || 'Michael',
-        lastName: previewEmployee.lastName || 'Brown',
-        position: previewEmployee.positionTitle || 'Staff',
-        department: previewEmployee.departmentName || 'Global Operations',
-        branch: previewEmployee.branchName || 'SM Sorsogon City',
+        ...previewEmployee,
+        employeeNumber: previewEmployee.employeeNumber || previewEmployee.employee_number || 'EMP-000125',
+        fullName: previewEmployee.fullName || `${previewEmployee.firstName || previewEmployee.first_name || ''} ${previewEmployee.lastName || previewEmployee.last_name || ''}`.trim(),
+        firstName: previewEmployee.firstName || previewEmployee.first_name || 'Michael',
+        middleName: previewEmployee.middleName || previewEmployee.middle_name || '',
+        lastName: previewEmployee.lastName || previewEmployee.last_name || 'Brown',
+        suffix: previewEmployee.suffix || '',
+        callName: previewEmployee.callName || previewEmployee.call_name || previewEmployee.firstName || previewEmployee.first_name || 'Michael',
+        position: previewEmployee.positionTitle || previewEmployee.position || 'Staff',
+        department: previewEmployee.departmentName || previewEmployee.department || 'Global Operations',
+        branch: previewEmployee.branchName || previewEmployee.branch || 'SM Sorsogon City',
+        email: previewEmployee.email || 'michael.brown@acme.com',
+        contactNumber: previewEmployee.contactNumber || previewEmployee.contact_number || '',
+        dateHired: previewEmployee.dateHired || previewEmployee.date_hired || '',
+        photoUrl: previewEmployee.photoUrl || previewEmployee.photo_url || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500&auto=format&fit=crop&q=80',
+        address: previewEmployee.address || previewEmployee.address || '',
+        sssNumber: previewEmployee.sssNumber || previewEmployee.sss_number || '',
+        tinNumber: previewEmployee.tinNumber || previewEmployee.tin_number || '',
+        emergencyContactName: previewEmployee.emergencyContactName || previewEmployee.emergency_contact_name || '',
+        emergencyContactPhone: previewEmployee.emergencyContactPhone || previewEmployee.emergency_contact_phone || '',
+        signatureUrl: previewEmployee.signatureUrl || previewEmployee.signature_url || '',
+        hrSignatureUrl: previewEmployee.hrSignatureUrl || previewEmployee.hr_signature_url || '',
       }
     : {
         employeeNumber: 'EMP-000125',
         fullName: 'Michael Brown',
         firstName: 'Michael',
+        middleName: '',
         lastName: 'Brown',
-        position: 'Staff',
-        department: 'Global Operations',
-        branch: 'West Coast Tech Campus',
+        suffix: '',
+        callName: 'Michael',
+        position: 'Software Engineer',
+        department: 'Engineering & Technology',
+        branch: 'Headquarters',
+        email: 'michael.brown@acme.com',
+        contactNumber: '',
+        dateHired: '',
+        photoUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500&auto=format&fit=crop&q=80',
+        address: '',
+        sssNumber: '',
+        tinNumber: '',
+        emergencyContactName: '',
+        emergencyContactPhone: '',
+        signatureUrl: '',
+        hrSignatureUrl: '',
       };
 
   const activePhotoSrc = previewEmployee?.photoUrl || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500&auto=format&fit=crop&q=80";
@@ -2465,20 +2494,8 @@ export default function CardDesignerPage() {
 
             <ThreeCardViewer
               template={template}
-              employeeNumber="EMP-000125"
-              employeeData={{
-                employeeNumber: 'EMP-000125',
-                fullName: 'Michael Brown',
-                firstName: 'Michael',
-                lastName: 'Brown',
-                department: 'Global Operations',
-                departmentName: 'Global Operations',
-                position: 'Staff',
-                positionTitle: 'Staff',
-                branch: 'West Coast Tech Campus',
-                branchName: 'West Coast Tech Campus',
-                photoUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500&auto=format&fit=crop&q=80',
-              }}
+              employeeNumber={previewEmployee?.employeeNumber || 'EMP-000125'}
+              employeeData={activeBindingMap}
               autoRotate={true}
             />
 
