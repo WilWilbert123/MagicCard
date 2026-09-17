@@ -50,7 +50,7 @@ import {
   Mail,
 } from 'lucide-react';
 import { CardTemplateJSON, CardElement, TextElement, ShapeElement, QRCodeElement, BarcodeElement, resolveDataBinding } from '@workspace/card-engine';
-import { enterpriseStore } from '@/lib/data/enterpriseStore';
+import { enterpriseStore, DEFAULT_AVATAR_PLACEHOLDER } from '@/lib/data/enterpriseStore';
 import { toast } from '@/components/ui/Toast';
 import { useTheme } from '@/components/ThemeProvider';
 import { LAYOUT_PRESETS, LayoutPreset } from '@/lib/data/layoutPresets';
@@ -442,7 +442,7 @@ export default function CardDesignerPage() {
         email: previewEmployee.email || 'michael.brown@acme.com',
         contactNumber: previewEmployee.contactNumber || previewEmployee.contact_number || '',
         dateHired: previewEmployee.dateHired || previewEmployee.date_hired || '',
-        photoUrl: previewEmployee.photoUrl || previewEmployee.photo_url || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500&auto=format&fit=crop&q=80',
+        photoUrl: previewEmployee.photoUrl || previewEmployee.photo_url || DEFAULT_AVATAR_PLACEHOLDER,
         address: previewEmployee.address || previewEmployee.address || '',
         sssNumber: previewEmployee.sssNumber || previewEmployee.sss_number || '',
         tinNumber: previewEmployee.tinNumber || previewEmployee.tin_number || '',
@@ -465,7 +465,7 @@ export default function CardDesignerPage() {
         email: 'michael.brown@acme.com',
         contactNumber: '',
         dateHired: '',
-        photoUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500&auto=format&fit=crop&q=80',
+        photoUrl: DEFAULT_AVATAR_PLACEHOLDER,
         address: '',
         sssNumber: '',
         tinNumber: '',
@@ -475,7 +475,7 @@ export default function CardDesignerPage() {
         hrSignatureUrl: '',
       };
 
-  const activePhotoSrc = previewEmployee?.photoUrl || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500&auto=format&fit=crop&q=80";
+  const activePhotoSrc = previewEmployee?.photoUrl || DEFAULT_AVATAR_PLACEHOLDER;
 
   // Load template from database on mount
   useEffect(() => {

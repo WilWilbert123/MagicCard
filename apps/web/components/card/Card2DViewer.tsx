@@ -2,7 +2,7 @@
 
 import React, { useRef, useEffect } from 'react';
 import { CardTemplateJSON, renderCardToCanvas } from '@workspace/card-engine';
-import { enterpriseStore } from '@/lib/data/enterpriseStore';
+import { enterpriseStore, DEFAULT_AVATAR_PLACEHOLDER } from '@/lib/data/enterpriseStore';
 
 interface Card2DViewerProps {
   template: CardTemplateJSON;
@@ -30,7 +30,7 @@ const fallbackEmployee = {
   email: 'm.brown@magiccard.corp',
   contactNumber: '',
   dateHired: '',
-  photoUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500&auto=format&fit=crop&q=80',
+  photoUrl: DEFAULT_AVATAR_PLACEHOLDER,
   address: '',
   sssNumber: '',
   tinNumber: '',

@@ -9,6 +9,12 @@ const DEFAULT_SETTINGS = {
   defaultBleedMm: 1.5,
   defaultSafeMarginMm: 3.0,
   verificationBaseUrl: process.env.NEXT_PUBLIC_APP_URL || 'https://magic-card-trust-id.vercel.app',
+  defaultPreviewPhotoUrl: '',
+  defaultCompanyLogoUrl: '',
+  defaultPreviewName: 'Sample Employee',
+  defaultPreviewEmployeeNumber: 'EMP-000125',
+  defaultPreviewDepartment: 'Engineering & Technology',
+  defaultPreviewPosition: 'Software Engineer',
 };
 
 function cleanVerificationUrl(rawUrl: any): string {
@@ -44,6 +50,12 @@ export async function GET() {
       defaultBleedMm: settings.defaultBleedMm ?? settings.default_bleed_mm ?? DEFAULT_SETTINGS.defaultBleedMm,
       defaultSafeMarginMm: settings.defaultSafeMarginMm ?? settings.default_safe_margin_mm ?? DEFAULT_SETTINGS.defaultSafeMarginMm,
       verificationBaseUrl: cleanVerificationUrl(rawUrl),
+      defaultPreviewPhotoUrl: settings.defaultPreviewPhotoUrl ?? settings.default_preview_photo_url ?? '',
+      defaultCompanyLogoUrl: settings.defaultCompanyLogoUrl ?? settings.default_company_logo_url ?? '',
+      defaultPreviewName: settings.defaultPreviewName ?? settings.default_preview_name ?? 'Sample Employee',
+      defaultPreviewEmployeeNumber: settings.defaultPreviewEmployeeNumber ?? settings.default_preview_employee_number ?? 'EMP-000125',
+      defaultPreviewDepartment: settings.defaultPreviewDepartment ?? settings.default_preview_department ?? 'Engineering & Technology',
+      defaultPreviewPosition: settings.defaultPreviewPosition ?? settings.default_preview_position ?? 'Software Engineer',
     };
 
     return NextResponse.json({ data: merged });
@@ -70,6 +82,12 @@ export async function POST(request: Request) {
       defaultBleedMm: Number(body.defaultBleedMm) || 1.5,
       defaultSafeMarginMm: Number(body.defaultSafeMarginMm) || 3.0,
       verificationBaseUrl: cleanUrl,
+      defaultPreviewPhotoUrl: body.defaultPreviewPhotoUrl ?? '',
+      defaultCompanyLogoUrl: body.defaultCompanyLogoUrl ?? '',
+      defaultPreviewName: body.defaultPreviewName ?? 'Sample Employee',
+      defaultPreviewEmployeeNumber: body.defaultPreviewEmployeeNumber ?? 'EMP-000125',
+      defaultPreviewDepartment: body.defaultPreviewDepartment ?? 'Engineering & Technology',
+      defaultPreviewPosition: body.defaultPreviewPosition ?? 'Software Engineer',
     };
 
     if (company?.id) {
@@ -93,6 +111,8 @@ export async function POST(request: Request) {
           { company_id: company.id, key: 'default_bleed_mm', value: JSON.stringify(newSettings.defaultBleedMm) },
           { company_id: company.id, key: 'default_safe_margin_mm', value: JSON.stringify(newSettings.defaultSafeMarginMm) },
           { company_id: company.id, key: 'verification_base_url', value: JSON.stringify(cleanUrl) },
+          { company_id: company.id, key: 'default_preview_photo_url', value: JSON.stringify(newSettings.defaultPreviewPhotoUrl) },
+          { company_id: company.id, key: 'default_company_logo_url', value: JSON.stringify(newSettings.defaultCompanyLogoUrl) },
         ];
         await admin.from('system_settings').upsert(settingsToUpsert, { onConflict: 'company_id,key' });
       } catch {
@@ -105,8 +125,8 @@ export async function POST(request: Request) {
       actorEmail: auth.user.email,
       action: 'UPDATE_SETTINGS',
       entityType: 'SystemSettings',
-      entityName: 'KIOSK & Hardware Policies',
-      details: `Updated system settings: Verification Base URL: ${newSettings.verificationBaseUrl}, Self-service reprint: ${newSettings.allowSelfServiceReprint ? 'ENABLED' : 'DISABLED'}, Inactivity timeout: ${newSettings.kioskInactivityTimeoutSeconds}s.`,
+      entityName: 'KIOSK & Template Policies',
+      details: `Updated system settings & badge preview defaults.`,
     });
 
     return NextResponse.json({ success: true, data: newSettings });
