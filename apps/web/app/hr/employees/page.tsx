@@ -426,6 +426,7 @@ export default function HrEmployeesPage() {
       'middleName',
       'lastName',
       'suffix',
+      'callName',
       'email',
       'contactNumber',
       'departmentName',
@@ -443,9 +444,9 @@ export default function HrEmployeesPage() {
       'hrSignatureUrl'
     ].join(',');
 
-    const row1 = 'EMP-100001,John,Alexander,Smith,,john.smith@magiccard.corp,+1 (555) 123-4567,Engineering & Technology,Global Headquarters (NYC),Senior Systems Architect,,ACTIVE,2024-01-15,"123 Main St, New York",SSS-01-2345678-9,TIN-123-456-789-000,Jane Smith,+1 (555) 999-1111,,';
-    const row2 = 'EMP-100002,Maria,,Garcia,Jr,maria.garcia@magiccard.corp,+1 (555) 987-6543,Corporate Security,Global Headquarters (NYC),Security Operations Specialist,,ACTIVE,2024-02-01,"456 Oak Ave, NYC",SSS-02-9876543-1,TIN-987-654-321-000,Carlos Garcia,+1 (555) 888-2222,,';
-    const row3 = 'EMP-100003,David,Robert,Chen,,david.chen@magiccard.corp,+1 (555) 456-7890,Operations & Facilities,West Coast Tech Campus (SF),Operations Lead,,ACTIVE,2024-03-10,"789 Pine Rd, SF",SSS-03-4567890-2,TIN-456-789-012-000,Sarah Chen,+1 (555) 777-3333,,';
+    const row1 = 'EMP-100001,John,Alexander,Smith,,Johnny,john.smith@magiccard.corp,+1 (555) 123-4567,Engineering & Technology,Global Headquarters (NYC),Senior Systems Architect,,ACTIVE,2024-01-15,"123 Main St, New York",05-1605331-4,654-117-898,Jane Smith,+1 (555) 999-1111,,';
+    const row2 = 'EMP-100002,Maria,,Garcia,Jr,Maria,maria.garcia@magiccard.corp,+1 (555) 987-6543,Corporate Security,Global Headquarters (NYC),Security Operations Specialist,,ACTIVE,2024-02-01,"456 Oak Ave, NYC",05-9876543-1,987-654-321-000,Carlos Garcia,+1 (555) 888-2222,,';
+    const row3 = 'EMP-100003,David,Robert,Chen,,Dave,david.chen@magiccard.corp,+1 (555) 456-7890,Operations & Facilities,West Coast Tech Campus (SF),Operations Lead,,ACTIVE,2024-03-10,"789 Pine Rd, SF",05-4567890-2,456-789-012-000,Sarah Chen,+1 (555) 777-3333,,';
 
     const csvContent = `${headers}\r\n${row1}\r\n${row2}\r\n${row3}\r\n`;
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -469,7 +470,10 @@ export default function HrEmployeesPage() {
     const headers = [
       'employeeNumber',
       'firstName',
+      'middleName',
       'lastName',
+      'suffix',
+      'callName',
       'email',
       'contactNumber',
       'departmentName',
@@ -491,7 +495,10 @@ export default function HrEmployeesPage() {
       [
         `"${e.employeeNumber || ''}"`,
         `"${e.firstName || ''}"`,
+        `"${e.middleName || ''}"`,
         `"${e.lastName || ''}"`,
+        `"${e.suffix || ''}"`,
+        `"${e.callName || ''}"`,
         `"${e.email || ''}"`,
         `"${e.contactNumber || ''}"`,
         `"${e.departmentName || ''}"`,
@@ -565,6 +572,7 @@ export default function HrEmployeesPage() {
           const middleName = headerMap['middlename'] !== undefined ? cols[headerMap['middlename']] : '';
           const lastName = cols[headerMap['lastname']] || '';
           const suffix = headerMap['suffix'] !== undefined ? cols[headerMap['suffix']] : '';
+          const callName = headerMap['callname'] !== undefined ? cols[headerMap['callname']] : '';
           const email = cols[headerMap['email']] || '';
           const contact = headerMap['contactnumber'] !== undefined ? cols[headerMap['contactnumber']] : '';
           const dept = headerMap['departmentname'] !== undefined ? cols[headerMap['departmentname']] : 'General';
@@ -588,6 +596,7 @@ export default function HrEmployeesPage() {
               middleName,
               lastName,
               suffix,
+              callName,
               fullName: `${firstName} ${lastName}`.trim(),
               email,
               contactNumber: contact,
