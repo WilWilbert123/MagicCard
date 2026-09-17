@@ -30,6 +30,7 @@ export interface Employee {
   middleName?: string;
   lastName: string;
   suffix?: string;
+  callName?: string;
   fullName: string;
   branchId: string;
   branchName: string;
@@ -40,6 +41,13 @@ export interface Employee {
   email: string;
   contactNumber: string;
   photoUrl: string;
+  address?: string;
+  sssNumber?: string;
+  tinNumber?: string;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  signatureUrl?: string;
+  hrSignatureUrl?: string;
   employmentStatus: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
   cardStatus: 'NOT_ISSUED' | 'PRINTED' | 'ISSUED' | 'REPRINT_REQUESTED';
   dateHired: string;

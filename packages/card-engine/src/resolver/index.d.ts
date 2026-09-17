@@ -5,6 +5,8 @@ export interface EmployeeResolutionContext {
     middleName?: string | null;
     lastName: string;
     suffix?: string | null;
+    callName?: string | null;
+    nickname?: string | null;
     fullName?: string;
     department?: string;
     position?: string;
@@ -13,6 +15,13 @@ export interface EmployeeResolutionContext {
     contactNumber?: string;
     dateHired?: string;
     photoUrl?: string;
+    address?: string;
+    sssNumber?: string;
+    tinNumber?: string;
+    emergencyContactName?: string;
+    emergencyContactPhone?: string;
+    signatureUrl?: string;
+    hrSignatureUrl?: string;
     verificationToken?: string;
 }
 export declare function encodeVerificationToken(employeeNumber: string): string;

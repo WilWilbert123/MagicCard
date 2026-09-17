@@ -112,6 +112,7 @@ export async function GET(request: Request) {
         middleName: e.middle_name || '',
         lastName: e.last_name,
         suffix: e.suffix || '',
+        callName: e.call_name || '',
         fullName: `${e.first_name || ''} ${e.last_name || ''}`.trim(),
         branchId: e.branch_id || '',
         branchName: branchMap.get(e.branch_id) || 'Unassigned',
@@ -122,6 +123,13 @@ export async function GET(request: Request) {
         email: e.email || '',
         contactNumber: e.contact_number || '',
         photoUrl: e.photo_url || '',
+        address: e.address || '',
+        sssNumber: e.sss_number || '',
+        tinNumber: e.tin_number || '',
+        emergencyContactName: e.emergency_contact_name || '',
+        emergencyContactPhone: e.emergency_contact_phone || '',
+        signatureUrl: e.signature_url || '',
+        hrSignatureUrl: e.hr_signature_url || '',
         employmentStatus: e.employment_status || 'ACTIVE',
         cardStatus: status,
         dateHired: e.date_hired || '',
@@ -176,9 +184,17 @@ export async function POST(request: Request) {
       last_name: lName,
       middle_name: body.middleName?.trim() || null,
       suffix: body.suffix?.trim() || null,
+      call_name: body.callName?.trim() || null,
       email: body.email?.trim() || null,
       contact_number: body.contactNumber?.trim() || null,
       photo_url: body.photoUrl || null,
+      address: body.address?.trim() || null,
+      sss_number: body.sssNumber?.trim() || null,
+      tin_number: body.tinNumber?.trim() || null,
+      emergency_contact_name: body.emergencyContactName?.trim() || null,
+      emergency_contact_phone: body.emergencyContactPhone?.trim() || null,
+      signature_url: body.signatureUrl || null,
+      hr_signature_url: body.hrSignatureUrl || null,
       employment_status: body.employmentStatus || 'ACTIVE',
       card_status: body.cardStatus || 'NOT_ISSUED',
       date_hired: body.dateHired || new Date().toISOString().split('T')[0],
@@ -216,12 +232,20 @@ export async function POST(request: Request) {
         employeeNumber: data.employee_number,
         firstName: data.first_name,
         lastName: data.last_name,
+        callName: data.call_name,
         fullName: `${data.first_name} ${data.last_name}`.trim(),
         branchId: data.branch_id,
         departmentId: data.department_id,
         email: data.email,
         contactNumber: data.contact_number,
         photoUrl: data.photo_url,
+        address: data.address,
+        sssNumber: data.sss_number,
+        tinNumber: data.tin_number,
+        emergencyContactName: data.emergency_contact_name,
+        emergencyContactPhone: data.emergency_contact_phone,
+        signatureUrl: data.signature_url,
+        hrSignatureUrl: data.hr_signature_url,
         employmentStatus: data.employment_status,
         cardStatus: data.card_status,
         dateHired: data.date_hired,
@@ -290,9 +314,17 @@ export async function PUT(request: Request) {
     if (updateFields.lastName !== undefined) updateRecord.last_name = updateFields.lastName.trim();
     if (updateFields.middleName !== undefined) updateRecord.middle_name = updateFields.middleName?.trim() || null;
     if (updateFields.suffix !== undefined) updateRecord.suffix = updateFields.suffix?.trim() || null;
+    if (updateFields.callName !== undefined) updateRecord.call_name = updateFields.callName?.trim() || null;
     if (updateFields.email !== undefined) updateRecord.email = updateFields.email?.trim() || null;
     if (updateFields.contactNumber !== undefined) updateRecord.contact_number = updateFields.contactNumber?.trim() || null;
     if (updateFields.photoUrl !== undefined) updateRecord.photo_url = updateFields.photoUrl || null;
+    if (updateFields.address !== undefined) updateRecord.address = updateFields.address?.trim() || null;
+    if (updateFields.sssNumber !== undefined) updateRecord.sss_number = updateFields.sssNumber?.trim() || null;
+    if (updateFields.tinNumber !== undefined) updateRecord.tin_number = updateFields.tinNumber?.trim() || null;
+    if (updateFields.emergencyContactName !== undefined) updateRecord.emergency_contact_name = updateFields.emergencyContactName?.trim() || null;
+    if (updateFields.emergencyContactPhone !== undefined) updateRecord.emergency_contact_phone = updateFields.emergencyContactPhone?.trim() || null;
+    if (updateFields.signatureUrl !== undefined) updateRecord.signature_url = updateFields.signatureUrl || null;
+    if (updateFields.hrSignatureUrl !== undefined) updateRecord.hr_signature_url = updateFields.hrSignatureUrl || null;
     if (updateFields.employmentStatus !== undefined) updateRecord.employment_status = updateFields.employmentStatus;
     if (updateFields.cardStatus !== undefined) {
       let st = updateFields.cardStatus;
