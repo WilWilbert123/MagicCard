@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { CardTemplateJSON, renderCardToCanvas } from '@workspace/card-engine';
-import { enterpriseStore, DEFAULT_AVATAR_PLACEHOLDER } from '@/lib/data/enterpriseStore';
+import { enterpriseStore, createFallbackEmployee } from '@/lib/data/enterpriseStore';
 
 interface Card2DViewerProps {
   template: CardTemplateJSON;
@@ -13,32 +13,6 @@ interface Card2DViewerProps {
   className?: string;
 }
 
-const fallbackEmployee = {
-  id: 'preview-emp-125',
-  employeeNumber: 'EMP-000125',
-  firstName: 'Michael',
-  middleName: '',
-  lastName: 'Brown',
-  callName: 'Michael',
-  fullName: 'Michael Brown',
-  department: 'Global Operations',
-  departmentName: 'Global Operations',
-  position: 'Staff',
-  positionTitle: 'Staff',
-  branch: 'West Coast Tech Campus',
-  branchName: 'West Coast Tech Campus',
-  email: 'm.brown@magiccard.corp',
-  contactNumber: '',
-  dateHired: '',
-  photoUrl: DEFAULT_AVATAR_PLACEHOLDER,
-  address: '',
-  sssNumber: '',
-  tinNumber: '',
-  emergencyContactName: '',
-  emergencyContactPhone: '',
-  status: 'active' as const,
-};
-
 export default function Card2DViewer({
   template,
   side,
@@ -48,6 +22,18 @@ export default function Card2DViewer({
   className = '',
 }: Card2DViewerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [settings, setSettings] = useState<any>(null);
+
+  useEffect(() => {
+    if (!employeeData && !employeeNumber) {
+      fetch('/api/settings', { cache: 'no-store' })
+        .then((r) => r.json())
+        .then((json) => {
+          if (json.data) setSettings(json.data);
+        })
+        .catch(() => {});
+    }
+  }, [employeeData, employeeNumber]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -55,14 +41,16 @@ export default function Card2DViewer({
 
     const controller = new AbortController();
 
+    const fallback = createFallbackEmployee(settings);
+
     const employee =
       employeeData ||
       (employeeNumber ? enterpriseStore.findEmployeeByNumber(employeeNumber) : null) ||
-      fallbackEmployee;
+      fallback;
 
     renderCardToCanvas(canvas, template, side, employee, {
       scale: 2,
-      baseUrl: baseUrl || 'https://magic-card-trust-id.vercel.app',
+      baseUrl: baseUrl || settings?.verificationBaseUrl || 'https://magic-card-trust-id.vercel.app',
       signal: controller.signal,
     }).catch((err) => {
       if (err?.name !== 'AbortError') {
@@ -73,7 +61,7 @@ export default function Card2DViewer({
     return () => {
       controller.abort();
     };
-  }, [template, side, employeeData, employeeNumber]);
+  }, [template, side, employeeData, employeeNumber, settings]);
 
   const isVertical =
     template?.card?.orientation === 'vertical' ||

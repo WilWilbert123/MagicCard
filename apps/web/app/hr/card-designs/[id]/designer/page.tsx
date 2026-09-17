@@ -50,7 +50,7 @@ import {
   Mail,
 } from 'lucide-react';
 import { CardTemplateJSON, CardElement, TextElement, ShapeElement, QRCodeElement, BarcodeElement, resolveDataBinding } from '@workspace/card-engine';
-import { enterpriseStore, DEFAULT_AVATAR_PLACEHOLDER } from '@/lib/data/enterpriseStore';
+import { enterpriseStore, DEFAULT_AVATAR_PLACEHOLDER, createFallbackEmployee } from '@/lib/data/enterpriseStore';
 import { toast } from '@/components/ui/Toast';
 import { useTheme } from '@/components/ThemeProvider';
 import { LAYOUT_PRESETS, LayoutPreset } from '@/lib/data/layoutPresets';
@@ -131,10 +131,12 @@ function PresetCardMiniPreview({
   preset,
   orientation,
   side,
+  settings,
 }: {
   preset: LayoutPreset;
   orientation: 'horizontal' | 'vertical';
   side: 'front' | 'back';
+  settings?: any;
 }) {
   const isVert = orientation === 'vertical';
   const cardW = isVert ? 540 : 856;
@@ -143,6 +145,8 @@ function PresetCardMiniPreview({
   const targetH = isVert ? 145 : 105;
   const scale = targetH / cardH;
   const targetW = cardW * scale;
+
+  const fallbackEmployee = createFallbackEmployee(settings);
 
   const elements =
     side === 'front'
@@ -204,22 +208,18 @@ function PresetCardMiniPreview({
                   }}
                   className="w-full h-full flex items-center leading-none truncate"
                 >
-                  {resolveDataBinding(el.text, {
-                    employeeNumber: 'EMP-000125',
-                    fullName: 'Michael Brown',
-                    firstName: 'Michael',
-                    lastName: 'Brown',
-                    position: 'Staff',
-                    department: 'Global Operations',
-                    branch: 'West Coast Tech Campus',
-                  })}
+                  {resolveDataBinding(el.text, fallbackEmployee, settings?.verificationBaseUrl)}
                 </div>
               )}
 
               {(el.type === 'EMPLOYEE_PHOTO' || el.type === 'IMAGE') && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src={el.type === 'IMAGE' && el.src ? el.src : "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500&auto=format&fit=crop&q=80"}
+                  src={
+                    el.type === 'IMAGE' && el.src
+                      ? resolveDataBinding(el.src, fallbackEmployee, settings?.verificationBaseUrl) || fallbackEmployee.companyLogoUrl || el.src
+                      : fallbackEmployee.photoUrl || DEFAULT_AVATAR_PLACEHOLDER
+                  }
                   alt="Photo"
                   style={{
                     borderRadius: (el.borderRadius !== undefined && el.borderRadius !== null)
@@ -406,8 +406,16 @@ export default function CardDesignerPage() {
 
   // Optional preview employee context passed via URL
   const [previewEmployee, setPreviewEmployee] = useState<any>(null);
+  const [systemSettings, setSystemSettings] = useState<any>(null);
 
   useEffect(() => {
+    fetch('/api/settings', { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.data) setSystemSettings(json.data);
+      })
+      .catch(() => {});
+
     if (typeof window === 'undefined') return;
     const searchParams = new URLSearchParams(window.location.search);
     const empNum = searchParams.get('employeeNumber') || searchParams.get('employeeId') || searchParams.get('emp');
@@ -426,56 +434,38 @@ export default function CardDesignerPage() {
     }
   }, []);
 
+  const fallbackEmployee = createFallbackEmployee(systemSettings);
+
   const activeBindingMap = previewEmployee
     ? {
         ...previewEmployee,
-        employeeNumber: previewEmployee.employeeNumber || previewEmployee.employee_number || 'EMP-000125',
-        fullName: previewEmployee.fullName || `${previewEmployee.firstName || previewEmployee.first_name || ''} ${previewEmployee.lastName || previewEmployee.last_name || ''}`.trim(),
-        firstName: previewEmployee.firstName || previewEmployee.first_name || 'Michael',
+        employeeNumber: previewEmployee.employeeNumber || previewEmployee.employee_number || fallbackEmployee.employeeNumber,
+        fullName: previewEmployee.fullName || `${previewEmployee.firstName || previewEmployee.first_name || ''} ${previewEmployee.lastName || previewEmployee.last_name || ''}`.trim() || fallbackEmployee.fullName,
+        firstName: previewEmployee.firstName || previewEmployee.first_name || fallbackEmployee.firstName,
         middleName: previewEmployee.middleName || previewEmployee.middle_name || '',
-        lastName: previewEmployee.lastName || previewEmployee.last_name || 'Brown',
+        lastName: previewEmployee.lastName || previewEmployee.last_name || fallbackEmployee.lastName,
         suffix: previewEmployee.suffix || '',
-        callName: previewEmployee.callName || previewEmployee.call_name || previewEmployee.firstName || previewEmployee.first_name || 'Michael',
-        position: previewEmployee.positionTitle || previewEmployee.position || 'Staff',
-        department: previewEmployee.departmentName || previewEmployee.department || 'Global Operations',
-        branch: previewEmployee.branchName || previewEmployee.branch || 'SM Sorsogon City',
-        email: previewEmployee.email || 'michael.brown@acme.com',
+        callName: previewEmployee.callName || previewEmployee.call_name || previewEmployee.firstName || previewEmployee.first_name || fallbackEmployee.callName,
+        position: previewEmployee.positionTitle || previewEmployee.position || fallbackEmployee.position,
+        department: previewEmployee.departmentName || previewEmployee.department || fallbackEmployee.department,
+        branch: previewEmployee.branchName || previewEmployee.branch || fallbackEmployee.branch,
+        email: previewEmployee.email || fallbackEmployee.email,
         contactNumber: previewEmployee.contactNumber || previewEmployee.contact_number || '',
         dateHired: previewEmployee.dateHired || previewEmployee.date_hired || '',
-        photoUrl: previewEmployee.photoUrl || previewEmployee.photo_url || DEFAULT_AVATAR_PLACEHOLDER,
-        address: previewEmployee.address || previewEmployee.address || '',
+        photoUrl: previewEmployee.photoUrl || previewEmployee.photo_url || fallbackEmployee.photoUrl,
+        companyLogoUrl: fallbackEmployee.companyLogoUrl,
+        logoUrl: fallbackEmployee.companyLogoUrl,
+        address: previewEmployee.address || '',
         sssNumber: previewEmployee.sssNumber || previewEmployee.sss_number || '',
         tinNumber: previewEmployee.tinNumber || previewEmployee.tin_number || '',
-        emergencyContactName: previewEmployee.emergencyContactName || previewEmployee.emergency_contact_name || '',
-        emergencyContactPhone: previewEmployee.emergencyContactPhone || previewEmployee.emergency_contact_phone || '',
-        signatureUrl: previewEmployee.signatureUrl || previewEmployee.signature_url || '',
-        hrSignatureUrl: previewEmployee.hrSignatureUrl || previewEmployee.hr_signature_url || '',
+        emergencyContactName: previewEmployee.emergencyContactName || '',
+        emergencyContactPhone: previewEmployee.emergencyContactPhone || '',
+        signatureUrl: previewEmployee.signatureUrl || '',
+        hrSignatureUrl: previewEmployee.hrSignatureUrl || '',
       }
-    : {
-        employeeNumber: 'EMP-000125',
-        fullName: 'Michael Brown',
-        firstName: 'Michael',
-        middleName: '',
-        lastName: 'Brown',
-        suffix: '',
-        callName: 'Michael',
-        position: 'Software Engineer',
-        department: 'Engineering & Technology',
-        branch: 'Headquarters',
-        email: 'michael.brown@acme.com',
-        contactNumber: '',
-        dateHired: '',
-        photoUrl: DEFAULT_AVATAR_PLACEHOLDER,
-        address: '',
-        sssNumber: '',
-        tinNumber: '',
-        emergencyContactName: '',
-        emergencyContactPhone: '',
-        signatureUrl: '',
-        hrSignatureUrl: '',
-      };
+    : fallbackEmployee;
 
-  const activePhotoSrc = previewEmployee?.photoUrl || DEFAULT_AVATAR_PLACEHOLDER;
+  const activePhotoSrc = previewEmployee?.photoUrl || fallbackEmployee.photoUrl;
 
   // Load template from database on mount
   useEffect(() => {
@@ -2512,6 +2502,7 @@ export default function CardDesignerPage() {
                         preset={preset}
                         orientation={modalPreviewOrientation}
                         side={modalPreviewSide}
+                        settings={systemSettings}
                       />
                     </div>
 

@@ -2,6 +2,46 @@ import { CardTemplateJSON } from '@workspace/card-engine';
 
 export const DEFAULT_AVATAR_PLACEHOLDER = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 24 24" fill="none" stroke="%2394a3b8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="background-color:%23f1f5f9;"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`;
 
+export function createFallbackEmployee(settings?: any) {
+  const photo = settings?.defaultPreviewPhotoUrl || settings?.default_preview_photo_url || DEFAULT_AVATAR_PLACEHOLDER;
+  const logo = settings?.defaultCompanyLogoUrl || settings?.default_company_logo_url || '';
+  const fullName = settings?.defaultPreviewName || settings?.default_preview_name || 'Andree Pimentel';
+
+  const parts = fullName.trim().split(' ');
+  const firstName = parts[0] || 'Andree';
+  const lastName = parts.slice(1).join(' ') || 'Pimentel';
+
+  return {
+    id: 'preview-emp-125',
+    employeeNumber: settings?.defaultPreviewEmployeeNumber || settings?.default_preview_employee_number || 'EMP-000125',
+    firstName,
+    middleName: '',
+    lastName,
+    callName: firstName,
+    fullName,
+    department: settings?.defaultPreviewDepartment || settings?.default_preview_department || 'HRD',
+    departmentName: settings?.defaultPreviewDepartment || settings?.default_preview_department || 'HRD',
+    position: settings?.defaultPreviewPosition || settings?.default_preview_position || 'Recruitment',
+    positionTitle: settings?.defaultPreviewPosition || settings?.default_preview_position || 'Recruitment',
+    branch: 'Headquarters',
+    branchName: 'Headquarters',
+    email: `${firstName.toLowerCase()}.${lastName.toLowerCase()}@magiccard.corp`,
+    contactNumber: '09876432344',
+    dateHired: '2023-07-15',
+    photoUrl: photo,
+    companyLogoUrl: logo,
+    logoUrl: logo,
+    address: 'Taguig City',
+    sssNumber: '04-1702223-2',
+    tinNumber: '666-133-887',
+    emergencyContactName: '',
+    emergencyContactPhone: '',
+    status: 'active' as const,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+}
+
 export interface Branch {
   id: string;
   name: string;
