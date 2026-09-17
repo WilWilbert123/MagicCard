@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { toast } from '@/components/ui/Toast';
 import { resolveDataBinding } from '@workspace/card-engine';
+import { createFallbackEmployee, DEFAULT_AVATAR_PLACEHOLDER } from '@/lib/data/enterpriseStore';
 
 interface BranchOption {
   id: string;
@@ -118,8 +119,9 @@ function colorToRgba(colorStr: string | undefined, alpha: number): string {
   return alpha === 0 ? 'rgba(0,0,0,0)' : str;
 }
 
-function MiniCard2DPreview({ layout }: { layout?: any }) {
+function MiniCard2DPreview({ layout, settings }: { layout?: any; settings?: any }) {
   const [activeSide, setActiveSide] = useState<'front' | 'back'>('front');
+  const fallbackEmployee = createFallbackEmployee(settings);
 
   if (!layout) {
     return (
@@ -226,22 +228,14 @@ function MiniCard2DPreview({ layout }: { layout?: any }) {
                     }}
                     className="w-full h-full flex items-center leading-none truncate"
                   >
-                    {resolveDataBinding(el.text, {
-                      employeeNumber: 'EMP-000125',
-                      fullName: 'Michael Brown',
-                      firstName: 'Michael',
-                      lastName: 'Brown',
-                      department: 'Global Operations',
-                      position: 'Staff',
-                      branch: 'West Coast Tech Campus',
-                    })}
+                    {resolveDataBinding(el.text, fallbackEmployee, settings?.verificationBaseUrl)}
                   </div>
                 )}
 
                 {el.type === 'EMPLOYEE_PHOTO' && (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500&auto=format&fit=crop&q=80"
+                    src={fallbackEmployee.photoUrl || DEFAULT_AVATAR_PLACEHOLDER}
                     alt="Photo"
                     style={{
                       borderRadius: `${el.borderRadius || 10}px`,
@@ -255,13 +249,7 @@ function MiniCard2DPreview({ layout }: { layout?: any }) {
                 {el.type === 'IMAGE' && (el.src || (el as any).data) && (
 
                   <img
-                    src={resolveDataBinding(el.src || '', {
-                      employeeNumber: 'EMP-000125',
-                      fullName: 'Michael Brown',
-                      firstName: 'Michael',
-                      lastName: 'Brown',
-                      companyLogoUrl: 'https://teleperformance.com/logo.png',
-                    } as any) || el.src}
+                    src={resolveDataBinding(el.src || '', fallbackEmployee, settings?.verificationBaseUrl) || fallbackEmployee.companyLogoUrl || el.src}
                     alt="Image"
                     style={{
                       filter: ((el as any).tintColor === '#ffffff' || (el as any).tintColor === 'white')
@@ -389,6 +377,7 @@ export default function HrCardDesignsPage() {
   const [branches, setBranches] = useState<BranchOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTemplateId, setActiveTemplateId] = useState<string | null>(null);
+  const [systemSettings, setSystemSettings] = useState<any>(null);
 
   // Branch filter state
   const [selectedBranchFilter, setSelectedBranchFilter] = useState<string>('ALL');
@@ -427,6 +416,12 @@ export default function HrCardDesignsPage() {
 
   useEffect(() => {
     loadData();
+    fetch('/api/settings', { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.data) setSystemSettings(json.data);
+      })
+      .catch(() => {});
   }, []);
 
   const handleBranchChange = async (templateId: string, newBranchId: string) => {
@@ -677,7 +672,7 @@ export default function HrCardDesignsPage() {
 
                 {/* Middle Section: Centered 2D Mini Card Preview */}
                 <div className="flex-1 flex flex-col items-center justify-center my-3">
-                  <MiniCard2DPreview layout={tpl.layout} />
+                  <MiniCard2DPreview layout={tpl.layout} settings={systemSettings} />
 
                   {/* Compact Specifications Pills */}
                   <div className="flex flex-wrap items-center justify-center gap-1.5 mt-3 text-[10px] text-slate-500 dark:text-slate-400">

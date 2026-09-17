@@ -5,10 +5,8 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { CardTemplateJSON, renderCardToCanvas } from '@workspace/card-engine';
-import { enterpriseStore } from '@/lib/data/enterpriseStore';
+import { DEFAULT_AVATAR_PLACEHOLDER, enterpriseStore, createFallbackEmployee } from '@/lib/data/enterpriseStore';
 import { RotateCcw, Play, Pause, Sun, Moon } from 'lucide-react';
-
-import { DEFAULT_AVATAR_PLACEHOLDER } from '@/lib/data/enterpriseStore';
 
 interface ThreeCardViewerProps {
   template: CardTemplateJSON;
@@ -17,34 +15,6 @@ interface ThreeCardViewerProps {
   baseUrl?: string;
   autoRotate?: boolean;
 }
-
-const fallbackEmployee = {
-  id: 'preview-emp-125',
-  employeeNumber: 'EMP-000125',
-  firstName: 'Michael',
-  middleName: '',
-  lastName: 'Brown',
-  callName: 'Michael',
-  fullName: 'Michael Brown',
-  department: 'Global Operations',
-  departmentName: 'Global Operations',
-  position: 'Software Engineer',
-  positionTitle: 'Software Engineer',
-  branch: 'Headquarters',
-  branchName: 'Headquarters',
-  email: 'm.brown@magiccard.corp',
-  contactNumber: '09876432344',
-  dateHired: '2023-07-15',
-  photoUrl: DEFAULT_AVATAR_PLACEHOLDER,
-  address: '333, 1423 Jacinto St.. Brgy. Poblacion, Taguig City',
-  sssNumber: '04-1702223-2',
-  tinNumber: '666-133-887',
-  emergencyContactName: 'Elon Musk',
-  emergencyContactPhone: '09328713806',
-  status: 'active' as const,
-  createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString(),
-};
 
 export default function ThreeCardViewer({
   template,
@@ -58,9 +28,21 @@ export default function ThreeCardViewer({
   const [isFlipped, setIsFlipped] = useState(false);
   const [rotating, setRotating] = useState(autoRotate);
   const [stageTheme, setStageTheme] = useState<'light' | 'dark'>('dark');
+  const [settings, setSettings] = useState<any>(null);
 
   const isFlippedRef = useRef(isFlipped);
   const rotatingRef = useRef(rotating);
+
+  useEffect(() => {
+    if (!employeeData && !employeeNumber) {
+      fetch('/api/settings', { cache: 'no-store' })
+        .then((r) => r.json())
+        .then((json) => {
+          if (json.data) setSettings(json.data);
+        })
+        .catch(() => {});
+    }
+  }, [employeeData, employeeNumber]);
 
   useEffect(() => {
     isFlippedRef.current = isFlipped;
@@ -271,12 +253,14 @@ export default function ThreeCardViewer({
     scene.add(shadowMesh);
 
     // ── Render card face textures ──────────────────────────────────
+    const fallback = createFallbackEmployee(settings);
+
     const employee =
       employeeData ||
       (employeeNumber ? enterpriseStore.findEmployeeByNumber(employeeNumber) : null) ||
-      fallbackEmployee;
+      fallback;
 
-    const activeBaseUrl = baseUrl || 'https://magic-card-trust-id.vercel.app';
+    const activeBaseUrl = baseUrl || settings?.verificationBaseUrl || 'https://magic-card-trust-id.vercel.app';
 
     const frontCanvas = document.createElement('canvas');
     frontCanvas.width = (template.card?.width || 340) * 2;
@@ -375,7 +359,7 @@ export default function ThreeCardViewer({
       envTexture.dispose();
       renderer.dispose();
     };
-  }, [template, employeeNumber, employeeData]);
+  }, [template, employeeNumber, employeeData, settings]);
 
   return (
 
