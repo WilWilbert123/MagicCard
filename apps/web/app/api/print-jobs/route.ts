@@ -129,21 +129,22 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const isKioskHeader = request.headers.get('x-kiosk-request') === 'true';
-
-    // Verify auth unless it's a kiosk self-service print dispatch
-    if (!isKioskHeader && !body.employeeNumber && !body.employeeId) {
-      const auth = await requireAuth();
-      if (!auth.authenticated) return auth.response;
-    }
-
     const admin = createAdminSupabaseClient();
 
-    // 1. Resolve Company ID
-    let companyId = body.companyId;
-    if (!companyId) {
-      const { data: comp } = await admin.from('companies').select('id').limit(1).maybeSingle();
-      companyId = comp?.id;
+    let authUser: any = null;
+    if (!isKioskHeader) {
+      const auth = await requireAuth();
+      if (!auth.authenticated) return auth.response;
+      authUser = auth.user;
     }
+
+    // 1. Resolve Company ID & Settings
+    let companyId = body.companyId;
+    const { data: comp } = await admin.from('companies').select('id, settings').limit(1).maybeSingle();
+    if (!companyId) companyId = comp?.id;
+
+    const sysSettings = comp?.settings || {};
+    const restrictCrossBranch = sysSettings.restrictCrossBranchPrinting ?? sysSettings.restrict_cross_branch_printing ?? false;
 
     // 2. Resolve Branch ID
     let branchId = body.branchId;
@@ -155,11 +156,36 @@ export async function POST(request: Request) {
     // 3. Resolve Employee ID & Record
     let employeeId = body.employeeId;
     const empNum = (body.employeeNumber || '').trim();
-    if (!employeeId && empNum) {
-      const { data: empRecord } = await admin.from('employees').select('id, branch_id').eq('employee_number', empNum).maybeSingle();
-      if (empRecord) {
-        employeeId = empRecord.id;
-        if (!branchId && empRecord.branch_id) branchId = empRecord.branch_id;
+    let empRecord: any = null;
+
+    if (employeeId) {
+      const { data: eData } = await admin.from('employees').select('id, branch_id, employee_number').eq('id', employeeId).maybeSingle();
+      empRecord = eData;
+    } else if (empNum) {
+      const { data: eData } = await admin.from('employees').select('id, branch_id, employee_number').eq('employee_number', empNum).maybeSingle();
+      empRecord = eData;
+    }
+
+    if (empRecord) {
+      employeeId = empRecord.id;
+      if (!branchId && empRecord.branch_id) branchId = empRecord.branch_id;
+    }
+
+    // 3b. Enforce Cross-Branch Security Restriction for Non-Super-Admins
+    if (restrictCrossBranch && authUser && empRecord?.branch_id) {
+      const [{ data: userRole }, { data: userProfile }] = await Promise.all([
+        admin.from('user_roles').select('roles(name)').eq('user_id', authUser.id).maybeSingle(),
+        admin.from('profiles').select('branch_id').eq('id', authUser.id).maybeSingle(),
+      ]);
+
+      const isSuperAdmin = (userRole?.roles as any)?.name === 'Super Admin';
+      const userBranchId = userProfile?.branch_id;
+
+      if (!isSuperAdmin && userBranchId && empRecord.branch_id !== userBranchId) {
+        return NextResponse.json(
+          { error: 'Forbidden: Cross-branch card printing is disabled by admin policy. You can only print cards for employees assigned to your branch.' },
+          { status: 403 }
+        );
       }
     }
 
@@ -289,18 +315,16 @@ export async function POST(request: Request) {
       }
     }
 
-    // Update Employee Card Status in Supabase (using PRINTED to pass Postgres check constraint)
-    if (status === 'COMPLETED') {
-      try {
-        if (employeeId) {
-          await admin.from('employees').update({ card_status: 'PRINTED', updated_at: new Date().toISOString() }).eq('id', employeeId);
-        }
-        if (empNum) {
-          await admin.from('employees').update({ card_status: 'PRINTED', updated_at: new Date().toISOString() }).eq('employee_number', empNum);
-        }
-      } catch (empErr) {
-        console.warn('Failed to update employee card_status to PRINTED:', empErr);
+    // Update Employee Card Status in Supabase to PRINTED (Issued)
+    try {
+      if (employeeId) {
+        await admin.from('employees').update({ card_status: 'PRINTED', updated_at: new Date().toISOString() }).eq('id', employeeId);
       }
+      if (empNum) {
+        await admin.from('employees').update({ card_status: 'PRINTED', updated_at: new Date().toISOString() }).eq('employee_number', empNum);
+      }
+    } catch (empErr) {
+      console.warn('Failed to update employee card_status to PRINTED:', empErr);
     }
 
     // Record Audit Log

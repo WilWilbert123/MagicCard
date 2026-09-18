@@ -3,6 +3,37 @@ import { createAdminSupabaseClient } from '@/lib/supabase/server';
 import { requireAuth } from '@/lib/auth/require-auth';
 import { recordAuditLog } from '@/lib/audit/logger';
 
+/**
+ * Checks if the specified user has the "Super Admin" role directly from Supabase user_roles table.
+ */
+async function checkIsSuperAdmin(adminClient: any, userId: string): Promise<boolean> {
+  try {
+    const { data: userRole } = await adminClient
+      .from('user_roles')
+      .select('roles!inner(name)')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (userRole?.roles?.name === 'Super Admin') {
+      return true;
+    }
+
+    // Fallback if user_roles table is completely empty during initial system boot
+    const { count } = await adminClient
+      .from('user_roles')
+      .select('*', { count: 'exact', head: true });
+
+    if (count === 0) {
+      // First setup - primary admin is treated as Super Admin
+      return true;
+    }
+
+    return false;
+  } catch {
+    return false;
+  }
+}
+
 export async function GET() {
   const auth = await requireAuth();
   if (!auth.authenticated) return auth.response;
@@ -10,7 +41,9 @@ export async function GET() {
   try {
     const admin = createAdminSupabaseClient();
 
-    // 1. Fetch profiles
+    const isCallerSuperAdmin = await checkIsSuperAdmin(admin, auth.user.id);
+
+    // 1. Fetch profiles from database
     const { data: profiles } = await admin
       .from('profiles')
       .select('*')
@@ -22,28 +55,59 @@ export async function GET() {
 
     const authMap = new Map((authUsers?.users || []).map((u) => [u.id, u]));
 
-    // Map profiles combined with Auth info
+    // 3. Fetch user roles directly from Supabase user_roles -> roles join
+    const { data: userRoles } = await admin
+      .from('user_roles')
+      .select('user_id, role_id, roles(id, name, description)');
+
+    const roleMap = new Map();
+    (userRoles || []).forEach((ur: any) => {
+      if (ur.roles) {
+        roleMap.set(ur.user_id, {
+          id: ur.roles.id || ur.role_id,
+          name: ur.roles.name,
+          description: ur.roles.description || '',
+        });
+      }
+    });
+
+    // Default HR Admin role query fallback from DB if user has no role record yet
+    const { data: hrAdminRole } = await admin
+      .from('roles')
+      .select('id, name, description')
+      .eq('name', 'HR Admin')
+      .maybeSingle();
+
+    const defaultRoleObj = hrAdminRole || { id: null, name: 'HR Admin', description: '' };
+
+    // Map profiles combined with Auth and Supabase Role info
     const list: any[] = (profiles || []).map((p: any) => {
       const authUser = authMap.get(p.id);
+      const roleInfo = roleMap.get(p.id) || defaultRoleObj;
+
       return {
         id: p.id,
         email: p.email || authUser?.email || '',
         displayName: p.full_name || authUser?.user_metadata?.full_name || 'HR Admin',
         isActive: p.is_active ?? true,
+        role: roleInfo,
         createdAt: p.created_at || authUser?.created_at || new Date().toISOString(),
         lastSignInAt: authUser?.last_sign_in_at || null,
         isCurrent: p.id === auth.user.id,
       };
     });
 
-    // If any auth users don't have a profile yet, include them
+    // Include orphan auth users if any
     (authUsers?.users || []).forEach((u) => {
       if (!list.some((item) => item.id === u.id)) {
+        const roleInfo = roleMap.get(u.id) || defaultRoleObj;
+
         list.push({
           id: u.id,
           email: u.email || '',
           displayName: u.user_metadata?.full_name || u.email?.split('@')[0] || 'HR Admin',
           isActive: true,
+          role: roleInfo,
           createdAt: u.created_at || new Date().toISOString(),
           lastSignInAt: u.last_sign_in_at || null,
           isCurrent: u.id === auth.user.id,
@@ -51,9 +115,12 @@ export async function GET() {
       }
     });
 
-    return NextResponse.json({ data: list });
+    return NextResponse.json({
+      data: list,
+      isSuperAdmin: isCallerSuperAdmin,
+    });
   } catch (err: any) {
-    return NextResponse.json({ error: err.message, data: [] }, { status: 500 });
+    return NextResponse.json({ error: err.message, data: [], isSuperAdmin: false }, { status: 500 });
   }
 }
 
@@ -62,10 +129,21 @@ export async function POST(request: Request) {
   if (!auth.authenticated) return auth.response;
 
   try {
+    const admin = createAdminSupabaseClient();
+    const isCallerSuperAdmin = await checkIsSuperAdmin(admin, auth.user.id);
+
+    if (!isCallerSuperAdmin) {
+      return NextResponse.json(
+        { error: 'Forbidden: Only Super Admins can add or configure administrator accounts.' },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
     const email = String(body.email || '').trim().toLowerCase();
     const password = String(body.password || '');
     const displayName = String(body.displayName || '').trim();
+    const requestedRoleId = body.roleId ? String(body.roleId).trim() : null;
 
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return NextResponse.json({ error: 'Valid email address is required.' }, { status: 400 });
@@ -76,8 +154,6 @@ export async function POST(request: Request) {
     if (!displayName) {
       return NextResponse.json({ error: 'Display name / Full name is required.' }, { status: 400 });
     }
-
-    const admin = createAdminSupabaseClient();
 
     // 1. Fetch current auth users to check for email duplication
     const { data: authUsers, error: listErr } = await admin.auth.admin.listUsers();
@@ -96,7 +172,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // 2. Check profiles for any orphan profiles with the same email and clean them up
+    // 2. Check profiles for orphan profiles with the same email and clean them up
     const { data: orphanProfiles } = await admin
       .from('profiles')
       .select('id')
@@ -116,7 +192,7 @@ export async function POST(request: Request) {
       }
     }
 
-    // 3. Get default company_id
+    // 3. Get default company_id from database
     const { data: company } = await admin
       .from('companies')
       .select('id')
@@ -140,7 +216,7 @@ export async function POST(request: Request) {
     if (createError || !createdAuth?.user) {
       console.error('Supabase Auth createUser error:', createError);
       return NextResponse.json(
-        { error: createError?.message || 'Failed to create user login credentials in Auth system. Passwords must be at least 6 characters.' },
+        { error: createError?.message || 'Failed to create user login credentials in Auth system.' },
         { status: 400 }
       );
     }
@@ -167,6 +243,35 @@ export async function POST(request: Request) {
       );
     }
 
+    // 6. Determine role ID from database query
+    let finalRoleId = requestedRoleId;
+    if (!finalRoleId) {
+      const { data: defaultHrRole } = await admin
+        .from('roles')
+        .select('id')
+        .eq('name', 'HR Admin')
+        .maybeSingle();
+      finalRoleId = defaultHrRole?.id;
+    }
+
+    // Assign to user_roles table in Supabase
+    if (finalRoleId) {
+      await admin.from('user_roles').delete().eq('user_id', userId);
+      const { error: roleAssignErr } = await admin.from('user_roles').insert({
+        user_id: userId,
+        role_id: finalRoleId,
+      });
+
+      if (roleAssignErr) {
+        console.warn('Could not assign role to user_roles table:', roleAssignErr.message);
+      }
+    }
+
+    // Fetch assigned role details directly from public.roles
+    const { data: assignedRole } = finalRoleId
+      ? await admin.from('roles').select('id, name, description').eq('id', finalRoleId).maybeSingle()
+      : { data: null };
+
     await recordAuditLog({
       actorId: auth.user.id,
       actorEmail: auth.user.email,
@@ -174,7 +279,7 @@ export async function POST(request: Request) {
       entityType: 'User',
       entityId: userId,
       entityName: `${displayName} (${email})`,
-      details: `Created new HR Admin account for "${displayName}" (${email}).`,
+      details: `Created new user account for "${displayName}" (${email}) with role "${assignedRole?.name || 'HR Admin'}".`,
     });
 
     return NextResponse.json(
@@ -183,6 +288,7 @@ export async function POST(request: Request) {
           id: userId,
           email,
           displayName,
+          role: assignedRole || { id: finalRoleId, name: 'HR Admin' },
           createdAt,
         },
       },
@@ -202,6 +308,16 @@ export async function DELETE(request: Request) {
   if (!auth.authenticated) return auth.response;
 
   try {
+    const admin = createAdminSupabaseClient();
+    const isCallerSuperAdmin = await checkIsSuperAdmin(admin, auth.user.id);
+
+    if (!isCallerSuperAdmin) {
+      return NextResponse.json(
+        { error: 'Forbidden: Only Super Admins can delete administrator accounts.' },
+        { status: 403 }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     if (!id) return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
@@ -210,8 +326,10 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: 'You cannot delete your own currently logged-in account.' }, { status: 400 });
     }
 
-    const admin = createAdminSupabaseClient();
     const { data: targetProfile } = await admin.from('profiles').select('email, full_name').eq('id', id).maybeSingle();
+
+    // Delete from user_roles
+    await admin.from('user_roles').delete().eq('user_id', id);
 
     // Delete from auth.users
     const { error: authErr } = await admin.auth.admin.deleteUser(id);
@@ -228,8 +346,8 @@ export async function DELETE(request: Request) {
       entityId: id,
       entityName: targetProfile ? `${targetProfile.full_name} (${targetProfile.email})` : 'User Account',
       details: targetProfile
-        ? `Deleted HR Admin user account "${targetProfile.full_name}" (${targetProfile.email}).`
-        : `Deleted HR Admin user account ID "${id}".`,
+        ? `Deleted user account "${targetProfile.full_name}" (${targetProfile.email}).`
+        : `Deleted user account ID "${id}".`,
     });
 
     return NextResponse.json({ success: true });

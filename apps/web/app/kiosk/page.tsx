@@ -312,7 +312,7 @@ export default function KioskMainPage() {
         const pjJson = pjRes.ok ? await pjRes.json() : null;
         if (pjJson?.data && Array.isArray(pjJson.data) && pjJson.data.length > 0) {
           const hasCompletedJob = pjJson.data.some((j: any) => j.status === 'COMPLETED');
-          if (hasCompletedJob) {
+          if (hasCompletedJob && emp.cardStatus !== 'REPRINT_REQUESTED') {
             emp.cardStatus = 'ISSUED';
           }
         }

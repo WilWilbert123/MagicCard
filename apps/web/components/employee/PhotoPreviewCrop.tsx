@@ -1,7 +1,9 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { Image as ImageIcon, ZoomIn, ZoomOut, RefreshCw, Check, AlertCircle, User } from 'lucide-react';
+import { Image as ImageIcon, ZoomIn, ZoomOut, RefreshCw, Check, AlertCircle, User, Upload, Crop } from 'lucide-react';
+import { compressImageFile } from '@/lib/utils/imageCompressor';
+import { toast } from '@/components/ui/Toast';
 
 interface PhotoPreviewCropProps {
   photoUrl: string;
@@ -17,8 +19,124 @@ export default function PhotoPreviewCrop({ photoUrl, onChange }: PhotoPreviewCro
   const [imgError, setImgError] = useState(false);
   const [imgLoaded, setImgLoaded] = useState(false);
   const [showGuide, setShowGuide] = useState(true);
+  const [isUploading, setIsUploading] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawFile = e.target.files?.[0];
+    if (!rawFile) return;
+
+    setIsUploading(true);
+    try {
+      // Automatically compress photo to ~100-150KB at max 800x800 resolution
+      const compressed = await compressImageFile(rawFile, 800, 800, 0.82);
+
+      const formData = new FormData();
+      formData.append('file', compressed);
+
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Failed to upload photo');
+
+      setImgError(false);
+      setImgLoaded(false);
+      onChange(json.url);
+
+      const oldKb = Math.round(rawFile.size / 1024);
+      const newKb = Math.round(compressed.size / 1024);
+      toast.success(
+        oldKb > newKb
+          ? `Photo uploaded! Compressed from ${oldKb}KB to ${newKb}KB.`
+          : `Photo uploaded (${newKb}KB)`
+      );
+    } catch (err: any) {
+      toast.error(err.message || 'Photo upload failed');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleApplyCrop = async () => {
+    if (!photoUrl || imgError) return;
+    setIsUploading(true);
+    try {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.src = photoUrl;
+      await new Promise((res, rej) => {
+        img.onload = res;
+        img.onerror = rej;
+      });
+
+      const canvas = document.createElement('canvas');
+      const targetW = 600;
+      const targetH = 800; // 3:4 aspect ratio portrait
+      canvas.width = targetW;
+      canvas.height = targetH;
+      const ctx = canvas.getContext('2d');
+
+      if (ctx && img.naturalWidth && img.naturalHeight) {
+        const targetAspect = targetW / targetH;
+        const imgAspect = img.naturalWidth / img.naturalHeight;
+
+        let baseW = img.naturalWidth;
+        let baseH = img.naturalHeight;
+
+        if (imgAspect > targetAspect) {
+          baseW = img.naturalHeight * targetAspect;
+        } else {
+          baseH = img.naturalWidth / targetAspect;
+        }
+
+        const cropW = baseW / zoom;
+        const cropH = baseH / zoom;
+
+        const maxOffsetX = Math.max(0, img.naturalWidth - cropW);
+        const maxOffsetY = Math.max(0, img.naturalHeight - cropH);
+
+        const srcX = Math.max(0, Math.min(maxOffsetX, (focusX / 100) * maxOffsetX));
+        const srcY = Math.max(0, Math.min(maxOffsetY, (focusY / 100) * maxOffsetY));
+
+        ctx.drawImage(img, srcX, srcY, cropW, cropH, 0, 0, targetW, targetH);
+
+        const blob = await new Promise<Blob | null>((resolve) =>
+          canvas.toBlob(resolve, 'image/jpeg', 0.88)
+        );
+
+        if (blob) {
+          const compressed = await compressImageFile(
+            new File([blob], 'cropped_photo.jpg', { type: 'image/jpeg' }),
+            800,
+            800,
+            0.85
+          );
+
+          const formData = new FormData();
+          formData.append('file', compressed);
+
+          const res = await fetch('/api/upload', {
+            method: 'POST',
+            body: formData,
+          });
+
+          const json = await res.json();
+          if (!res.ok) throw new Error(json.error || 'Failed to save cropped photo');
+
+          onChange(json.url);
+          toast.success('Photo framing & crop saved to Supabase Storage!');
+        }
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to crop photo');
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if (!photoUrl || imgError) return;
@@ -36,7 +154,6 @@ export default function PhotoPreviewCrop({ photoUrl, onChange }: PhotoPreviewCro
     if (!isDragging) return;
     const dx = e.clientX - dragStart.x;
     const dy = e.clientY - dragStart.y;
-    // Sensible scaling: 130px container width maps to focal percentage
     const sensitivity = 80 / zoom;
     const newFocusX = Math.max(0, Math.min(100, dragStart.initX - (dx / 130) * sensitivity));
     const newFocusY = Math.max(0, Math.min(100, dragStart.initY - (dy / 165) * sensitivity));
@@ -56,9 +173,34 @@ export default function PhotoPreviewCrop({ photoUrl, onChange }: PhotoPreviewCro
 
   return (
     <div className="space-y-3">
+      {/* Upload Button Header */}
+      <div className="p-3 rounded-xl bg-red-50/50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30 flex items-center justify-between gap-3">
+        <div>
+          <div className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+            <Upload className="w-4 h-4 text-red-500" />
+            Upload Employee Photo File
+          </div>
+          <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+            Select any JPG, PNG, or WEBP image. Image URL is optional.
+          </p>
+        </div>
+
+        <label className="px-3.5 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white font-semibold text-xs flex items-center gap-1.5 cursor-pointer shadow-md shadow-red-600/20 transition shrink-0">
+          <Upload className="w-3.5 h-3.5" />
+          <span>{isUploading ? 'Uploading...' : 'Upload Photo'}</span>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleFileUpload}
+            disabled={isUploading}
+            className="hidden"
+          />
+        </label>
+      </div>
+
       <div>
-        <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold text-xs flex items-center justify-between">
-          <span>Photo URL (Optional)</span>
+        <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold text-[11px] flex items-center justify-between">
+          <span>Or Photo URL (Optional)</span>
           {photoUrl && imgLoaded && !imgError && (
             <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1">
               <Check className="w-3 h-3" /> Valid Image
@@ -75,7 +217,7 @@ export default function PhotoPreviewCrop({ photoUrl, onChange }: PhotoPreviewCro
               setImgLoaded(false);
               onChange(e.target.value);
             }}
-            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition text-[11px] pr-8"
+            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-1.5 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-red-500 transition text-[11px] pr-8 font-mono"
           />
           {photoUrl && (
             <button
@@ -109,7 +251,7 @@ export default function PhotoPreviewCrop({ photoUrl, onChange }: PhotoPreviewCro
           } flex items-center justify-center select-none shrink-0 transition-colors shadow-md`}
         >
           {photoUrl && !imgError ? (
-            // eslint-disable-next-line @next/next/no-img-element
+            /* eslint-disable-next-line @next/next/no-img-element */
             <img
               src={photoUrl}
               alt="Employee Preview"
@@ -243,8 +385,8 @@ export default function PhotoPreviewCrop({ photoUrl, onChange }: PhotoPreviewCro
             </div>
           </div>
 
-          {/* Toggle Alignment Guide */}
-          <div className="flex items-center justify-between pt-1">
+          {/* Action Footer */}
+          <div className="flex items-center justify-between pt-1 gap-2">
             <label className="text-[10px] text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1.5 cursor-pointer">
               <input
                 type="checkbox"
@@ -252,8 +394,20 @@ export default function PhotoPreviewCrop({ photoUrl, onChange }: PhotoPreviewCro
                 onChange={(e) => setShowGuide(e.target.checked)}
                 className="rounded text-red-600 focus:ring-red-500 h-3 w-3 border-slate-300 dark:border-slate-700"
               />
-              Show Face Alignment Oval Guide
+              Oval Guide
             </label>
+
+            {photoUrl && !imgError && (
+              <button
+                type="button"
+                onClick={handleApplyCrop}
+                disabled={isUploading}
+                className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white font-semibold text-[10px] flex items-center gap-1 transition shadow-xs disabled:opacity-50"
+              >
+                <Crop className="w-3 h-3 text-red-400" />
+                <span>{isUploading ? 'Cropping...' : 'Save & Lock Photo Framing'}</span>
+              </button>
+            )}
           </div>
         </div>
       </div>

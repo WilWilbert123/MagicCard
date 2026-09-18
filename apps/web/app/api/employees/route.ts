@@ -100,6 +100,9 @@ export async function GET(request: Request) {
     const mapped = (employees || []).map((e: any) => {
       const hasCompletedJob = printedEmpIds.has(e.id) || (e.employee_number && printedEmpNums.has(e.employee_number));
       let status = e.card_status || 'NOT_ISSUED';
+      if (status === 'ISSUED') status = 'PRINTED';
+
+      // Only override NOT_ISSUED if completed print job exists. Never overwrite REPRINT_REQUESTED.
       if (hasCompletedJob && status === 'NOT_ISSUED') {
         status = 'PRINTED';
         staleCardStatusEmpIds.push(e.id);
@@ -216,6 +219,27 @@ export async function POST(request: Request) {
 
     if (error) throw error;
 
+    if (data.photo_url) {
+      try {
+        await admin
+          .from('employee_photos')
+          .update({ is_active: false })
+          .eq('employee_id', data.id);
+
+        await admin.from('employee_photos').insert({
+          employee_id: data.id,
+          storage_path: data.photo_url,
+          file_name: data.photo_url.split('/').pop() || 'photo.jpg',
+          file_size_bytes: 0,
+          mime_type: 'image/jpeg',
+          is_active: true,
+          uploaded_by: auth.user.id || null,
+        });
+      } catch (photoErr) {
+        console.warn('Could not sync employee_photos record on create:', photoErr);
+      }
+    }
+
     await recordAuditLog({
       actorId: auth.user.id,
       actorEmail: auth.user.email,
@@ -327,8 +351,10 @@ export async function PUT(request: Request) {
     if (updateFields.hrSignatureUrl !== undefined) updateRecord.hr_signature_url = updateFields.hrSignatureUrl || null;
     if (updateFields.employmentStatus !== undefined) updateRecord.employment_status = updateFields.employmentStatus;
     if (updateFields.cardStatus !== undefined) {
-      let st = updateFields.cardStatus;
+      let st = String(updateFields.cardStatus).trim().toUpperCase();
       if (st === 'ISSUED') st = 'PRINTED';
+      if (st === 'PENDING') st = 'NOT_ISSUED';
+      if (st === 'REPRINT' || st === 'REPRINT REQ' || st === 'REPRINT_REQUEST') st = 'REPRINT_REQUESTED';
       updateRecord.card_status = st;
     }
     if (updateFields.dateHired !== undefined) updateRecord.date_hired = updateFields.dateHired;
@@ -347,6 +373,27 @@ export async function PUT(request: Request) {
       .single();
 
     if (error) throw error;
+
+    if (updateFields.photoUrl !== undefined && data.photo_url) {
+      try {
+        await admin
+          .from('employee_photos')
+          .update({ is_active: false })
+          .eq('employee_id', id);
+
+        await admin.from('employee_photos').insert({
+          employee_id: id,
+          storage_path: data.photo_url,
+          file_name: data.photo_url.split('/').pop() || 'photo.jpg',
+          file_size_bytes: 0,
+          mime_type: 'image/jpeg',
+          is_active: true,
+          uploaded_by: auth.user.id || null,
+        });
+      } catch (photoErr) {
+        console.warn('Could not sync employee_photos record on update:', photoErr);
+      }
+    }
 
     const empName = `${data.first_name} ${data.last_name}`.trim();
     await recordAuditLog({

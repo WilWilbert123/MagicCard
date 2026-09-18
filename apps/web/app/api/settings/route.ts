@@ -5,6 +5,7 @@ import { recordAuditLog } from '@/lib/audit/logger';
 
 const DEFAULT_SETTINGS = {
   allowSelfServiceReprint: true,
+  restrictCrossBranchPrinting: false,
   kioskInactivityTimeoutSeconds: 45,
   defaultBleedMm: 1.5,
   defaultSafeMarginMm: 3.0,
@@ -46,6 +47,7 @@ export async function GET() {
 
     const merged = {
       allowSelfServiceReprint: settings.allowSelfServiceReprint ?? settings.allow_self_service_reprint ?? DEFAULT_SETTINGS.allowSelfServiceReprint,
+      restrictCrossBranchPrinting: settings.restrictCrossBranchPrinting ?? settings.restrict_cross_branch_printing ?? DEFAULT_SETTINGS.restrictCrossBranchPrinting,
       kioskInactivityTimeoutSeconds: settings.kioskInactivityTimeoutSeconds ?? settings.kiosk_inactivity_timeout_seconds ?? DEFAULT_SETTINGS.kioskInactivityTimeoutSeconds,
       defaultBleedMm: settings.defaultBleedMm ?? settings.default_bleed_mm ?? DEFAULT_SETTINGS.defaultBleedMm,
       defaultSafeMarginMm: settings.defaultSafeMarginMm ?? settings.default_safe_margin_mm ?? DEFAULT_SETTINGS.defaultSafeMarginMm,
@@ -78,6 +80,7 @@ export async function POST(request: Request) {
     const newSettings = {
       ...(company?.settings || {}),
       allowSelfServiceReprint: typeof body.allowSelfServiceReprint === 'boolean' ? body.allowSelfServiceReprint : true,
+      restrictCrossBranchPrinting: typeof body.restrictCrossBranchPrinting === 'boolean' ? body.restrictCrossBranchPrinting : false,
       kioskInactivityTimeoutSeconds: Number(body.kioskInactivityTimeoutSeconds) || 45,
       defaultBleedMm: Number(body.defaultBleedMm) || 1.5,
       defaultSafeMarginMm: Number(body.defaultSafeMarginMm) || 3.0,
@@ -107,6 +110,7 @@ export async function POST(request: Request) {
       try {
         const settingsToUpsert = [
           { company_id: company.id, key: 'allow_self_service_reprint', value: JSON.stringify(newSettings.allowSelfServiceReprint) },
+          { company_id: company.id, key: 'restrict_cross_branch_printing', value: JSON.stringify(newSettings.restrictCrossBranchPrinting) },
           { company_id: company.id, key: 'kiosk_inactivity_timeout_seconds', value: JSON.stringify(newSettings.kioskInactivityTimeoutSeconds) },
           { company_id: company.id, key: 'default_bleed_mm', value: JSON.stringify(newSettings.defaultBleedMm) },
           { company_id: company.id, key: 'default_safe_margin_mm', value: JSON.stringify(newSettings.defaultSafeMarginMm) },
