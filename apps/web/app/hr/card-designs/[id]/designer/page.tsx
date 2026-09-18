@@ -2536,16 +2536,11 @@ export default function CardDesignerPage() {
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-6">
           <div className="w-full max-w-4xl rounded-2xl bg-[#0e1320] border border-slate-800 p-6 shadow-2xl">
             <div className="flex items-center justify-between mb-4 border-b border-slate-800 pb-3">
-              <div>
-                <h2 className="text-base font-bold text-white flex items-center gap-2">
-                  <Eye className="w-5 h-5 text-red-500" />
-                  Realistic 3D ID Card Preview (WebGL Three.js)
-                </h2>
-                <p className="text-slate-400 text-xs">
-                  Physical PVC simulation with 0.76mm extruded thickness, bevel edges, dual-sided canvas mapping, and contact shadows.
-                </p>
-              </div>
-              <button onClick={() => setShow3DModal(false)} className="text-slate-400 hover:text-white">
+              <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                <Eye className="w-5 h-5 text-red-500" />
+                3D Preview
+              </h2>
+              <button onClick={() => setShow3DModal(false)} className="text-slate-400 hover:text-white transition">
                 <X className="w-5 h-5" />
               </button>
             </div>

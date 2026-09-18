@@ -64,13 +64,33 @@ export default function PhotoPreviewCrop({ photoUrl, onChange }: PhotoPreviewCro
   const handleApplyCrop = async () => {
     if (!photoUrl || imgError) return;
     setIsUploading(true);
+    let blobUrlToClean: string | null = null;
     try {
+      let imageSource = photoUrl;
+
+      // 1. Fetch image bytes into a local Blob URL to guarantee 0 CORS canvas taint / crossOrigin failures
+      if (!photoUrl.startsWith('data:')) {
+        try {
+          const fetchRes = await fetch(photoUrl);
+          if (fetchRes.ok) {
+            const imgBlob = await fetchRes.blob();
+            blobUrlToClean = URL.createObjectURL(imgBlob);
+            imageSource = blobUrlToClean;
+          }
+        } catch {
+          // Fallback to direct photoUrl if fetch fails
+        }
+      }
+
       const img = new Image();
-      img.crossOrigin = 'anonymous';
-      img.src = photoUrl;
+      if (!imageSource.startsWith('data:') && !imageSource.startsWith('blob:')) {
+        img.crossOrigin = 'anonymous';
+      }
+
+      img.src = imageSource;
       await new Promise((res, rej) => {
         img.onload = res;
-        img.onerror = rej;
+        img.onerror = () => rej(new Error('Failed to load image for framing. Ensure image URL is valid and accessible.'));
       });
 
       const canvas = document.createElement('canvas');
@@ -81,31 +101,21 @@ export default function PhotoPreviewCrop({ photoUrl, onChange }: PhotoPreviewCro
       const ctx = canvas.getContext('2d');
 
       if (ctx && img.naturalWidth && img.naturalHeight) {
-        const targetAspect = targetW / targetH;
-        const imgAspect = img.naturalWidth / img.naturalHeight;
+        // Mathematically exact calculation matching CSS object-fit: cover with transform: scale(zoom)
+        const S = Math.max(img.naturalWidth / targetW, img.naturalHeight / targetH);
+        const visibleW = (targetW * S) / zoom;
+        const visibleH = (targetH * S) / zoom;
 
-        let baseW = img.naturalWidth;
-        let baseH = img.naturalHeight;
-
-        if (imgAspect > targetAspect) {
-          baseW = img.naturalHeight * targetAspect;
-        } else {
-          baseH = img.naturalWidth / targetAspect;
-        }
-
-        const cropW = baseW / zoom;
-        const cropH = baseH / zoom;
-
-        const maxOffsetX = Math.max(0, img.naturalWidth - cropW);
-        const maxOffsetY = Math.max(0, img.naturalHeight - cropH);
+        const maxOffsetX = Math.max(0, img.naturalWidth - visibleW);
+        const maxOffsetY = Math.max(0, img.naturalHeight - visibleH);
 
         const srcX = Math.max(0, Math.min(maxOffsetX, (focusX / 100) * maxOffsetX));
         const srcY = Math.max(0, Math.min(maxOffsetY, (focusY / 100) * maxOffsetY));
 
-        ctx.drawImage(img, srcX, srcY, cropW, cropH, 0, 0, targetW, targetH);
+        ctx.drawImage(img, srcX, srcY, visibleW, visibleH, 0, 0, targetW, targetH);
 
         const blob = await new Promise<Blob | null>((resolve) =>
-          canvas.toBlob(resolve, 'image/jpeg', 0.88)
+          canvas.toBlob(resolve, 'image/jpeg', 0.90)
         );
 
         if (blob) {
@@ -113,7 +123,7 @@ export default function PhotoPreviewCrop({ photoUrl, onChange }: PhotoPreviewCro
             new File([blob], 'cropped_photo.jpg', { type: 'image/jpeg' }),
             800,
             800,
-            0.85
+            0.88
           );
 
           const formData = new FormData();
@@ -127,6 +137,12 @@ export default function PhotoPreviewCrop({ photoUrl, onChange }: PhotoPreviewCro
           const json = await res.json();
           if (!res.ok) throw new Error(json.error || 'Failed to save cropped photo');
 
+          // Reset local framing controls to 1.0x & 50% 50% since image is now baked
+          setZoom(1);
+          setFocusX(50);
+          setFocusY(50);
+
+          // Update parent state with newly saved framed image URL!
           onChange(json.url);
           toast.success('Photo framing & crop saved to Supabase Storage!');
         }
@@ -134,6 +150,7 @@ export default function PhotoPreviewCrop({ photoUrl, onChange }: PhotoPreviewCro
     } catch (err: any) {
       toast.error(err.message || 'Failed to crop photo');
     } finally {
+      if (blobUrlToClean) URL.revokeObjectURL(blobUrlToClean);
       setIsUploading(false);
     }
   };
@@ -402,10 +419,20 @@ export default function PhotoPreviewCrop({ photoUrl, onChange }: PhotoPreviewCro
                 type="button"
                 onClick={handleApplyCrop}
                 disabled={isUploading}
-                className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white font-semibold text-[10px] flex items-center gap-1 transition shadow-xs disabled:opacity-50"
+                className={`px-3 py-1.5 rounded font-bold text-[11px] flex items-center gap-1.5 transition ${
+                  Math.abs(zoom - 1) > 0.05 || Math.abs(focusX - 50) > 2 || Math.abs(focusY - 50) > 2
+                    ? 'bg-red-600 hover:bg-red-500 text-white shadow-md shadow-red-600/30 animate-bounce'
+                    : 'bg-slate-800 hover:bg-slate-700 text-white shadow-xs'
+                } disabled:opacity-50`}
               >
-                <Crop className="w-3 h-3 text-red-400" />
-                <span>{isUploading ? 'Cropping...' : 'Save & Lock Photo Framing'}</span>
+                <Crop className="w-3.5 h-3.5 text-red-300" />
+                <span>
+                  {isUploading
+                    ? 'Cropping & Uploading...'
+                    : Math.abs(zoom - 1) > 0.05 || Math.abs(focusX - 50) > 2 || Math.abs(focusY - 50) > 2
+                    ? 'Lock & Apply New Photo Framing'
+                    : 'Save & Lock Photo Framing'}
+                </span>
               </button>
             )}
           </div>
