@@ -506,6 +506,7 @@ export default function CardDesignerPage() {
   const [dragElementId, setDragElementId] = useState<string | null>(null);
   const [dragStartPos, setDragStartPos] = useState({ x: 0, y: 0 });
   const [elementStartPos, setElementStartPos] = useState({ x: 0, y: 0 });
+  const [activeGuides, setActiveGuides] = useState<{ type: 'v' | 'h'; pos: number }[]>([]);
 
   // Interactive Resizing State
   const [isResizing, setIsResizing] = useState(false);
@@ -691,16 +692,88 @@ export default function CardDesignerPage() {
       const dx = Math.round((e.clientX - dragStartPos.x) / zoomLevel);
       const dy = Math.round((e.clientY - dragStartPos.y) / zoomLevel);
 
-      const newX = Math.max(0, elementStartPos.x + dx);
-      const newY = Math.max(0, elementStartPos.y + dy);
+      let rawX = Math.max(0, elementStartPos.x + dx);
+      let rawY = Math.max(0, elementStartPos.y + dy);
+
+      const surface = activeSide === 'front' ? template.front : template.back;
+      const draggingEl = surface.elements.find((el) => el.id === dragElementId);
+      const elW = draggingEl?.width || 0;
+      const elH = draggingEl?.height || 0;
+
+      const cardW = template.card.width;
+      const cardH = template.card.height;
+
+      const SNAP_THRESHOLD = 5;
+      const newGuides: { type: 'v' | 'h'; pos: number }[] = [];
+
+      // Collect vertical alignment guide candidates (X positions)
+      const vCandidates: number[] = [cardW / 2, 0, cardW]; // Card Center, Left, Right
+      // Collect horizontal alignment guide candidates (Y positions)
+      const hCandidates: number[] = [cardH / 2, 0, cardH]; // Card Center, Top, Bottom
+
+      surface.elements.forEach((sibling) => {
+        if (sibling.id === dragElementId || sibling.isHidden) return;
+        const sW = sibling.width || 0;
+        const sH = sibling.height || 0;
+        vCandidates.push(sibling.x, sibling.x + sW / 2, sibling.x + sW);
+        hCandidates.push(sibling.y, sibling.y + sH / 2, sibling.y + sH);
+      });
+
+      // Magnetic snap X (Left edge, Center X, Right edge)
+      let snappedX = rawX;
+      const elementCenterX = rawX + elW / 2;
+      const elementRightX = rawX + elW;
+
+      for (const pos of vCandidates) {
+        if (Math.abs(rawX - pos) <= SNAP_THRESHOLD) {
+          snappedX = pos;
+          newGuides.push({ type: 'v', pos });
+          break;
+        }
+        if (Math.abs(elementCenterX - pos) <= SNAP_THRESHOLD) {
+          snappedX = pos - elW / 2;
+          newGuides.push({ type: 'v', pos });
+          break;
+        }
+        if (Math.abs(elementRightX - pos) <= SNAP_THRESHOLD) {
+          snappedX = pos - elW;
+          newGuides.push({ type: 'v', pos });
+          break;
+        }
+      }
+
+      // Magnetic snap Y (Top edge, Center Y, Bottom edge)
+      let snappedY = rawY;
+      const elementCenterY = rawY + elH / 2;
+      const elementBottomY = rawY + elH;
+
+      for (const pos of hCandidates) {
+        if (Math.abs(rawY - pos) <= SNAP_THRESHOLD) {
+          snappedY = pos;
+          newGuides.push({ type: 'h', pos });
+          break;
+        }
+        if (Math.abs(elementCenterY - pos) <= SNAP_THRESHOLD) {
+          snappedY = pos - elH / 2;
+          newGuides.push({ type: 'h', pos });
+          break;
+        }
+        if (Math.abs(elementBottomY - pos) <= SNAP_THRESHOLD) {
+          snappedY = pos - elH;
+          newGuides.push({ type: 'h', pos });
+          break;
+        }
+      }
+
+      setActiveGuides(newGuides);
 
       setTemplate((prev) => {
         const updated = JSON.parse(JSON.stringify(prev)) as CardTemplateJSON;
-        const surface = activeSide === 'front' ? updated.front : updated.back;
-        const idx = surface.elements.findIndex((eItem) => eItem.id === dragElementId);
+        const surf = activeSide === 'front' ? updated.front : updated.back;
+        const idx = surf.elements.findIndex((eItem) => eItem.id === dragElementId);
         if (idx !== -1) {
-          surface.elements[idx].x = newX;
-          surface.elements[idx].y = newY;
+          surf.elements[idx].x = Math.round(snappedX);
+          surf.elements[idx].y = Math.round(snappedY);
         }
         return updated;
       });
@@ -764,6 +837,7 @@ export default function CardDesignerPage() {
   };
 
   const handleCanvasMouseUp = () => {
+    setActiveGuides([]);
     if (isDragging) {
       setIsDragging(false);
       setDragElementId(null);
@@ -1311,6 +1385,19 @@ export default function CardDesignerPage() {
               {showSafeMargin && (
                 <div className="absolute inset-[30px] rounded-[14px] border border-dashed border-blue-400/40 pointer-events-none z-20" />
               )}
+
+              {/* Smart Alignment Guides / Snap Lines (Dark gray in Light mode, Light gray in Dark mode) */}
+              {activeGuides.map((guide, idx) => (
+                <div
+                  key={`guide-${idx}`}
+                  style={
+                    guide.type === 'v'
+                      ? { left: `${guide.pos}px`, top: 0, bottom: 0, width: '1px' }
+                      : { top: `${guide.pos}px`, left: 0, right: 0, height: '1px' }
+                  }
+                  className="absolute pointer-events-none z-40 bg-slate-700 dark:bg-slate-300"
+                />
+              ))}
 
               {/* Visual Elements Layer (Clipped at Card Boundary) */}
               {currentSurface.elements.map((el) => {

@@ -173,8 +173,7 @@ export default function ThreeCardViewer({
     };
 
     const cardGroup = new THREE.Group();
-    // Subtle initial Y-rotation to show 3D depth without an extreme tilt angle
-    cardGroup.rotation.y = 0.18;
+    cardGroup.rotation.y = 0;
     scene.add(cardGroup);
 
     // ── PVC Edge / Body ────────────────────────────────────────────
@@ -291,10 +290,14 @@ export default function ThreeCardViewer({
           float NdotV = max(dot(normal, viewDir), 0.0);
           float fresnel = pow(1.0 - NdotV, 2.0);
 
+          // Tilt Factor: Strictly 0.0 at direct head-on view (NdotV = 1.0),
+          // rising smoothly as the card tilts/rotates off-axis.
+          float tiltFactor = clamp(pow(1.0 - NdotV, 1.4), 0.0, 1.0);
+
           // Specular Glare — concentrated metallic flash when card tilts toward light
           float NdotH = max(dot(normal, halfVector), 0.0);
-          float specGleam = pow(NdotH, 16.0); // Sharp, metallic shiny glare!
-          float specWide = pow(NdotH, 4.0);   // Broad metallic sheen
+          float specGleam = pow(NdotH, 16.0) * tiltFactor; // Metallic glare only on tilt
+          float specWide = pow(NdotH, 4.0) * tiltFactor;
 
           // Dynamic rainbow spectrum driven by card rotation angle & UV position
           float rotationAngleShift = dot(vWorldNormal, vec3(0.8, 0.5, 0.3));
@@ -311,9 +314,9 @@ export default function ThreeCardViewer({
           // Blend spectral rainbow with brilliant white metallic specular flash
           vec3 shinyHoloColor = mix(rainbowColor, vec3(1.0, 0.98, 0.95), specGleam * 0.85);
 
-          // Overall intensity bursts into a brilliant shiny sheen as the card rotates!
-          float intensity = (fresnel * 0.35 + specGleam * 0.85 + specWide * 0.25 + holoPattern * 0.18) * uOpacity * 2.2;
-          intensity = clamp(intensity, 0.05, 0.72);
+          // Overall intensity is zero at front view (tiltFactor = 0) and bursts into foil sheen as rotated
+          float intensity = (fresnel * 0.45 + specGleam * 0.75 + specWide * 0.25 + holoPattern * 0.2) * uOpacity * 2.5 * tiltFactor;
+          intensity = clamp(intensity, 0.0, 0.75);
 
           gl_FragColor = vec4(shinyHoloColor, intensity);
         }
@@ -435,9 +438,8 @@ export default function ThreeCardViewer({
       const delta = clock.getDelta();
       const elapsed = clock.getElapsedTime();
 
-      // Smooth flip — rest positions have a slight angle so depth is always visible
-      // Front rests at +15° Y, Back rests at 180°+15° = 195° Y
-      const targetY = isFlippedRef.current ? Math.PI + 0.26 : 0.26;
+      // Smooth flip — rests flat at 0 for Front, Math.PI for Back
+      const targetY = isFlippedRef.current ? Math.PI : 0;
       cardGroup.rotation.y = THREE.MathUtils.damp(cardGroup.rotation.y, targetY, 5, delta);
 
       // Gentle float — very subtle (premium, not cartoon)

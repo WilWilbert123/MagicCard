@@ -678,6 +678,44 @@ export default function HrSettingsPage() {
     }
   };
 
+  const handleCreatePosition = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!posForm.title.trim()) return;
+
+    try {
+      const res = await fetch('/api/positions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: posForm.title.trim(),
+          departmentId: posForm.departmentId || departments[0]?.id || '',
+          level: posForm.level || 'STANDARD',
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Failed to create position');
+
+      setPositions((prev) => [...prev, json.data]);
+      setPosForm({ title: '', departmentId: '', level: 'STANDARD' });
+      setShowAddPosModal(false);
+      toast.success('Job position created successfully.');
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
+
+  const handleDeletePosition = async (id: string) => {
+    try {
+      const res = await fetch(`/api/positions?id=${id}`, { method: 'DELETE' });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Failed to delete position');
+      setPositions((prev) => prev.filter((p) => p.id !== id));
+      toast.success('Job position removed successfully.');
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
+
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
       {/* Header */}
@@ -1469,7 +1507,88 @@ export default function HrSettingsPage() {
         </div>
       )}
 
-      {/* ADD BRANCH MODAL */}
+      {/* TAB: JOB POSITIONS */}
+      {activeTab === 'POSITIONS' && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-base font-bold text-slate-900 dark:text-white">Job Positions & Titles</h2>
+              <p className="text-slate-500 dark:text-slate-400 text-xs">
+                Corporate positions and titles assigned to employee badges and department roles.
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                setPosForm({ title: '', departmentId: departments[0]?.id || '', level: 'STANDARD' });
+                setShowAddPosModal(true);
+              }}
+              className="px-3.5 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-semibold shadow-md shadow-red-600/20 transition flex items-center gap-1.5"
+            >
+              <Plus className="w-4 h-4" /> Add Job Position
+            </button>
+          </div>
+
+          <div className="rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-[#111827]/90 overflow-hidden shadow-sm">
+            <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300">
+              <thead className="bg-slate-50 dark:bg-slate-900/80 border-b border-slate-200 dark:border-slate-800 uppercase tracking-wider text-[10px] text-slate-500 dark:text-slate-400">
+                <tr>
+                  <th className="px-5 py-3">Position Title</th>
+                  <th className="px-5 py-3">Department</th>
+                  <th className="px-5 py-3">Access Level</th>
+                  <th className="px-5 py-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200/80 dark:divide-slate-800/60">
+                {positionsLoading ? (
+                  <tr>
+                    <td colSpan={4} className="px-5 py-8 text-center text-slate-500 text-xs">
+                      <div className="inline-flex items-center gap-2">
+                        <div className="w-3.5 h-3.5 rounded-full border-2 border-slate-400 border-t-red-500 animate-spin" />
+                        Loading job positions from Supabase...
+                      </div>
+                    </td>
+                  </tr>
+                ) : positions.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="px-5 py-8 text-center text-slate-500 text-xs">
+                      No job positions found. Add your first position above.
+                    </td>
+                  </tr>
+                ) : (
+                  positions.map((p) => {
+                    const dept = departments.find((d) => d.id === p.departmentId);
+                    return (
+                      <tr key={p.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition">
+                        <td className="px-5 py-3 font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+                          <Layers className="w-4 h-4 text-red-500 shrink-0" />
+                          {p.title}
+                        </td>
+                        <td className="px-5 py-3 text-slate-600 dark:text-slate-400">
+                          {dept ? dept.name : 'All Departments / General'}
+                        </td>
+                        <td className="px-5 py-3">
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                            {p.level || 'STANDARD'}
+                          </span>
+                        </td>
+                        <td className="px-5 py-3 text-right">
+                          <button
+                            onClick={() => handleDeletePosition(p.id)}
+                            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition"
+                            title="Delete position"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
       {showAddBranchModal && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="w-full max-w-md rounded-2xl bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 p-6 shadow-2xl">
@@ -2023,6 +2142,82 @@ export default function HrSettingsPage() {
                   className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white font-semibold shadow-md shadow-red-600/30 transition disabled:opacity-50"
                 >
                   {userCreating ? 'Creating User...' : 'Create Account'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ADD POSITION MODAL */}
+      {showAddPosModal && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 p-6 shadow-2xl">
+            <div className="flex items-center justify-between mb-4 border-b border-slate-200 dark:border-slate-800 pb-3">
+              <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <Layers className="w-5 h-5 text-red-500" />
+                Add Corporate Job Position
+              </h3>
+              <button onClick={() => setShowAddPosModal(false)} className="text-slate-400 hover:text-slate-700 dark:hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreatePosition} className="space-y-4 text-xs">
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Position Title *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Senior Software Engineer"
+                  value={posForm.title}
+                  onChange={(e) => setPosForm({ ...posForm, title: e.target.value })}
+                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Department *</label>
+                <select
+                  value={posForm.departmentId}
+                  onChange={(e) => setPosForm({ ...posForm, departmentId: e.target.value })}
+                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white"
+                >
+                  {departments.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name} ({d.code})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Access Level</label>
+                <select
+                  value={posForm.level}
+                  onChange={(e) => setPosForm({ ...posForm, level: e.target.value })}
+                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white"
+                >
+                  <option value="STANDARD">STANDARD</option>
+                  <option value="LEAD">LEAD</option>
+                  <option value="MANAGER">MANAGER</option>
+                  <option value="EXECUTIVE">EXECUTIVE</option>
+                </select>
+              </div>
+
+              <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowAddPosModal(false)}
+                  className="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white font-semibold shadow-md shadow-red-600/30"
+                >
+                  Save Position
                 </button>
               </div>
             </form>
