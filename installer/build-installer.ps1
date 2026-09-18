@@ -32,6 +32,18 @@ if ($LASTEXITCODE -ne 0) {
 
 Write-Host "[1/3] DONE - Binary publish completed: $PublishDir"
 
+# Copy VBS background scripts, logs batch, stop batch, PM2 config to publish folder
+Write-Host "Copying invisible background execution scripts to publish folder..."
+$KioskAgentDir = Join-Path $RootDir "apps\kiosk-agent"
+$FilesToCopy = @("start_hidden.vbs", "watchdog.vbs", "install_startup.vbs", "ecosystem.config.js", "logs.bat", "stop.bat", "install_all.bat")
+foreach ($file in $FilesToCopy) {
+    $src = Join-Path $KioskAgentDir $file
+    if (Test-Path $src) {
+        Copy-Item -Path $src -Destination $PublishDir -Force
+        Write-Host "  -> Copied $file to publish folder"
+    }
+}
+
 # 3. Build Inno Setup installer if ISCC is available
 $IsccPath = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
 $IssFile = Join-Path $ScriptDir "KioskAgentSetup.iss"

@@ -41,22 +41,30 @@ Name: "{commonappdata}\EmployeeID\KioskAgent\logs"
 Source: "..\apps\kiosk-agent\bin\Release\net9.0-windows\win-x64\publish\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
-Name: "{group}\Configure {#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Parameters: "--setup"
+Name: "{group}\Start KioskAgent (Invisible Background)"; Filename: "wscript.exe"; Parameters: """{app}\start_hidden.vbs"""; IconFilename: "shell32.dll"; IconIndex: 1
+Name: "{group}\View KioskAgent Logs"; Filename: "{app}\logs.bat"; IconFilename: "shell32.dll"; IconIndex: 76
+Name: "{group}\Stop KioskAgent"; Filename: "{app}\stop.bat"; IconFilename: "shell32.dll"; IconIndex: 27
 Name: "{group}\Uninstall {#MyAppName}"; Filename: "{uninstallexe}"
+Name: "{userstartup}\EmployeeID KioskAgent"; Filename: "wscript.exe"; Parameters: """{app}\start_hidden.vbs"""; WorkingDir: "{app}"; IconFilename: "shell32.dll"; IconIndex: 1
+Name: "{autodesktop}\KioskAgent Logs"; Filename: "{app}\logs.bat"; IconFilename: "shell32.dll"; IconIndex: 76
+Name: "{autodesktop}\Stop KioskAgent"; Filename: "{app}\stop.bat"; IconFilename: "shell32.dll"; IconIndex: 27
 
 [Run]
 ; Open local Windows Firewall port 7125
 Filename: "netsh"; Parameters: "advfirewall firewall add rule name=""EmployeeID KioskAgent Port 7125"" dir=in action=allow protocol=TCP localport=7125"; Flags: runhidden
 
-; Install and start Windows Service
-Filename: "sc.exe"; Parameters: "create {#MyServiceName} binPath= ""{app}\{#MyAppExeName}"" start= auto displayName= ""EmployeeID KioskAgent Service"""; Flags: runhidden
-Filename: "sc.exe"; Parameters: "description {#MyServiceName} ""Provides local hardware communication for MagicCard ID Card Printers and Next.js KIOSK."""; Flags: runhidden
-Filename: "sc.exe"; Parameters: "start {#MyServiceName}"; Flags: runhidden
+; Register Startup auto-run shortcut invisibly
+Filename: "wscript.exe"; Parameters: """{app}\install_startup.vbs"""; WorkingDir: "{app}"; Flags: runhidden
+
+; Launch KioskAgent invisibly in background via start_hidden.vbs
+Filename: "wscript.exe"; Parameters: """{app}\start_hidden.vbs"""; WorkingDir: "{app}"; Flags: runhidden
 
 [UninstallRun]
-; Stop and remove Windows Service
-Filename: "sc.exe"; Parameters: "stop {#MyServiceName}"; Flags: runhidden
-Filename: "sc.exe"; Parameters: "delete {#MyServiceName}"; Flags: runhidden
+; Stop KioskAgent and Watchdog process
+Filename: "{app}\stop.bat"; Flags: runhidden
+
+; Delete startup shortcut and firewall rule
+Filename: "cmd.exe"; Parameters: "/c del /f /q ""{userstartup}\EmployeeID KioskAgent.lnk"""; Flags: runhidden
 Filename: "netsh"; Parameters: "advfirewall firewall delete rule name=""EmployeeID KioskAgent Port 7125"""; Flags: runhidden
 
 [Code]

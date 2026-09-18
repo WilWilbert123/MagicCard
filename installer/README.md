@@ -22,22 +22,43 @@ powershell -ExecutionPolicy Bypass -File installer/build-installer.ps1
 
 ## 2. Installing on Physical KIOSK Machines (`KIOSK-001` through `KIOSK-N`)
 
-Copy `EmployeeID-KioskAgent-Setup.exe` to each physical Windows KIOSK computer (`KIOSK-001`, `KIOSK-002`, `KIOSK-003`, etc.).
+Copy `EmployeeID-KioskAgent-Setup.exe` (or `EmployeeID-KioskAgent-Setup.zip`) to each physical Windows KIOSK computer (`KIOSK-001`, `KIOSK-002`, `KIOSK-003`, etc.).
 
-1. Right-click `EmployeeID-KioskAgent-Setup.exe` → **Run as Administrator**.
+### Option A: Standard Setup Executable
+1. Double-click `EmployeeID-KioskAgent-Setup.exe`.
 2. Follow the setup wizard:
    - Installation Directory: `C:\Program Files\EmployeeID\KioskAgent\`
-   - Input **KIOSK ID** (e.g., `KIOSK-001` for Machine 1, `KIOSK-002` for Machine 2).
+   - Input **KIOSK ID** (e.g., `KIOSK-001`).
    - Input **Branch ID** (e.g., `BRANCH-001`).
-   - Input **HR Admin Pairing Code** (generated from HR Admin Dashboard).
 3. The installer will automatically:
-   - Register and start the Windows Service **`EmployeeIDKioskAgent`**.
-   - Open local Windows Firewall port `7125`.
-   - Create local logging directory at `C:\ProgramData\EmployeeID\KioskAgent\logs\`.
+   - Configure **Invisible Background Execution** via `start_hidden.vbs` (no CMD popup window).
+   - Register **Auto-Run on Startup/Reboot** (`install_startup.vbs`) in Windows Startup (`shell:startup`).
+   - Enable **Watchdog Crash Protection** (`watchdog.vbs` / PM2) to auto-restart `KioskAgent.exe` immediately if an error occurs.
+   - Place **`KioskAgent Logs`** and **`Stop KioskAgent`** shortcuts on Desktop and Start Menu.
+
+### Option B: Portable ZIP Deployment
+1. Extract `EmployeeID-KioskAgent-Setup.zip` to your desired directory (e.g., `C:\KioskAgent`).
+2. Double-click `install_all.bat`. This will:
+   - Register `start_hidden.vbs` in Windows Startup.
+   - Start `KioskAgent.exe` invisibly in the background.
 
 ---
 
-## 3. Post-Installation Verification
+## 3. Included Background Management Toolkit
+
+| Script File | Purpose | Execution Mode |
+| :--- | :--- | :--- |
+| **`start_hidden.vbs`** | Launches `KioskAgent.exe` / Watchdog in hidden mode (`WindowStyle = 0`). | 100% Invisible (No CMD Window) |
+| **`install_startup.vbs`** | Adds `start_hidden.vbs` shortcut to `%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup`. | Auto-runs on PC Boot / Restart |
+| **`watchdog.vbs`** | Background worker that checks `KioskAgent.exe` every 3s & auto-restarts it on crash/error. | Invisible Watchdog Worker |
+| **`ecosystem.config.js`** | PM2 Process Manager configuration for production deployments. | PM2 Managed Worker |
+| **`logs.bat`** | Double-click to open live streaming terminal logs (PM2 or Serilog tailing). | Interactive Log Window |
+| **`stop.bat`** | Double-click to cleanly terminate `KioskAgent.exe`, Watchdog, and PM2 processes. | Manual Stop Utility |
+| **`install_all.bat`** | One-click setup script for portable zip installations. | Interactive Setup |
+
+---
+
+## 4. Verification & Health Check
 
 Open Command Prompt or Web Browser on the physical KIOSK machine and navigate to:
 
@@ -60,24 +81,15 @@ Expected JSON Response:
 
 ---
 
-## 4. Managing the Windows Service
+## 5. Manual Controls
 
-To check status, start, stop, or restart the agent service from PowerShell (Admin):
-
-```powershell
-# Check service status
-Get-Service EmployeeIDKioskAgent
-
-# Restart service
-Restart-Service EmployeeIDKioskAgent
-
-# Stop service
-Stop-Service EmployeeIDKioskAgent
-```
+- **View Live Logs:** Double-click `logs.bat` on Desktop or installation directory.
+- **Stop Agent & Watchdog:** Double-click `stop.bat` on Desktop or installation directory.
+- **Restart Agent Invisibly:** Double-click `start_hidden.vbs`.
 
 ---
 
-## 5. Troubleshooting Guide
+## 6. Troubleshooting Guide
 
 - **Port 7125 Conflict:** Verify no other application is listening on port 7125: `netstat -ano | findstr 7125`. Change `Kiosk:Port` in `appsettings.json` if necessary.
 - **Printer Offline Error:** Verify USB/Ethernet connection to the ID Card Printer. Check installed printers in Windows Control Panel -> Devices and Printers.

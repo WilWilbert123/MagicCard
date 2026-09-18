@@ -6,7 +6,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { CardTemplateJSON, renderCardToCanvas } from '@workspace/card-engine';
 import { DEFAULT_AVATAR_PLACEHOLDER, enterpriseStore, createFallbackEmployee } from '@/lib/data/enterpriseStore';
-import { RotateCcw, Play, Pause, Sun, Moon } from 'lucide-react';
+import { RotateCcw, Play, Pause, Sun, Moon, Sparkles } from 'lucide-react';
 
 interface ThreeCardViewerProps {
   template: CardTemplateJSON;
@@ -14,6 +14,8 @@ interface ThreeCardViewerProps {
   employeeData?: any;
   baseUrl?: string;
   autoRotate?: boolean;
+  showControls?: boolean;
+  className?: string;
 }
 
 export default function ThreeCardViewer({
@@ -22,16 +24,20 @@ export default function ThreeCardViewer({
   employeeData,
   baseUrl,
   autoRotate = false,
+  showControls = true,
+  className = '',
 }: ThreeCardViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isFlipped, setIsFlipped] = useState(false);
   const [rotating, setRotating] = useState(autoRotate);
   const [stageTheme, setStageTheme] = useState<'light' | 'dark'>('dark');
+  const [holoEnabled, setHoloEnabled] = useState(true);
   const [settings, setSettings] = useState<any>(null);
 
   const isFlippedRef = useRef(isFlipped);
   const rotatingRef = useRef(rotating);
+  const holoEnabledRef = useRef(holoEnabled);
 
   useEffect(() => {
     if (!employeeData && !employeeNumber) {
@@ -51,6 +57,10 @@ export default function ThreeCardViewer({
   useEffect(() => {
     rotatingRef.current = rotating;
   }, [rotating]);
+
+  useEffect(() => {
+    holoEnabledRef.current = holoEnabled;
+  }, [holoEnabled]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -226,6 +236,80 @@ export default function ThreeCardViewer({
     backMesh.rotation.set(0, Math.PI, 0);
     cardGroup.add(backMesh);
 
+    // ── Smooth Iridescent Holographic Security Foil Overlay ─────────
+    const holoUniforms = {
+      uTime: { value: 0 },
+      uOpacity: { value: 0.16 },
+      uEnabled: { value: true },
+    };
+
+    const holoMaterial = new THREE.ShaderMaterial({
+      uniforms: holoUniforms,
+      vertexShader: `
+        varying vec3 vNormal;
+        varying vec3 vViewPosition;
+        varying vec2 vUv;
+        void main() {
+          vUv = uv;
+          vNormal = normalize(normalMatrix * normal);
+          vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+          vViewPosition = -mvPosition.xyz;
+          gl_Position = projectionMatrix * mvPosition;
+        }
+      `,
+      fragmentShader: `
+        uniform float uTime;
+        uniform float uOpacity;
+        uniform bool uEnabled;
+        varying vec3 vNormal;
+        varying vec3 vViewPosition;
+        varying vec2 vUv;
+
+        vec3 rainbow(float t) {
+          return 0.5 + 0.5 * cos(6.28318 * (t + vec3(0.0, 0.33, 0.67)));
+        }
+
+        void main() {
+          if (!uEnabled) {
+            discard;
+          }
+          vec3 normal = normalize(vNormal);
+          vec3 viewDir = normalize(vViewPosition);
+
+          // Soft Fresnel reflection — intensifies smoothly as the card tilts
+          float fresnel = pow(1.0 - max(dot(normal, viewDir), 0.0), 2.0);
+          float angle = dot(normal, viewDir);
+
+          // Subtle iridescent wave shift
+          float holoPattern = sin((vUv.x * 12.0 + vUv.y * 12.0) + angle * 6.0 + uTime * 0.4);
+          float hue = vUv.x * 0.5 + vUv.y * 0.5 + angle * 1.2 + holoPattern * 0.12;
+
+          vec3 holoColor = rainbow(hue);
+
+          // Soft diagonal security seal stripes
+          float stripe = sin((vUv.x - vUv.y) * 35.0 + uTime * 0.2) * 0.5 + 0.5;
+          float intensity = (fresnel * 0.75 + stripe * 0.25) * uOpacity;
+
+          gl_FragColor = vec4(holoColor, clamp(intensity, 0.0, 0.22));
+        }
+      `,
+      transparent: true,
+      depthWrite: false,
+      polygonOffset: true,
+      polygonOffsetFactor: -2,
+    });
+
+    const holoFrontGeo = createFaceGeometry(faceWidth, faceHeight, faceRadius);
+    const holoFrontMesh = new THREE.Mesh(holoFrontGeo, holoMaterial);
+    holoFrontMesh.position.set(0, 0, cardThickness / 2 + 0.0165);
+    cardGroup.add(holoFrontMesh);
+
+    const holoBackGeo = createFaceGeometry(faceWidth, faceHeight, faceRadius);
+    const holoBackMesh = new THREE.Mesh(holoBackGeo, holoMaterial);
+    holoBackMesh.position.set(0, 0, -(cardThickness / 2 + 0.0165));
+    holoBackMesh.rotation.set(0, Math.PI, 0);
+    cardGroup.add(holoBackMesh);
+
     // ── Contact Shadow (soft blob under card) ──────────────────────
     const shadowGeo = new THREE.PlaneGeometry(isVertical ? 3.0 : 4.4, isVertical ? 4.2 : 2.8);
     const shadowCanvas = document.createElement('canvas');
@@ -333,6 +417,10 @@ export default function ThreeCardViewer({
       // Gentle float — very subtle (premium, not cartoon)
       cardGroup.position.y = Math.sin(elapsed * 1.1) * 0.028;
 
+      // Update Holo Shader uniforms
+      holoUniforms.uTime.value = elapsed;
+      holoUniforms.uEnabled.value = holoEnabledRef.current;
+
       controls.autoRotate = rotatingRef.current;
       controls.update();
 
@@ -348,10 +436,13 @@ export default function ThreeCardViewer({
       geometry.dispose();
       frontPlaneGeo.dispose();
       backPlaneGeo.dispose();
+      holoFrontGeo.dispose();
+      holoBackGeo.dispose();
       shadowGeo.dispose();
       pvcMaterial.dispose();
       frontMaterial.dispose();
       backMaterial.dispose();
+      holoMaterial.dispose();
       shadowMat.dispose();
       if (frontTex) frontTex.dispose();
       if (backTex) backTex.dispose();
@@ -365,48 +456,63 @@ export default function ThreeCardViewer({
 
     <div
       ref={containerRef}
-      className={`relative w-full h-[520px] rounded-2xl border overflow-hidden select-none transition-colors duration-500 ${stageTheme === 'light'
+      className={`relative w-full h-full min-h-[440px] rounded-2xl border overflow-hidden select-none transition-colors duration-500 ${stageTheme === 'light'
         ? 'bg-gradient-to-br from-[#c8d4e0] via-[#b8c8da] to-[#a8bad0] border-slate-400 shadow-xl'
         : 'bg-gradient-to-br from-[#111827] via-[#0a1020] to-[#060c18] border-slate-800/80 shadow-2xl'
-        }`}
+        } ${className}`}
     >
       {/* Icon-Only Controls Overlay */}
-      <div className="absolute top-4 left-4 z-10 flex items-center gap-2">
-        <button
-          onClick={() => setIsFlipped(!isFlipped)}
-          title={isFlipped ? 'Flip to Front (Obverse)' : 'Flip to Back (Reverse)'}
-          className={`p-2.5 rounded-xl border backdrop-blur shadow-md transition active:scale-95 flex items-center justify-center ${stageTheme === 'light'
-            ? 'bg-white/90 hover:bg-white text-slate-800 border-slate-300'
-            : 'bg-slate-900/80 hover:bg-slate-800 text-white border-slate-700'
-            }`}
-        >
-          <RotateCcw className="w-4 h-4" />
-        </button>
-
-        <button
-          onClick={() => setRotating(!rotating)}
-          title={rotating ? 'Pause 3D Auto Rotation' : 'Start 3D Auto Rotation'}
-          className={`p-2.5 rounded-xl border backdrop-blur shadow-md transition active:scale-95 flex items-center justify-center ${rotating
-            ? 'bg-red-600 border-red-600 text-white shadow-red-600/30'
-            : stageTheme === 'light'
+      {showControls && (
+        <div className="absolute top-4 left-4 z-10 flex items-center gap-2">
+          <button
+            onClick={() => setIsFlipped(!isFlipped)}
+            title={isFlipped ? 'Flip to Front (Obverse)' : 'Flip to Back (Reverse)'}
+            className={`p-2.5 rounded-xl border backdrop-blur shadow-md transition active:scale-95 flex items-center justify-center ${stageTheme === 'light'
               ? 'bg-white/90 hover:bg-white text-slate-800 border-slate-300'
               : 'bg-slate-900/80 hover:bg-slate-800 text-white border-slate-700'
-            }`}
-        >
-          {rotating ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-        </button>
+              }`}
+          >
+            <RotateCcw className="w-4 h-4" />
+          </button>
 
-        <button
-          onClick={() => setStageTheme(stageTheme === 'light' ? 'dark' : 'light')}
-          title={stageTheme === 'light' ? 'Switch to Dark Studio Environment' : 'Switch to Light Studio Environment'}
-          className={`p-2.5 rounded-xl border backdrop-blur shadow-md transition active:scale-95 flex items-center justify-center ${stageTheme === 'light'
-            ? 'bg-white/90 hover:bg-white text-amber-600 border-slate-300'
-            : 'bg-slate-900/80 hover:bg-slate-800 text-amber-400 border-slate-700'
-            }`}
-        >
-          {stageTheme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
-        </button>
-      </div>
+          <button
+            onClick={() => setRotating(!rotating)}
+            title={rotating ? 'Pause 3D Auto Rotation' : 'Start 3D Auto Rotation'}
+            className={`p-2.5 rounded-xl border backdrop-blur shadow-md transition active:scale-95 flex items-center justify-center ${rotating
+              ? 'bg-red-600 border-red-600 text-white shadow-red-600/30'
+              : stageTheme === 'light'
+                ? 'bg-white/90 hover:bg-white text-slate-800 border-slate-300'
+                : 'bg-slate-900/80 hover:bg-slate-800 text-white border-slate-700'
+              }`}
+          >
+            {rotating ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+          </button>
+
+          <button
+            onClick={() => setStageTheme(stageTheme === 'light' ? 'dark' : 'light')}
+            title={stageTheme === 'light' ? 'Switch to Dark Studio Environment' : 'Switch to Light Studio Environment'}
+            className={`p-2.5 rounded-xl border backdrop-blur shadow-md transition active:scale-95 flex items-center justify-center ${stageTheme === 'light'
+              ? 'bg-white/90 hover:bg-white text-amber-600 border-slate-300'
+              : 'bg-slate-900/80 hover:bg-slate-800 text-amber-400 border-slate-700'
+              }`}
+          >
+            {stageTheme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+          </button>
+
+          <button
+            onClick={() => setHoloEnabled(!holoEnabled)}
+            title={holoEnabled ? 'Disable Iridescent Holographic Security Foil' : 'Enable Iridescent Holographic Security Foil'}
+            className={`p-2.5 rounded-xl border backdrop-blur shadow-md transition active:scale-95 flex items-center justify-center ${holoEnabled
+              ? 'bg-amber-500/20 text-amber-400 border-amber-500/40 shadow-amber-500/20'
+              : stageTheme === 'light'
+                ? 'bg-white/90 hover:bg-white text-slate-400 border-slate-300'
+                : 'bg-slate-900/80 hover:bg-slate-800 text-slate-500 border-slate-700'
+              }`}
+          >
+            <Sparkles className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
 
 
