@@ -271,7 +271,7 @@ export default function ThreeCardViewer({
         // High-vibrancy smooth spectral rainbow hue function
         vec3 spectralRainbow(float t) {
           vec3 c = 0.5 + 0.5 * cos(6.2831853 * (t + vec3(0.0, 0.333, 0.667)));
-          return clamp(c, 0.0, 1.0);
+          return clamp(c * 1.25 - 0.1, 0.0, 1.0);
         }
 
         void main() {
@@ -286,13 +286,14 @@ export default function ThreeCardViewer({
           vec3 lightDir = normalize(vec3(-2.0, 4.0, 5.0));
           vec3 halfVector = normalize(lightDir + viewDir);
 
-          // Card Orientation Angle calculation:
-          // Uses world normal Z-axis to measure true card rotation angle independent of camera perspective fanning.
-          // In direct front (or back) view, abs(vWorldNormal.z) = 1.0 across the entire card surface.
-          float rotOff = clamp(1.0 - abs(vWorldNormal.z), 0.0, 1.0);
+          // Card Orientation relative to Camera Viewing Axis:
+          // dot(normal, vec3(0,0,1)) measures card face alignment with camera in view space.
+          // Exactly 1.0 when facing flat head-on, dropping smoothly as card or OrbitControls camera rotates.
+          float headOnAlignment = abs(dot(normal, vec3(0.0, 0.0, 1.0)));
+          float rotOff = clamp(1.0 - headOnAlignment, 0.0, 1.0);
 
-          // Tilt Factor: Strictly 0.0 when facing flat/front view.
-          // As soon as card rotates even 1° off-axis, tiltFactor instantly ramps up.
+          // Tilt Factor: Strictly 0.0 at perfect flat front view.
+          // Instantly ramps up to 1.0 as soon as user rotates view or card!
           float tiltFactor = smoothstep(0.001, 0.025, rotOff);
 
           float NdotV = max(dot(normal, viewDir), 0.0);
@@ -300,20 +301,19 @@ export default function ThreeCardViewer({
 
           // Smooth Metallic Specular Glare — silky light sheen sweep across card surface
           float NdotH = max(dot(normal, halfVector), 0.0);
-          float specGleam = pow(NdotH, 32.0); // Concentrated silky metallic highlight
-          float specSoft = pow(NdotH, 8.0);   // Smooth surrounding sheen
+          float specGleam = pow(NdotH, 16.0); // Silky metallic highlight
+          float specWide = pow(NdotH, 4.0);   // Smooth surrounding sheen
 
-          // Dynamic silky rainbow spectrum driven by card rotation angle & UV position
-          float rotationAngleShift = dot(vWorldNormal, vec3(0.8, 0.5, 0.3));
-          float hue = (vUv.x * 0.5 + vUv.y * 0.4) + (NdotV * 1.4) + (rotationAngleShift * 1.2) + (uTime * 0.15);
+          // Dynamic silky rainbow spectrum driven by card angle & UV position
+          float hue = (vUv.x * 0.7 + vUv.y * 0.5) + (NdotV * 1.5) + (uTime * 0.2);
           vec3 rainbowColor = spectralRainbow(hue);
 
-          // Blend smooth spectral rainbow with brilliant white metallic specular sheen (no grid/stripe noise)
-          vec3 shinyHoloColor = mix(rainbowColor, vec3(1.0, 0.98, 0.96), specGleam * 0.9);
+          // Blend smooth spectral rainbow with brilliant white metallic specular sheen
+          vec3 shinyHoloColor = mix(rainbowColor, vec3(1.0, 0.98, 0.95), specGleam * 0.85);
 
-          // Overall intensity: strictly 0.0 at direct front view (tiltFactor = 0) and silky smooth sheen upon rotation
-          float intensity = (fresnel * 0.35 + specGleam * 0.8 + specSoft * 0.3) * uOpacity * 2.5 * tiltFactor;
-          intensity = clamp(intensity, 0.0, 0.65);
+          // Overall intensity: strictly 0.0 at direct front view (tiltFactor = 0) and rich glowing sheen upon rotation
+          float intensity = (fresnel * 0.45 + specGleam * 0.85 + specWide * 0.35 + 0.25) * uOpacity * 2.8 * tiltFactor;
+          intensity = clamp(intensity, 0.0, 0.75);
 
           gl_FragColor = vec4(shinyHoloColor, intensity);
         }
