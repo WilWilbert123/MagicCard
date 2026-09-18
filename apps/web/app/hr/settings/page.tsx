@@ -1753,21 +1753,21 @@ export default function HrSettingsPage() {
       {activeTab === 'DATABASE' && (
         <div className="space-y-6 max-w-5xl">
           {/* Header Banner */}
-          <div className="flex items-start justify-between gap-4 p-6 rounded-2xl bg-gradient-to-r from-red-950/40 via-slate-900 to-slate-900 border border-red-900/40 shadow-sm">
+          <div className="flex items-start justify-between gap-4 p-6 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
             <div className="space-y-1.5">
-              <div className="flex items-center gap-2 text-red-400 font-extrabold text-lg">
+              <div className="flex items-center gap-2 text-red-600 dark:text-red-400 font-extrabold text-lg">
                 <Database className="w-5 h-5" />
                 <span>Supabase Database Table Cleanup (Super Admin)</span>
               </div>
-              <p className="text-slate-400 text-xs max-w-2xl leading-relaxed">
+              <p className="text-slate-600 dark:text-slate-400 text-xs max-w-2xl leading-relaxed">
                 Clear operational database records (Employees, Kiosks, Print Jobs, Audit Logs, Photos) directly in Supabase.
-                Core security tables (<strong className="text-red-300">Roles, User Roles, Permissions, Profiles, System Settings</strong>) are locked and protected from deletion.
+                Core security tables (<strong className="text-red-600 dark:text-red-300 font-semibold">Roles, User Roles, Permissions, Profiles, System Settings</strong>) are locked and protected from deletion.
               </p>
             </div>
             <button
               onClick={loadTableMetrics}
               disabled={loadingMetrics}
-              className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold flex items-center gap-2 border border-slate-700 transition shrink-0"
+              className="px-4 py-2 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-800 dark:text-white text-xs font-semibold flex items-center gap-2 border border-slate-200 dark:border-slate-700 shadow-sm transition shrink-0"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${loadingMetrics ? 'animate-spin' : ''}`} />
               <span>Refresh Table Metrics</span>
@@ -1775,10 +1775,10 @@ export default function HrSettingsPage() {
           </div>
 
           {/* Security Alert */}
-          <div className="p-4 rounded-xl bg-amber-950/30 border border-amber-800/40 text-amber-200 text-xs flex items-start gap-3">
-            <Shield className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+          <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/40 text-amber-900 dark:text-amber-200 text-xs flex items-start gap-3">
+            <Shield className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
             <div>
-              <strong className="font-bold">Security Protection Policy:</strong> Protected system tables (<span className="font-mono underline">roles, user_roles, profiles, system_settings, permissions</span>) are strictly guarded and disabled. Clearing operational tables will remove data permanently. Use with caution.
+              <strong className="font-bold">Security Protection Policy:</strong> Protected system tables (<span className="font-mono underline text-amber-800 dark:text-amber-300">roles, user_roles, profiles, system_settings, permissions</span>) are strictly guarded and disabled. Clearing operational tables will remove data permanently. Use with caution.
             </div>
           </div>
 
@@ -1791,22 +1791,22 @@ export default function HrSettingsPage() {
                   key={tableName}
                   className={`p-5 rounded-2xl border transition-all flex flex-col justify-between space-y-4 ${
                     isProtected
-                      ? 'bg-slate-900/40 border-slate-800/80 opacity-75'
-                      : 'bg-white dark:bg-[#111827]/90 border-slate-200 dark:border-slate-800 hover:border-slate-700 shadow-sm'
+                      ? 'bg-slate-100/90 dark:bg-slate-900/40 border-slate-300 dark:border-slate-800/80'
+                      : 'bg-white dark:bg-[#111827]/90 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 shadow-sm'
                   }`}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <span className="font-mono text-sm font-bold text-slate-900 dark:text-white">
+                        <span className={`font-mono text-sm font-bold ${isProtected ? 'text-slate-700 dark:text-slate-300' : 'text-slate-900 dark:text-white'}`}>
                           {tableName}
                         </span>
                         {isProtected ? (
-                          <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-slate-800 text-slate-400 border border-slate-700 flex items-center gap-1">
-                            <Lock className="w-3 h-3 text-amber-400" /> Protected Core
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-400 border border-slate-300 dark:border-slate-700 flex items-center gap-1">
+                            <Lock className="w-3 h-3 text-amber-600 dark:text-amber-400" /> Protected Core
                           </span>
                         ) : (
-                          <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-emerald-950/60 text-emerald-400 border border-emerald-800/60">
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60 font-semibold">
                             Clearable
                           </span>
                         )}
@@ -1817,33 +1817,33 @@ export default function HrSettingsPage() {
                     </div>
 
                     <div className="text-right shrink-0">
-                      <div className="text-xl font-extrabold font-mono text-slate-900 dark:text-white">
+                      <div className={`text-xl font-extrabold font-mono ${isProtected ? 'text-slate-600 dark:text-slate-400' : 'text-slate-900 dark:text-white'}`}>
                         {info.count.toLocaleString()}
                       </div>
-                      <div className="text-[10px] text-slate-500 uppercase tracking-wider">
+                      <div className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider font-semibold">
                         Records
                       </div>
                     </div>
                   </div>
 
                   <div className="pt-3 border-t border-slate-200 dark:border-slate-800/80 flex items-center justify-between">
-                    <span className="text-[11px] text-slate-400 font-mono">
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
                       {isProtected ? 'Locked by System Policy' : 'Safe to truncate'}
                     </span>
 
                     {isProtected ? (
                       <button
                         disabled
-                        className="px-3.5 py-1.5 rounded-lg bg-slate-800 text-slate-500 text-xs font-semibold cursor-not-allowed border border-slate-700/50 flex items-center gap-1.5"
+                        className="px-3.5 py-1.5 rounded-lg bg-slate-200/90 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-xs font-semibold cursor-not-allowed border border-slate-300 dark:border-slate-700/50 flex items-center gap-1.5"
                       >
-                        <Lock className="w-3.5 h-3.5" />
+                        <Lock className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
                         <span>Cannot Clear</span>
                       </button>
                     ) : (
                       <button
                         onClick={() => setSelectedTableToClear({ name: tableName, label: info.label, count: info.count })}
                         disabled={info.count === 0}
-                        className="px-3.5 py-1.5 rounded-lg bg-red-600/10 hover:bg-red-600 border border-red-600/30 hover:border-red-500 text-red-400 hover:text-white text-xs font-bold transition flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
+                        className="px-3.5 py-1.5 rounded-lg bg-red-50 hover:bg-red-600 dark:bg-red-600/10 dark:hover:bg-red-600 border border-red-200 hover:border-red-600 dark:border-red-600/30 dark:hover:border-red-500 text-red-600 hover:text-white dark:text-red-400 dark:hover:text-white text-xs font-bold transition flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed shadow-xs"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                         <span>Clear Table Data</span>
@@ -1857,31 +1857,31 @@ export default function HrSettingsPage() {
 
           {/* Safety Confirmation Modal */}
           {selectedTableToClear && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-              <div className="w-full max-w-lg bg-[#0d1322] border border-red-900/60 rounded-3xl p-7 text-white shadow-2xl space-y-6 relative">
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 dark:bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+              <div className="w-full max-w-lg bg-white dark:bg-[#0d1322] border border-slate-200 dark:border-red-900/60 rounded-3xl p-7 text-slate-900 dark:text-white shadow-2xl space-y-6 relative">
                 <button
                   onClick={() => { setSelectedTableToClear(null); setClearConfirmInput(''); }}
-                  className="absolute top-5 right-5 p-2 text-slate-400 hover:text-white rounded-xl bg-slate-800/60 transition"
+                  className="absolute top-5 right-5 p-2 text-slate-400 hover:text-slate-700 dark:hover:text-white rounded-xl bg-slate-100 dark:bg-slate-800/60 transition"
                 >
                   <X className="w-4 h-4" />
                 </button>
 
                 <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-red-950 border border-red-800 text-red-400 flex items-center justify-center shrink-0 shadow-lg shadow-red-950/50">
+                  <div className="w-12 h-12 rounded-2xl bg-red-100 dark:bg-red-950 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0 shadow-lg shadow-red-500/10">
                     <AlertTriangle className="w-6 h-6" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold text-white">
+                    <h3 className="text-xl font-bold text-slate-900 dark:text-white">
                       Clear Table '{selectedTableToClear.name}'?
                     </h3>
-                    <p className="text-xs text-slate-400 mt-1">
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                       {selectedTableToClear.label} — Supabase Table Cleanup
                     </p>
                   </div>
                 </div>
 
-                <div className="p-4 rounded-xl bg-red-950/40 border border-red-800/60 text-xs text-red-200 space-y-2">
-                  <p className="font-bold flex items-center gap-1.5 text-red-400">
+                <div className="p-4 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800/60 text-xs text-red-900 dark:text-red-200 space-y-2">
+                  <p className="font-bold flex items-center gap-1.5 text-red-600 dark:text-red-400">
                     <AlertTriangle className="w-4 h-4 shrink-0" />
                     WARNING: Permanent Data Deletion
                   </p>
@@ -1891,23 +1891,23 @@ export default function HrSettingsPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="block text-xs font-semibold text-slate-300">
-                    Type <span className="font-mono font-bold text-red-400">DELETE DATA</span> to confirm:
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    Type <span className="font-mono font-bold text-red-600 dark:text-red-400">DELETE DATA</span> to confirm:
                   </label>
                   <input
                     type="text"
                     value={clearConfirmInput}
                     onChange={(e) => setClearConfirmInput(e.target.value)}
                     placeholder="DELETE DATA"
-                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm font-mono text-white placeholder-slate-600 focus:outline-none focus:border-red-500 transition"
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm font-mono text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-600 focus:outline-none focus:border-red-500 transition"
                   />
                 </div>
 
-                <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-800">
+                <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">
                   <button
                     type="button"
                     onClick={() => { setSelectedTableToClear(null); setClearConfirmInput(''); }}
-                    className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition"
+                    className="px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold transition"
                   >
                     Cancel
                   </button>
@@ -1915,7 +1915,7 @@ export default function HrSettingsPage() {
                     type="button"
                     disabled={clearConfirmInput.trim() !== 'DELETE DATA' || isClearingTable}
                     onClick={handleConfirmClearTable}
-                    className="px-6 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-bold transition flex items-center gap-2 shadow-lg shadow-red-950/50"
+                    className="px-6 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-bold transition flex items-center gap-2 shadow-lg shadow-red-600/20"
                   >
                     {isClearingTable ? (
                       <>
