@@ -11,7 +11,6 @@ import {
   Printer,
   FileText,
   Settings,
-  Search,
   Building2,
   LogOut,
   Bell,
@@ -20,7 +19,9 @@ import {
   Clock,
   XCircle,
   Sun,
-  Moon
+  Moon,
+  Info,
+  X
 } from 'lucide-react';
 import { useTheme } from '@/components/ThemeProvider';
 import type { KioskDevice, PrintJobRecord } from '@/lib/data/enterpriseStore';
@@ -51,6 +52,7 @@ export default function HrLayout({ children }: { children: React.ReactNode }) {
   const [selectedBranch, setSelectedBranch] = useState('ALL');
   const { isDark, toggleTheme } = useTheme();
   const [adminUser, setAdminUser] = useState<{ email: string; name: string } | null>(null);
+  const [showDevModal, setShowDevModal] = useState(false);
 
   // If on login page, DO NOT render the sidebar, top navigation, or any protected UI
   const isLoginPage = pathname === '/hr/login';
@@ -287,17 +289,7 @@ export default function HrLayout({ children }: { children: React.ReactNode }) {
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top Header */}
         <header className="h-16 border-b border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-[#0f172a]/60 backdrop-blur-md px-6 flex items-center justify-between sticky top-0 z-20 shadow-xs transition-colors duration-300">
-          <div className="flex items-center gap-4 flex-1 max-w-lg">
-            {/* Search Input */}
-            <div className="relative w-full">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-              <input
-                type="text"
-                placeholder="Search employees, KIOSKs, templates..."
-                className="w-full bg-slate-100/80 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700/80 rounded-lg pl-9 pr-4 py-1.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-red-500 focus:bg-white transition"
-              />
-            </div>
-
+          <div className="flex items-center gap-4">
             {/* Branch Selector */}
             <div className="flex items-center gap-2">
               <Building2 className="w-4 h-4 text-slate-400 shrink-0" />
@@ -427,6 +419,64 @@ export default function HrLayout({ children }: { children: React.ReactNode }) {
         <main className="p-6 flex-1 overflow-y-auto bg-slate-50/70 dark:bg-[#0b0f17] transition-colors duration-300">
           {children}
         </main>
+      </div>
+
+      {/* Bottom Right Floating Developer Info Badge & Modal */}
+      <div className="fixed bottom-4 right-4 z-50 flex flex-col items-end gap-2.5 pointer-events-auto">
+        {showDevModal && (
+          <div className="w-80 rounded-2xl bg-white dark:bg-[#0f172a] border border-slate-200/90 dark:border-slate-800 p-5 shadow-2xl space-y-3.5 text-slate-900 dark:text-white transition-all animate-in fade-in slide-in-from-bottom-2 duration-200">
+            <div className="flex items-start justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-red-600 via-red-500 to-amber-500 text-white flex items-center justify-center font-extrabold text-xs shadow-md shrink-0">
+                  WG
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold leading-tight text-slate-900 dark:text-white">Wilbert Gamis</h4>
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">System Architect & Developer</span>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowDevModal(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                title="Close modal"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-2 text-[11px] leading-relaxed text-slate-600 dark:text-slate-300">
+              <p className="font-semibold text-slate-900 dark:text-slate-100">
+                Built Completely from Scratch
+              </p>
+              <p>
+                Architected and developed this <strong>Enterprise ID Card & Kiosk Platform</strong> completely from scratch — integrating Next.js 15, Supabase Auth & Database, custom 2D/3D WebGL Card Canvas Engine, and local C# Kiosk Agent hardware daemons.
+              </p>
+            </div>
+
+            <div className="pt-2 border-t border-slate-200 dark:border-slate-800 flex flex-wrap gap-1.5 text-[9px] font-mono font-bold">
+              <span className="px-2 py-0.5 rounded-md bg-red-50 text-red-700 dark:bg-red-950/80 dark:text-red-300 border border-red-200 dark:border-red-800">
+                Next.js 15
+              </span>
+              <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 dark:bg-blue-950/80 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                Supabase
+              </span>
+              <span className="px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 dark:bg-purple-950/80 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
+                3D WebGL Engine
+              </span>
+              <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                C# Kiosk Agent
+              </span>
+            </div>
+          </div>
+        )}
+
+        <button
+          onClick={() => setShowDevModal(!showDevModal)}
+          title="About the Developer (Wilbert Gamis)"
+          className="p-2.5 rounded-full border shadow-xl backdrop-blur-md transition-all active:scale-95 flex items-center justify-center bg-white dark:bg-slate-900 text-black dark:text-white border-slate-300 dark:border-slate-700 hover:border-red-500 dark:hover:border-red-500"
+        >
+          <Info className="w-4 h-4" />
+        </button>
       </div>
     </div>
   );

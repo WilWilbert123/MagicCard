@@ -71,8 +71,10 @@ export default function Card2DViewer({
     <div className={`relative flex items-center justify-center p-2 ${className}`}>
       <canvas
         ref={canvasRef}
-        className={`rounded-[18px] shadow-[0_20px_50px_-10px_rgba(0,0,0,0.6)] border border-slate-700/80 block object-contain ${
-          isVertical ? 'max-h-[350px] max-w-[230px]' : 'max-h-[260px] max-w-[420px]'
+        className={`rounded-[24px] shadow-[0_30px_70px_-15px_rgba(0,0,0,0.8)] border border-slate-700/80 block object-contain transition-all duration-300 ${
+          isVertical
+            ? 'h-[520px] sm:h-[580px] max-h-[62vh] w-auto'
+            : 'w-[580px] sm:w-[660px] max-w-[90vw] h-auto'
         }`}
       />
     </div>
