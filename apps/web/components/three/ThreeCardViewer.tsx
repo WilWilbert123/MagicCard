@@ -268,10 +268,10 @@ export default function ThreeCardViewer({
         varying vec3 vWorldNormal;
         varying vec2 vUv;
 
-        // High-vibrancy spectral rainbow hue function
+        // High-vibrancy smooth spectral rainbow hue function
         vec3 spectralRainbow(float t) {
           vec3 c = 0.5 + 0.5 * cos(6.2831853 * (t + vec3(0.0, 0.333, 0.667)));
-          return clamp(c * 1.35 - 0.12, 0.0, 1.0);
+          return clamp(c, 0.0, 1.0);
         }
 
         void main() {
@@ -286,39 +286,34 @@ export default function ThreeCardViewer({
           vec3 lightDir = normalize(vec3(-2.0, 4.0, 5.0));
           vec3 halfVector = normalize(lightDir + viewDir);
 
-          // Fresnel & Angle calculations
+          // Card Orientation Angle calculation:
+          // Uses world normal Z-axis to measure true card rotation angle independent of camera perspective fanning.
+          // In direct front (or back) view, abs(vWorldNormal.z) = 1.0 across the entire card surface.
+          float rotOff = clamp(1.0 - abs(vWorldNormal.z), 0.0, 1.0);
+
+          // Tilt Factor: Strictly 0.0 when facing flat/front view.
+          // As soon as card rotates even 1° off-axis, tiltFactor instantly ramps up.
+          float tiltFactor = smoothstep(0.001, 0.025, rotOff);
+
           float NdotV = max(dot(normal, viewDir), 0.0);
-          float angleOff = 1.0 - NdotV;
+          float fresnel = pow(1.0 - NdotV, 1.5);
 
-          // Tilt Factor: Strictly 0.0 at direct head-on front view (NdotV >= 0.9995),
-          // instantly becoming visible upon even slight rotation/tilt.
-          float tiltFactor = smoothstep(0.0005, 0.015, angleOff);
-
-          float fresnel = pow(angleOff, 1.5);
-
-          // Specular Glare — concentrated metallic flash when card tilts toward light
+          // Smooth Metallic Specular Glare — silky light sheen sweep across card surface
           float NdotH = max(dot(normal, halfVector), 0.0);
-          float specGleam = pow(NdotH, 16.0);
-          float specWide = pow(NdotH, 4.0);
+          float specGleam = pow(NdotH, 32.0); // Concentrated silky metallic highlight
+          float specSoft = pow(NdotH, 8.0);   // Smooth surrounding sheen
 
-          // Dynamic rainbow spectrum driven by card rotation angle & UV position
+          // Dynamic silky rainbow spectrum driven by card rotation angle & UV position
           float rotationAngleShift = dot(vWorldNormal, vec3(0.8, 0.5, 0.3));
-          float hue = (vUv.x * 0.6 + vUv.y * 0.4) + (NdotV * 1.6) + (rotationAngleShift * 1.4) + (uTime * 0.18);
+          float hue = (vUv.x * 0.5 + vUv.y * 0.4) + (NdotV * 1.4) + (rotationAngleShift * 1.2) + (uTime * 0.15);
           vec3 rainbowColor = spectralRainbow(hue);
 
-          // Fine diffraction grating & security seal pattern (diagonal holographic stripes & micro-lines)
-          float stripePattern1 = sin((vUv.x * 24.0 + vUv.y * 24.0) + (NdotV * 8.0) + uTime * 0.4) * 0.5 + 0.5;
-          float stripePattern2 = cos((vUv.x * 45.0 - vUv.y * 35.0) - (rotationAngleShift * 10.0)) * 0.5 + 0.5;
-          float microGrid = sin(vUv.x * 75.0) * sin(vUv.y * 75.0) * 0.5 + 0.5;
+          // Blend smooth spectral rainbow with brilliant white metallic specular sheen (no grid/stripe noise)
+          vec3 shinyHoloColor = mix(rainbowColor, vec3(1.0, 0.98, 0.96), specGleam * 0.9);
 
-          float holoPattern = (stripePattern1 * 0.45 + stripePattern2 * 0.35 + microGrid * 0.2);
-
-          // Blend spectral rainbow with brilliant white metallic specular flash
-          vec3 shinyHoloColor = mix(rainbowColor, vec3(1.0, 0.98, 0.95), specGleam * 0.85);
-
-          // Overall intensity is zero at direct front view (tiltFactor = 0) and bursts into foil sheen instantly when rotated
-          float intensity = (fresnel * 0.45 + specGleam * 0.75 + specWide * 0.25 + holoPattern * 0.35) * uOpacity * 2.8 * tiltFactor;
-          intensity = clamp(intensity, 0.0, 0.75);
+          // Overall intensity: strictly 0.0 at direct front view (tiltFactor = 0) and silky smooth sheen upon rotation
+          float intensity = (fresnel * 0.35 + specGleam * 0.8 + specSoft * 0.3) * uOpacity * 2.5 * tiltFactor;
+          intensity = clamp(intensity, 0.0, 0.65);
 
           gl_FragColor = vec4(shinyHoloColor, intensity);
         }
