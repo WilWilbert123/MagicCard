@@ -6,7 +6,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { CardTemplateJSON, renderCardToCanvas } from '@workspace/card-engine';
 import { DEFAULT_AVATAR_PLACEHOLDER, enterpriseStore, createFallbackEmployee } from '@/lib/data/enterpriseStore';
-import { RotateCcw, Play, Pause, Sun, Moon, Sparkles } from 'lucide-react';
+import { RotateCcw, Play, Pause, Sun, Moon } from 'lucide-react';
 
 interface ThreeCardViewerProps {
   template: CardTemplateJSON;
@@ -236,10 +236,10 @@ export default function ThreeCardViewer({
     backMesh.rotation.set(0, Math.PI, 0);
     cardGroup.add(backMesh);
 
-    // ── Smooth Iridescent Holographic Security Foil Overlay ─────────
+    // ── Ultra-Vibrant Shiny Iridescent Holographic Security Foil Overlay ─────────
     const holoUniforms = {
       uTime: { value: 0 },
-      uOpacity: { value: 0.16 },
+      uOpacity: { value: 0.28 },
       uEnabled: { value: true },
     };
 
@@ -248,10 +248,13 @@ export default function ThreeCardViewer({
       vertexShader: `
         varying vec3 vNormal;
         varying vec3 vViewPosition;
+        varying vec3 vWorldNormal;
         varying vec2 vUv;
+
         void main() {
           vUv = uv;
           vNormal = normalize(normalMatrix * normal);
+          vWorldNormal = normalize(mat3(modelMatrix) * normal);
           vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
           vViewPosition = -mvPosition.xyz;
           gl_Position = projectionMatrix * mvPosition;
@@ -263,36 +266,59 @@ export default function ThreeCardViewer({
         uniform bool uEnabled;
         varying vec3 vNormal;
         varying vec3 vViewPosition;
+        varying vec3 vWorldNormal;
         varying vec2 vUv;
 
-        vec3 rainbow(float t) {
-          return 0.5 + 0.5 * cos(6.28318 * (t + vec3(0.0, 0.33, 0.67)));
+        // High-vibrancy spectral rainbow hue function
+        vec3 spectralRainbow(float t) {
+          vec3 c = 0.5 + 0.5 * cos(6.2831853 * (t + vec3(0.0, 0.333, 0.667)));
+          return clamp(c * 1.35 - 0.12, 0.0, 1.0);
         }
 
         void main() {
           if (!uEnabled) {
             discard;
           }
+
           vec3 normal = normalize(vNormal);
           vec3 viewDir = normalize(vViewPosition);
 
-          // Soft Fresnel reflection — intensifies smoothly as the card tilts
-          float fresnel = pow(1.0 - max(dot(normal, viewDir), 0.0), 2.0);
-          float angle = dot(normal, viewDir);
+          // Simulated Key Light direction for realistic specular glare sweep
+          vec3 lightDir = normalize(vec3(-2.0, 4.0, 5.0));
+          vec3 halfVector = normalize(lightDir + viewDir);
 
-          // Subtle iridescent wave shift
-          float holoPattern = sin((vUv.x * 12.0 + vUv.y * 12.0) + angle * 6.0 + uTime * 0.4);
-          float hue = vUv.x * 0.5 + vUv.y * 0.5 + angle * 1.2 + holoPattern * 0.12;
+          // Fresnel & Angle calculations
+          float NdotV = max(dot(normal, viewDir), 0.0);
+          float fresnel = pow(1.0 - NdotV, 2.0);
 
-          vec3 holoColor = rainbow(hue);
+          // Specular Glare — concentrated metallic flash when card tilts toward light
+          float NdotH = max(dot(normal, halfVector), 0.0);
+          float specGleam = pow(NdotH, 16.0); // Sharp, metallic shiny glare!
+          float specWide = pow(NdotH, 4.0);   // Broad metallic sheen
 
-          // Soft diagonal security seal stripes
-          float stripe = sin((vUv.x - vUv.y) * 35.0 + uTime * 0.2) * 0.5 + 0.5;
-          float intensity = (fresnel * 0.75 + stripe * 0.25) * uOpacity;
+          // Dynamic rainbow spectrum driven by card rotation angle & UV position
+          float rotationAngleShift = dot(vWorldNormal, vec3(0.8, 0.5, 0.3));
+          float hue = (vUv.x * 0.6 + vUv.y * 0.4) + (NdotV * 1.6) + (rotationAngleShift * 1.4) + (uTime * 0.18);
+          vec3 rainbowColor = spectralRainbow(hue);
 
-          gl_FragColor = vec4(holoColor, clamp(intensity, 0.0, 0.22));
+          // Fine diffraction grating & security seal pattern (diagonal holographic stripes & micro-lines)
+          float stripePattern1 = sin((vUv.x * 24.0 + vUv.y * 24.0) + (NdotV * 8.0) + uTime * 0.4) * 0.5 + 0.5;
+          float stripePattern2 = cos((vUv.x * 45.0 - vUv.y * 35.0) - (rotationAngleShift * 10.0)) * 0.5 + 0.5;
+          float microGrid = sin(vUv.x * 75.0) * sin(vUv.y * 75.0) * 0.5 + 0.5;
+
+          float holoPattern = (stripePattern1 * 0.45 + stripePattern2 * 0.35 + microGrid * 0.2);
+
+          // Blend spectral rainbow with brilliant white metallic specular flash
+          vec3 shinyHoloColor = mix(rainbowColor, vec3(1.0, 0.98, 0.95), specGleam * 0.85);
+
+          // Overall intensity bursts into a brilliant shiny sheen as the card rotates!
+          float intensity = (fresnel * 0.35 + specGleam * 0.85 + specWide * 0.25 + holoPattern * 0.18) * uOpacity * 2.2;
+          intensity = clamp(intensity, 0.05, 0.72);
+
+          gl_FragColor = vec4(shinyHoloColor, intensity);
         }
       `,
+      blending: THREE.AdditiveBlending, // True glowing metallic foil sheen overlay
       transparent: true,
       depthWrite: false,
       polygonOffset: true,
@@ -497,19 +523,6 @@ export default function ThreeCardViewer({
               }`}
           >
             {stageTheme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
-          </button>
-
-          <button
-            onClick={() => setHoloEnabled(!holoEnabled)}
-            title={holoEnabled ? 'Disable Iridescent Holographic Security Foil' : 'Enable Iridescent Holographic Security Foil'}
-            className={`p-2.5 rounded-xl border backdrop-blur shadow-md transition active:scale-95 flex items-center justify-center ${holoEnabled
-              ? 'bg-amber-500/20 text-amber-400 border-amber-500/40 shadow-amber-500/20'
-              : stageTheme === 'light'
-                ? 'bg-white/90 hover:bg-white text-slate-400 border-slate-300'
-                : 'bg-slate-900/80 hover:bg-slate-800 text-slate-500 border-slate-700'
-              }`}
-          >
-            <Sparkles className="w-4 h-4" />
           </button>
         </div>
       )}
