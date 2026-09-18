@@ -26,6 +26,7 @@ import {
   FileDown,
   Check,
   Eye,
+  LockKeyhole,
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { Employee, Branch, Department, DEFAULT_CR80_TEMPLATE } from '@/lib/data/enterpriseStore';
@@ -58,6 +59,19 @@ export default function HrEmployeesPage() {
   const [selectedDept, setSelectedDept] = useState('ALL');
   const [selectedStatus, setSelectedStatus] = useState('ALL');
   const [selectedCardStatus, setSelectedCardStatus] = useState('ALL');
+
+  // Branch Security & Policy states
+  const [restrictCrossBranchPrinting, setRestrictCrossBranchPrinting] = useState(false);
+  const [userBranchId, setUserBranchId] = useState<string | null>(null);
+  const [userBranchName, setUserBranchName] = useState<string | null>(null);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(true);
+
+  const isPrintRestricted = (emp: Employee) => {
+    if (!restrictCrossBranchPrinting) return false;
+    if (isSuperAdmin) return false;
+    if (!userBranchId || !emp.branchId) return false;
+    return emp.branchId !== userBranchId;
+  };
 
   // Modals
   const [showAddModal, setShowAddModal] = useState(false);
@@ -253,7 +267,7 @@ export default function HrEmployeesPage() {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [empRes, brRes, deptRes, tplRes] = await Promise.all([
+      const [empRes, brRes, deptRes, tplRes, setRes, profRes] = await Promise.all([
         fetch('/api/employees', { cache: 'no-store' }).then(async (r) => {
           if (!r.ok) throw new Error('Employees API request failed.');
           return r.json();
@@ -270,12 +284,27 @@ export default function HrEmployeesPage() {
           if (!r.ok) return null;
           return r.json();
         }),
+        fetch('/api/settings', { cache: 'no-store' }).then(async (r) => {
+          if (!r.ok) return null;
+          return r.json();
+        }),
+        fetch('/api/auth/profile', { cache: 'no-store' }).then(async (r) => {
+          if (!r.ok) return null;
+          return r.json();
+        }),
       ]);
 
-      const loadedEmployees = empRes.data ?? [];
-      const loadedBranches = brRes.data ?? [];
-      const loadedDepartments = deptRes.data ?? [];
+      const loadedEmployees = empRes?.data ?? [];
+      const loadedBranches = brRes?.data ?? [];
+      const loadedDepartments = deptRes?.data ?? [];
       const loadedTemplates = tplRes?.data ?? [];
+
+      if (setRes?.data) setRestrictCrossBranchPrinting(setRes.data.restrictCrossBranchPrinting ?? false);
+      if (profRes?.data) {
+        setUserBranchId(profRes.data.branchId || null);
+        setUserBranchName(profRes.data.branchName || null);
+        setIsSuperAdmin(profRes.data.isSuperAdmin ?? true);
+      }
 
       setEmployees(loadedEmployees);
       setBranches(loadedBranches);
@@ -316,6 +345,39 @@ export default function HrEmployeesPage() {
       );
     } catch (err: any) {
       toast.error(err.message);
+    }
+  };
+
+  const handlePrintCard = async (emp: Employee) => {
+    try {
+      toast.info(`Dispatching print job for ${emp.fullName}...`);
+      const res = await fetch('/api/print-jobs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          employeeId: emp.id,
+          employeeNumber: emp.employeeNumber,
+          employeeName: emp.fullName,
+          branchId: emp.branchId,
+          branchName: emp.branchName,
+          departmentId: emp.departmentId,
+          departmentName: emp.departmentName,
+          status: 'COMPLETED',
+        }),
+      });
+
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Failed to dispatch print job');
+
+      toast.success(`Badge printed! Card status updated to ISSUED for ${emp.fullName}.`);
+      
+      // Update local state immediately
+      setEmployees((prev) =>
+        prev.map((e) => (e.id === emp.id ? { ...e, cardStatus: 'PRINTED' } : e))
+      );
+      loadData();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to dispatch print job.');
     }
   };
 
@@ -926,6 +988,24 @@ export default function HrEmployeesPage() {
                   </td>
                   <td className="px-5 py-3 text-right">
                     <div className="flex items-center justify-end gap-1.5">
+                      {isPrintRestricted(emp) ? (
+                        <button
+                          type="button"
+                          disabled
+                          title={`Cross-branch card printing is restricted by admin policy. Employee belongs to ${emp.branchName || 'another branch'}.`}
+                          className="p-1.5 text-slate-300 dark:text-slate-600 cursor-not-allowed rounded opacity-50"
+                        >
+                          <Printer className="w-4 h-4" />
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handlePrintCard(emp)}
+                          title={emp.cardStatus === 'REPRINT_REQUESTED' ? "Process Reprint Request (Prints & sets to ISSUED)" : "Print Badge (Sets status to ISSUED)"}
+                          className="p-1.5 text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded transition"
+                        >
+                          <Printer className="w-4 h-4" />
+                        </button>
+                      )}
                       <button
                         onClick={() => handleOpenPreview3dModal(emp)}
                         title="View 3D ID Card Badge (Same as KIOSK)"
@@ -1786,6 +1866,27 @@ export default function HrEmployeesPage() {
               </div>
 
               <div className="flex items-center gap-3">
+                {isPrintRestricted(previewEmployee) ? (
+                  <button
+                    disabled
+                    title={`Cross-branch printing is restricted by admin policy. Employee belongs to ${previewEmployee.branchName || 'another branch'}.`}
+                    className="px-4 py-2 rounded-xl bg-slate-800 text-slate-400 font-semibold flex items-center gap-1.5 opacity-60 cursor-not-allowed border border-slate-700"
+                  >
+                    <LockKeyhole className="w-3.5 h-3.5 text-amber-500" />
+                    Cross-Branch Printing Restricted
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => {
+                      handlePrintCard(previewEmployee);
+                      setShow3dPreviewModal(false);
+                    }}
+                    className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold flex items-center gap-1.5 transition shadow-md"
+                  >
+                    <Printer className="w-3.5 h-3.5" />
+                    Print / Reprint Badge
+                  </button>
+                )}
                 <Link
                   href="/kiosk"
                   target="_blank"
@@ -1798,7 +1899,7 @@ export default function HrEmployeesPage() {
                   onClick={() => setShow3dPreviewModal(false)}
                   className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white font-semibold shadow-md transition"
                 >
-                  Close Preview
+                  Close
                 </button>
               </div>
             </div>

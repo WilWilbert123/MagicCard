@@ -27,6 +27,7 @@ import {
   Image as ImageIcon
 } from 'lucide-react';
 import { Branch, Department } from '@/lib/data/enterpriseStore';
+import { compressImageFile } from '@/lib/utils/imageCompressor';
 
 export default function HrSettingsPage() {
   const [activeTab, setActiveTab] = useState<'POLICIES' | 'BRANCHES' | 'DEPARTMENTS' | 'POSITIONS' | 'ACCOUNT'>('POLICIES');
@@ -44,17 +45,21 @@ export default function HrSettingsPage() {
   const [passwordError, setPasswordError] = useState('');
   const [showForgotPasswordHelp, setShowForgotPasswordHelp] = useState(false);
   const [adminUsers, setAdminUsers] = useState<any[]>([]);
+  const [availableRoles, setAvailableRoles] = useState<any[]>([]);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(true);
   const [usersLoading, setUsersLoading] = useState(true);
   const [showAddUserModal, setShowAddUserModal] = useState(false);
   const [userForm, setUserForm] = useState({
     displayName: '',
     email: '',
     password: '',
+    roleId: '',
   });
   const [userCreating, setUserCreating] = useState(false);
 
   // Policy States
   const [allowSelfServiceReprint, setAllowSelfServiceReprint] = useState(true);
+  const [restrictCrossBranchPrinting, setRestrictCrossBranchPrinting] = useState(false);
   const [kioskInactivityTimeoutSeconds, setKioskInactivityTimeoutSeconds] = useState(45);
   const [defaultBleedMm, setDefaultBleedMm] = useState(1.5);
   const [defaultSafeMarginMm, setDefaultSafeMarginMm] = useState(3.0);
@@ -179,6 +184,7 @@ export default function HrSettingsPage() {
       .then((json) => {
         if (json.data) {
           setAllowSelfServiceReprint(json.data.allowSelfServiceReprint ?? true);
+          setRestrictCrossBranchPrinting(json.data.restrictCrossBranchPrinting ?? false);
           setKioskInactivityTimeoutSeconds(json.data.kioskInactivityTimeoutSeconds ?? 45);
           setDefaultBleedMm(json.data.defaultBleedMm ?? 1.5);
           setDefaultSafeMarginMm(json.data.defaultSafeMarginMm ?? 3.0);
@@ -193,6 +199,19 @@ export default function HrSettingsPage() {
       })
       .catch(() => toast.error('Failed to load system settings.'));
 
+    fetch('/api/roles', { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.data && Array.isArray(json.data)) {
+          setAvailableRoles(json.data);
+          const hrRole = json.data.find((r: any) => r.name === 'HR Admin') || json.data[0];
+          if (hrRole) {
+            setUserForm((prev) => ({ ...prev, roleId: prev.roleId || hrRole.id }));
+          }
+        }
+      })
+      .catch(() => {});
+
     loadUsers();
   }, []);
 
@@ -204,6 +223,9 @@ export default function HrSettingsPage() {
       if (json.data) {
         setAdminUsers(json.data);
       }
+      if (typeof json.isSuperAdmin === 'boolean') {
+        setIsSuperAdmin(json.isSuperAdmin);
+      }
     } catch {
       toast.error('Failed to load HR admin users.');
     } finally {
@@ -212,10 +234,11 @@ export default function HrSettingsPage() {
   };
 
   const handleUploadPhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const rawFile = e.target.files?.[0];
+    if (!rawFile) return;
     setUploadingPhoto(true);
     try {
+      const file = await compressImageFile(rawFile, 800, 800, 0.82);
       const formData = new FormData();
       formData.append('file', file);
       const res = await fetch('/api/upload', {
@@ -225,7 +248,13 @@ export default function HrSettingsPage() {
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || 'Failed to upload photo');
       setDefaultPreviewPhotoUrl(json.url);
-      toast.success('Default preview photo uploaded to Supabase Storage!');
+      const oldKb = Math.round(rawFile.size / 1024);
+      const newKb = Math.round(file.size / 1024);
+      toast.success(
+        oldKb > newKb
+          ? `Preview photo compressed (${oldKb}KB ➔ ${newKb}KB) and saved!`
+          : `Default preview photo uploaded to Supabase Storage!`
+      );
     } catch (err: any) {
       toast.error(err.message || 'Failed to upload image.');
     } finally {
@@ -234,10 +263,11 @@ export default function HrSettingsPage() {
   };
 
   const handleUploadLogo = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const rawFile = e.target.files?.[0];
+    if (!rawFile) return;
     setUploadingLogo(true);
     try {
+      const file = await compressImageFile(rawFile, 1000, 1000, 0.85);
       const formData = new FormData();
       formData.append('file', file);
       const res = await fetch('/api/upload', {
@@ -247,7 +277,13 @@ export default function HrSettingsPage() {
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || 'Failed to upload logo');
       setDefaultCompanyLogoUrl(json.url);
-      toast.success('Default company logo uploaded to Supabase Storage!');
+      const oldKb = Math.round(rawFile.size / 1024);
+      const newKb = Math.round(file.size / 1024);
+      toast.success(
+        oldKb > newKb
+          ? `Logo compressed (${oldKb}KB ➔ ${newKb}KB) and saved!`
+          : `Default company logo uploaded to Supabase Storage!`
+      );
     } catch (err: any) {
       toast.error(err.message || 'Failed to upload logo.');
     } finally {
@@ -264,6 +300,7 @@ export default function HrSettingsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           allowSelfServiceReprint,
+          restrictCrossBranchPrinting,
           kioskInactivityTimeoutSeconds,
           defaultBleedMm,
           defaultSafeMarginMm,
@@ -372,8 +409,8 @@ export default function HrSettingsPage() {
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || 'Failed to create user account.');
 
-      toast.success('New HR Admin account created in Supabase Auth!');
-      setUserForm({ displayName: '', email: '', password: '' });
+      toast.success(`New ${json.data?.role?.name || 'HR Admin'} user created!`);
+      setUserForm({ displayName: '', email: '', password: '', roleId: availableRoles[0]?.id || '' });
       setShowAddUserModal(false);
       loadUsers();
     } catch (err: any) {
@@ -801,16 +838,27 @@ export default function HrSettingsPage() {
                   HR Corporate Admin Accounts (Supabase Auth)
                 </h2>
                 <p className="text-slate-500 dark:text-slate-400 text-xs mt-0.5">
-                  Manage backend HR administrator accounts authenticated via Supabase Auth.
+                  Manage backend HR administrator accounts authenticated via Supabase Auth and assign corporate RBAC roles.
                 </p>
               </div>
-              <button
-                onClick={() => setShowAddUserModal(true)}
-                className="px-3.5 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-semibold shadow-md shadow-red-600/20 transition flex items-center gap-1.5 self-start sm:self-auto"
-              >
-                <UserPlus className="w-4 h-4" /> Add HR Admin Account
-              </button>
+              {isSuperAdmin && (
+                <button
+                  onClick={() => setShowAddUserModal(true)}
+                  className="px-3.5 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-semibold shadow-md shadow-red-600/20 transition flex items-center gap-1.5 self-start sm:self-auto"
+                >
+                  <UserPlus className="w-4 h-4" /> Add HR Admin Account
+                </button>
+              )}
             </div>
+
+            {!isSuperAdmin && (
+              <div className="p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-amber-800 dark:text-amber-300 text-xs flex items-center gap-2.5">
+                <LockKeyhole className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                <span>
+                  <strong>Restricted Privileges:</strong> Only <strong>Super Admin</strong> account holders can add new administrator accounts or modify RBAC system roles.
+                </span>
+              </div>
+            )}
 
             <div className="rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-[#111827]/90 overflow-hidden shadow-sm">
               <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300">
@@ -818,6 +866,7 @@ export default function HrSettingsPage() {
                   <tr>
                     <th className="px-5 py-3">User / Admin</th>
                     <th className="px-5 py-3">Email Address</th>
+                    <th className="px-5 py-3">Assigned Role</th>
                     <th className="px-5 py-3">Status</th>
                     <th className="px-5 py-3">Created Date</th>
                     <th className="px-5 py-3 text-right">Actions</th>
@@ -826,59 +875,77 @@ export default function HrSettingsPage() {
                 <tbody className="divide-y divide-slate-200/80 dark:divide-slate-800/60">
                   {usersLoading ? (
                     <tr>
-                      <td colSpan={5} className="px-5 py-8 text-center text-slate-500 text-xs">
+                      <td colSpan={6} className="px-5 py-8 text-center text-slate-500 text-xs">
                         <div className="inline-flex items-center gap-2">
                           <div className="w-3.5 h-3.5 rounded-full border-2 border-slate-400 border-t-red-500 animate-spin" />
-                          Loading accounts from Supabase Auth...
+                          Loading accounts & RBAC roles from Supabase Auth...
                         </div>
                       </td>
                     </tr>
                   ) : adminUsers.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="px-5 py-8 text-center text-slate-500 text-xs">
+                      <td colSpan={6} className="px-5 py-8 text-center text-slate-500 text-xs">
                         No admin accounts found. Add your first HR user above.
                       </td>
                     </tr>
                   ) : (
-                    adminUsers.map((u) => (
-                      <tr key={u.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition">
-                        <td className="px-5 py-3 font-semibold text-slate-900 dark:text-white flex items-center gap-2">
-                          <div className="w-7 h-7 rounded-full bg-red-100 dark:bg-red-950/60 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800/60 flex items-center justify-center font-bold text-xs shrink-0">
-                            {u.displayName?.[0] || 'A'}
-                          </div>
-                          <div>
-                            <div>{u.displayName}</div>
-                            {u.isCurrent && (
-                              <span className="text-[9px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 rounded px-1.5 py-0.2">
-                                (You / Logged In)
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-5 py-3 text-slate-600 dark:text-slate-300 font-mono text-[11px]">{u.email}</td>
-                        <td className="px-5 py-3">
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
-                            ACTIVE
-                          </span>
-                        </td>
-                        <td className="px-5 py-3 text-slate-500 text-[11px]">
-                          {new Date(u.createdAt).toLocaleDateString()}
-                        </td>
-                        <td className="px-5 py-3 text-right">
-                          {u.isCurrent ? (
-                            <span className="text-[10px] text-slate-400 italic">Current Session</span>
-                          ) : (
-                            <button
-                              onClick={() => handleDeleteUser(u.id, u.email)}
-                              className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition"
-                              title="Delete user account"
+                    adminUsers.map((u) => {
+                      const roleName = u.role?.name || 'HR Admin';
+                      const isSuper = roleName === 'Super Admin';
+                      return (
+                        <tr key={u.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition">
+                          <td className="px-5 py-3 font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+                            <div className="w-7 h-7 rounded-full bg-red-100 dark:bg-red-950/60 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800/60 flex items-center justify-center font-bold text-xs shrink-0">
+                              {u.displayName?.[0] || 'A'}
+                            </div>
+                            <div>
+                              <div>{u.displayName}</div>
+                              {u.isCurrent && (
+                                <span className="text-[9px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 rounded px-1.5 py-0.2">
+                                  (You / Logged In)
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-5 py-3 text-slate-600 dark:text-slate-300 font-mono text-[11px]">{u.email}</td>
+                          <td className="px-5 py-3">
+                            <span
+                              className={`px-2 py-0.5 rounded-full text-[10px] font-bold border inline-flex items-center gap-1 ${
+                                isSuper
+                                  ? 'bg-red-50 text-red-700 dark:bg-red-950/80 dark:text-red-300 border-red-200 dark:border-red-800'
+                                  : 'bg-blue-50 text-blue-700 dark:bg-blue-950/80 dark:text-blue-300 border-blue-200 dark:border-blue-800'
+                              }`}
                             >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    ))
+                              <Shield className="w-3 h-3" />
+                              {roleName}
+                            </span>
+                          </td>
+                          <td className="px-5 py-3">
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+                              ACTIVE
+                            </span>
+                          </td>
+                          <td className="px-5 py-3 text-slate-500 text-[11px]">
+                            {new Date(u.createdAt).toLocaleDateString()}
+                          </td>
+                          <td className="px-5 py-3 text-right">
+                            {u.isCurrent ? (
+                              <span className="text-[10px] text-slate-400 italic">Current Session</span>
+                            ) : isSuperAdmin ? (
+                              <button
+                                onClick={() => handleDeleteUser(u.id, u.email)}
+                                className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition"
+                                title="Delete user account"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            ) : (
+                              <span className="text-[10px] text-slate-400">Protected</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })
                   )}
                 </tbody>
               </table>
@@ -927,6 +994,51 @@ export default function HrSettingsPage() {
                 onChange={(e) => setKioskInactivityTimeoutSeconds(parseInt(e.target.value) || 45)}
                 className="w-24 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded px-2.5 py-1 text-xs text-slate-900 dark:text-white"
               />
+            </div>
+          </div>
+
+          {/* Cross-Branch Card Printing Policy */}
+          <div className="rounded-xl bg-white dark:bg-[#111827]/90 border border-slate-200/80 dark:border-slate-800 p-6 space-y-4 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <Building2 className="w-4 h-4 text-red-500" />
+                  Cross-Branch Card Printing Policy
+                </h2>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+                  Control whether HR staff assigned to one branch can print ID cards for employees in another branch.
+                </p>
+              </div>
+              <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border ${
+                restrictCrossBranchPrinting
+                  ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/70 dark:text-amber-300 border-amber-300 dark:border-amber-800'
+                  : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800'
+              }`}>
+                {restrictCrossBranchPrinting ? 'RESTRICTED (Same Branch Only)' : 'UNRESTRICTED (Any Branch)'}
+              </span>
+            </div>
+
+            <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-4">
+              <div className="space-y-1">
+                <div className="text-xs font-bold text-slate-900 dark:text-white">
+                  Restrict Printing to User's Assigned Branch Only
+                </div>
+                <div className="text-[11px] text-slate-500 dark:text-slate-400 max-w-2xl leading-relaxed">
+                  <strong>Disabled (Off):</strong> Cross-branch printing is allowed. An HR user from Branch 1 can print cards for employees assigned to Branch 4.
+                  <br />
+                  <strong>Enabled (On):</strong> Restricts card printing. An HR user from Branch 1 cannot print cards for employees in Branch 4. <em>(Super Admins bypass this policy constraint)</em>.
+                </div>
+              </div>
+
+              <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                <input
+                  type="checkbox"
+                  checked={restrictCrossBranchPrinting}
+                  onChange={(e) => setRestrictCrossBranchPrinting(e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-slate-600 peer-checked:bg-red-600"></div>
+              </label>
             </div>
           </div>
 
@@ -1600,6 +1712,29 @@ export default function HrSettingsPage() {
                   onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
                   className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white"
                 />
+              </div>
+
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Corporate Role & System Permissions *</label>
+                <select
+                  required
+                  value={userForm.roleId}
+                  onChange={(e) => setUserForm({ ...userForm, roleId: e.target.value })}
+                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white font-medium"
+                >
+                  {availableRoles.length === 0 ? (
+                    <option value="">Loading system roles...</option>
+                  ) : (
+                    availableRoles.map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {r.name} {r.description ? `(${r.description})` : ''}
+                      </option>
+                    ))
+                  )}
+                </select>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">
+                  Controls module privileges and permissions. Only Super Admins can add accounts and configure roles.
+                </p>
               </div>
 
               <div>

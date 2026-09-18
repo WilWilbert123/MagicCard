@@ -19,11 +19,25 @@ export async function GET() {
     .eq('id', user.id)
     .maybeSingle();
 
+  // Fetch assigned user role from user_roles table
+  const { data: userRole } = await admin
+    .from('user_roles')
+    .select('role_id, roles(id, name, description)')
+    .eq('user_id', user.id)
+    .maybeSingle();
+
+  const roleName = (userRole?.roles as any)?.name || 'Super Admin';
+  const roleId = userRole?.role_id || (userRole?.roles as any)?.id || null;
+  const isSuperAdmin = roleName === 'Super Admin';
+
   return NextResponse.json({
     data: {
       id: user.id,
       email: user.email || profile?.email || '',
       displayName: profile?.full_name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Admin HR',
+      roleId,
+      roleName,
+      isSuperAdmin,
     },
   });
 }
