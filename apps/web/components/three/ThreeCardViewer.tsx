@@ -288,16 +288,18 @@ export default function ThreeCardViewer({
 
           // Fresnel & Angle calculations
           float NdotV = max(dot(normal, viewDir), 0.0);
-          float fresnel = pow(1.0 - NdotV, 2.0);
+          float angleOff = 1.0 - NdotV;
 
-          // Tilt Factor: Strictly 0.0 at direct head-on view (NdotV = 1.0),
-          // rising smoothly as the card tilts/rotates off-axis.
-          float tiltFactor = clamp(pow(1.0 - NdotV, 1.4), 0.0, 1.0);
+          // Tilt Factor: Strictly 0.0 at direct head-on front view (NdotV >= 0.9995),
+          // instantly becoming visible upon even slight rotation/tilt.
+          float tiltFactor = smoothstep(0.0005, 0.015, angleOff);
+
+          float fresnel = pow(angleOff, 1.5);
 
           // Specular Glare — concentrated metallic flash when card tilts toward light
           float NdotH = max(dot(normal, halfVector), 0.0);
-          float specGleam = pow(NdotH, 16.0) * tiltFactor; // Metallic glare only on tilt
-          float specWide = pow(NdotH, 4.0) * tiltFactor;
+          float specGleam = pow(NdotH, 16.0);
+          float specWide = pow(NdotH, 4.0);
 
           // Dynamic rainbow spectrum driven by card rotation angle & UV position
           float rotationAngleShift = dot(vWorldNormal, vec3(0.8, 0.5, 0.3));
@@ -314,8 +316,8 @@ export default function ThreeCardViewer({
           // Blend spectral rainbow with brilliant white metallic specular flash
           vec3 shinyHoloColor = mix(rainbowColor, vec3(1.0, 0.98, 0.95), specGleam * 0.85);
 
-          // Overall intensity is zero at front view (tiltFactor = 0) and bursts into foil sheen as rotated
-          float intensity = (fresnel * 0.45 + specGleam * 0.75 + specWide * 0.25 + holoPattern * 0.2) * uOpacity * 2.5 * tiltFactor;
+          // Overall intensity is zero at direct front view (tiltFactor = 0) and bursts into foil sheen instantly when rotated
+          float intensity = (fresnel * 0.45 + specGleam * 0.75 + specWide * 0.25 + holoPattern * 0.35) * uOpacity * 2.8 * tiltFactor;
           intensity = clamp(intensity, 0.0, 0.75);
 
           gl_FragColor = vec4(shinyHoloColor, intensity);

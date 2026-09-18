@@ -2621,8 +2621,8 @@ export default function CardDesignerPage() {
       {/* 3D Realistic Preview Modal */}
       {show3DModal && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-6">
-          <div className="w-full max-w-4xl rounded-2xl bg-[#0e1320] border border-slate-800 p-6 shadow-2xl">
-            <div className="flex items-center justify-between mb-4 border-b border-slate-800 pb-3">
+          <div className="w-full max-w-5xl h-[85vh] max-h-[780px] rounded-2xl bg-[#0e1320] border border-slate-800 p-6 shadow-2xl flex flex-col justify-between">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3 shrink-0">
               <h2 className="text-lg font-bold text-white flex items-center gap-2">
                 <Eye className="w-5 h-5 text-red-500" />
                 3D Preview
@@ -2632,17 +2632,20 @@ export default function CardDesignerPage() {
               </button>
             </div>
 
-            <ThreeCardViewer
-              template={template}
-              employeeNumber={previewEmployee?.employeeNumber || 'EMP-000125'}
-              employeeData={activeBindingMap}
-              autoRotate={true}
-            />
+            <div className="flex-1 w-full min-h-0 py-2">
+              <ThreeCardViewer
+                template={template}
+                employeeNumber={previewEmployee?.employeeNumber || 'EMP-000125'}
+                employeeData={activeBindingMap}
+                autoRotate={true}
+                className="w-full h-full"
+              />
+            </div>
 
-            <div className="mt-4 flex justify-end">
+            <div className="pt-3 border-t border-slate-800 flex justify-end shrink-0">
               <button
                 onClick={() => setShow3DModal(false)}
-                className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold"
+                className="px-5 py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold shadow-md transition"
               >
                 Close Preview
               </button>

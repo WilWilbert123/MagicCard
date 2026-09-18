@@ -22,6 +22,7 @@ import {
   X,
   FileSpreadsheet,
   User,
+  AlertTriangle,
   HelpCircle,
   FileDown,
   Check,
@@ -861,6 +862,7 @@ export default function HrEmployeesPage() {
             <option value="ALL">All Employment</option>
             <option value="ACTIVE">Active</option>
             <option value="INACTIVE">Inactive</option>
+            <option value="SUSPENDED">Suspended</option>
           </select>
 
           {/* Card Status Filter */}
@@ -919,29 +921,55 @@ export default function HrEmployeesPage() {
                 </td>
               </tr>
             ) : (
-              filteredEmployees.map((emp) => (
-                <tr key={emp.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition">
-                  <td className="px-5 py-3">
-                    <input type="checkbox" className="rounded border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-red-600 focus:ring-0" />
-                  </td>
-                  <td className="px-5 py-3">
-                    {emp.photoUrl ? (
-                      /* eslint-disable-next-line @next/next/no-img-element */
-                      <img
-                        src={emp.photoUrl}
-                        alt={emp.fullName}
-                        className="w-9 h-9 rounded-full object-cover border border-slate-200 dark:border-slate-700"
-                      />
-                    ) : (
-                      <div className="w-9 h-9 rounded-full bg-red-100 dark:bg-red-950/60 border border-red-200 dark:border-red-800/60 flex items-center justify-center text-xs font-bold text-red-600 dark:text-red-400">
-                        {emp.firstName?.[0] || 'E'}{emp.lastName?.[0] || 'M'}
+              filteredEmployees.map((emp) => {
+                const isSuspended = emp.employmentStatus === 'SUSPENDED';
+                const isInactive = emp.employmentStatus === 'INACTIVE';
+
+                return (
+                  <tr
+                    key={emp.id}
+                    className={`transition ${
+                      isSuspended
+                        ? 'bg-red-50/50 dark:bg-red-950/20 hover:bg-red-50 dark:hover:bg-red-950/30 border-l-4 border-l-red-500'
+                        : isInactive
+                        ? 'opacity-70 bg-slate-50/60 dark:bg-slate-900/40 hover:opacity-100 border-l-4 border-l-slate-400'
+                        : 'hover:bg-slate-50 dark:hover:bg-slate-800/30'
+                    }`}
+                  >
+                    <td className="px-5 py-3">
+                      <input type="checkbox" className="rounded border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-red-600 focus:ring-0" />
+                    </td>
+                    <td className="px-5 py-3">
+                      {emp.photoUrl ? (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img
+                          src={emp.photoUrl}
+                          alt={emp.fullName}
+                          className="w-9 h-9 rounded-full object-cover border border-slate-200 dark:border-slate-700"
+                        />
+                      ) : (
+                        <div className="w-9 h-9 rounded-full bg-red-100 dark:bg-red-950/60 border border-red-200 dark:border-red-800/60 flex items-center justify-center text-xs font-bold text-red-600 dark:text-red-400">
+                          {emp.firstName?.[0] || 'E'}{emp.lastName?.[0] || 'M'}
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-5 py-3">
+                      <div className="flex items-center gap-2">
+                        <div className="font-semibold text-slate-900 dark:text-white">{emp.fullName}</div>
+                        {isSuspended && (
+                          <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300 border border-red-300 dark:border-red-800 shrink-0 inline-flex items-center gap-1">
+                            <AlertTriangle className="w-2.5 h-2.5 text-red-600 dark:text-red-400" />
+                            SUSPENDED
+                          </span>
+                        )}
+                        {isInactive && (
+                          <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-400 border border-slate-300 dark:border-slate-700 shrink-0">
+                            INACTIVE
+                          </span>
+                        )}
                       </div>
-                    )}
-                  </td>
-                  <td className="px-5 py-3">
-                    <div className="font-semibold text-slate-900 dark:text-white">{emp.fullName}</div>
-                    <div className="text-[10px] text-slate-500">{emp.email}</div>
-                  </td>
+                      <div className="text-[10px] text-slate-500">{emp.email}</div>
+                    </td>
                   <td className="px-5 py-3 font-mono text-slate-600 dark:text-slate-300">{emp.employeeNumber}</td>
                   <td className="px-5 py-3 text-slate-600 dark:text-slate-400">{emp.departmentName}</td>
                   <td className="px-5 py-3 text-slate-600 dark:text-slate-400">{emp.positionTitle}</td>
@@ -1042,7 +1070,8 @@ export default function HrEmployeesPage() {
                     </div>
                   </td>
                 </tr>
-              ))
+                );
+              })
             )}
           </tbody>
         </table>

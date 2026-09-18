@@ -218,14 +218,35 @@ export default function KioskMainPage() {
 
 
 
-  // Inactivity timeout back to Screensaver on SEARCH screen
+  // Touchscreen Inactivity Timeout — Auto-resets KIOSK to SCREENSAVER if abandoned during search, preview, confirm or error
   useEffect(() => {
-    if (step !== 'SEARCH') return;
-    const timeout = setTimeout(() => {
-      setStep('SCREENSAVER');
-      setEmployeeInput('');
-    }, kioskTimeoutSeconds * 1000);
-    return () => clearTimeout(timeout);
+    if (step === 'SCREENSAVER' || step === 'PRINTING' || step === 'SUCCESS') return;
+
+    let timeoutId: NodeJS.Timeout;
+
+    const resetTimer = () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        setStep('SCREENSAVER');
+        setEmployeeInput('');
+        setFoundEmployee(null);
+        setErrorMessage('');
+      }, (kioskTimeoutSeconds || 45) * 1000);
+    };
+
+    resetTimer();
+
+    const handleUserActivity = () => resetTimer();
+    window.addEventListener('pointerdown', handleUserActivity);
+    window.addEventListener('keydown', handleUserActivity);
+    window.addEventListener('touchstart', handleUserActivity);
+
+    return () => {
+      clearTimeout(timeoutId);
+      window.removeEventListener('pointerdown', handleUserActivity);
+      window.removeEventListener('keydown', handleUserActivity);
+      window.removeEventListener('touchstart', handleUserActivity);
+    };
   }, [step, employeeInput, kioskTimeoutSeconds]);
 
   // Keypad Handlers
@@ -371,10 +392,12 @@ export default function KioskMainPage() {
   const handleStartPrint = async () => {
     if (!foundEmployee) return;
 
-    // Security check: Prevent spam re-printing if card is already printed/issued
+    // Security check: If card is already issued/printed, enforce HR self-service re-issue policy
     if (foundEmployee.cardStatus === 'ISSUED' || foundEmployee.cardStatus === 'PRINTED') {
-      toast.error('Card already issued for this employee. Contact HR for replacements.');
-      return;
+      if (!allowSelfServiceReprint) {
+        toast.error('Self-service badge re-issuance is disabled by HR policy. Please contact HR to authorize a replacement card.');
+        return;
+      }
     }
 
     setStep('PRINTING');
