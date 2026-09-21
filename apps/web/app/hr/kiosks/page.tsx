@@ -90,7 +90,7 @@ export default function HrKiosksPage() {
           name: newKioskName,
           branchId: selectedBranchId || branches[0]?.id,
           maxCardCapacity: newKioskCapacity || 50,
-          status: 'ONLINE',
+          status: 'OFFLINE',
         }),
       });
 
