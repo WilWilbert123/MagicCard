@@ -12,9 +12,9 @@ const DEFAULT_SETTINGS = {
   verificationBaseUrl: process.env.NEXT_PUBLIC_APP_URL || 'https://magic-card-trust-id.vercel.app',
   defaultPreviewPhotoUrl: '',
   defaultCompanyLogoUrl: '',
-  defaultPreviewName: 'Sample Employee',
-  defaultPreviewEmployeeNumber: 'EMP-000125',
-  defaultPreviewDepartment: 'Engineering & Technology',
+  defaultPreviewName: 'Wilbert Gamis',
+  defaultPreviewEmployeeNumber: 'EMP-000111',
+  defaultPreviewDepartment: 'MISD',
   defaultPreviewPosition: 'Software Engineer',
 };
 
