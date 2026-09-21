@@ -7,7 +7,7 @@ Set WshShell = CreateObject("WScript.Shell")
 Set fso = CreateObject("Scripting.FileSystemObject")
 
 Dim currentDir, exePath, logFolder, logFile
-currentDir = fso.GetAbsolutePathName(".")
+currentDir = fso.GetParentFolderName(WScript.ScriptFullName)
 exePath = currentDir & "\KioskAgent.exe"
 logFolder = currentDir & "\logs"
 

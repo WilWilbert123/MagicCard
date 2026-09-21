@@ -33,7 +33,9 @@ export async function POST(request: Request) {
         last_heartbeat_at: now,
         updated_at: now,
       };
-      if (kiosk.status !== 'DISABLED') {
+      if (body.status === 'OFFLINE') {
+        updateData.status = 'OFFLINE';
+      } else if (kiosk.status !== 'DISABLED') {
         updateData.status = 'ONLINE';
       }
       if (printerStatus) updateData.printer_status_summary = printerStatus;
