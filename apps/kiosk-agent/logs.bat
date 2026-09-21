@@ -9,37 +9,9 @@ echo.
 echo Press Ctrl+C at any time to exit log stream.
 echo.
 
-REM 1. Check if PM2 is active and managing KioskAgent
-where pm2 >nul 2>nul
-if %ERRORLEVEL% EQU 0 (
-    pm2 list 2>nul | findstr /I "KioskAgent" | findstr /I "online" >nul
-    if %ERRORLEVEL% EQU 0 (
-        echo [INFO] Active PM2 process detected. Streaming PM2 live logs...
-        echo --------------------------------------------------------
-        pm2 logs KioskAgent
-        goto end
-    )
-)
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$dir='%~dp0'; $commonPath=[System.IO.Path]::Combine($env:ProgramData, 'EmployeeID\KioskAgent\logs'); $localPath=[System.IO.Path]::Combine($dir, 'logs'); $files = Get-ChildItem -Path $commonPath, $localPath -Filter *.log -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending; if ($files.Count -gt 0) { Write-Host '[LIVE LOG FILE]' $files[0].FullName -ForegroundColor Yellow; Get-Content -Path $files[0].FullName -Wait -Tail 50 } else { Write-Host '[NOTICE] No log files found yet in:' -ForegroundColor Red; Write-Host '  1)' $commonPath -ForegroundColor Gray; Write-Host '  2)' $localPath -ForegroundColor Gray; Write-Host 'Please run AutoStart_Hidden.vbs first to start KioskAgent.' -ForegroundColor Yellow }"
 
-REM 2. Fallback to live tail of Serilog / Watchdog logs via PowerShell
-echo [INFO] Searching for live KioskAgent logs...
+echo.
 echo --------------------------------------------------------
-powershell -NoProfile -ExecutionPolicy Bypass -Command "^
-    $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition; ^
-    $commonLogPath = Join-Path $env:ProgramData 'EmployeeID\KioskAgent\logs'; ^
-    $localLogPath = Join-Path $scriptDir 'logs'; ^
-    $logFiles = Get-ChildItem -Path $commonLogPath, $localLogPath -Filter '*.log' -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending; ^
-    if ($logFiles.Count -gt 0) { ^
-        $targetFile = $logFiles[0].FullName; ^
-        Write-Host '[FOUND LOG FILE]' $targetFile -ForegroundColor Yellow; ^
-        Get-Content -Path $targetFile -Wait -Tail 50; ^
-    } else { ^
-        Write-Host '[WARNING] No log files found in:' -ForegroundColor Red; ^
-        Write-Host '  1)' $commonLogPath -ForegroundColor Gray; ^
-        Write-Host '  2)' $localLogPath -ForegroundColor Gray; ^
-        Write-Host 'Waiting for KioskAgent to generate logs...' -ForegroundColor Yellow; ^
-        Start-Sleep -Seconds 3; ^
-    }"
-
-:end
+echo Log stream ended.
 pause
