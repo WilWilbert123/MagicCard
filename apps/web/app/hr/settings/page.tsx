@@ -129,9 +129,9 @@ export default function HrSettingsPage() {
   const [verificationBaseUrl, setVerificationBaseUrl] = useState('https://magic-card-trust-id.vercel.app');
   const [defaultPreviewPhotoUrl, setDefaultPreviewPhotoUrl] = useState('');
   const [defaultCompanyLogoUrl, setDefaultCompanyLogoUrl] = useState('');
-  const [defaultPreviewName, setDefaultPreviewName] = useState('Michael Brown');
-  const [defaultPreviewEmployeeNumber, setDefaultPreviewEmployeeNumber] = useState('EMP-000125');
-  const [defaultPreviewDepartment, setDefaultPreviewDepartment] = useState('Global Operations');
+  const [defaultPreviewName, setDefaultPreviewName] = useState('Wilbert Gamis');
+  const [defaultPreviewEmployeeNumber, setDefaultPreviewEmployeeNumber] = useState('EMP-000111');
+  const [defaultPreviewDepartment, setDefaultPreviewDepartment] = useState('MISD');
   const [defaultPreviewPosition, setDefaultPreviewPosition] = useState('Software Engineer');
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);

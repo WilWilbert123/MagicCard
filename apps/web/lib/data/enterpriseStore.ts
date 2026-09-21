@@ -5,24 +5,24 @@ export const DEFAULT_AVATAR_PLACEHOLDER = `data:image/svg+xml;utf8,<svg xmlns="h
 export function createFallbackEmployee(settings?: any) {
   const photo = settings?.defaultPreviewPhotoUrl || settings?.default_preview_photo_url || DEFAULT_AVATAR_PLACEHOLDER;
   const logo = settings?.defaultCompanyLogoUrl || settings?.default_company_logo_url || '';
-  const fullName = settings?.defaultPreviewName || settings?.default_preview_name || 'Andree Pimentel';
+  const fullName = settings?.defaultPreviewName || settings?.default_preview_name || 'Wilbert Gamis';
 
   const parts = fullName.trim().split(' ');
-  const firstName = parts[0] || 'Andree';
-  const lastName = parts.slice(1).join(' ') || 'Pimentel';
+  const firstName = parts[0] || 'Wilbert';
+  const lastName = parts.slice(1).join(' ') || 'Gamis';
 
   return {
-    id: 'preview-emp-125',
-    employeeNumber: settings?.defaultPreviewEmployeeNumber || settings?.default_preview_employee_number || 'EMP-000125',
+    id: 'preview-emp-111',
+    employeeNumber: settings?.defaultPreviewEmployeeNumber || settings?.default_preview_employee_number || 'EMP-000111',
     firstName,
     middleName: '',
     lastName,
     callName: firstName,
     fullName,
-    department: settings?.defaultPreviewDepartment || settings?.default_preview_department || 'HRD',
-    departmentName: settings?.defaultPreviewDepartment || settings?.default_preview_department || 'HRD',
-    position: settings?.defaultPreviewPosition || settings?.default_preview_position || 'Recruitment',
-    positionTitle: settings?.defaultPreviewPosition || settings?.default_preview_position || 'Recruitment',
+    department: settings?.defaultPreviewDepartment || settings?.default_preview_department || 'MISD',
+    departmentName: settings?.defaultPreviewDepartment || settings?.default_preview_department || 'MISD',
+    position: settings?.defaultPreviewPosition || settings?.default_preview_position || 'Software Engineer',
+    positionTitle: settings?.defaultPreviewPosition || settings?.default_preview_position || 'Software Engineer',
     branch: 'Headquarters',
     branchName: 'Headquarters',
     email: `${firstName.toLowerCase()}.${lastName.toLowerCase()}@magiccard.corp`,
