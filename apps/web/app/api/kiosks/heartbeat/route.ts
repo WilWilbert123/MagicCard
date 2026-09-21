@@ -13,10 +13,10 @@ export async function POST(request: Request) {
     const altCode = rawCode.includes('-00')
       ? rawCode.replace('-00', '-0')
       : rawCode.includes('-0')
-      ? rawCode.replace('-0', '-00')
-      : rawCode;
+        ? rawCode.replace('-0', '-00')
+        : rawCode;
 
-    // 1. Fetch target kiosk dynamically by its exact incoming code (supports KIOSK-001, KIOSK-SOR-01, KIOSK-NYC-01, etc.)
+
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rawCode);
     const filterQuery = isUuid
       ? `kiosk_code.eq.${rawCode},kiosk_code.eq.${altCode},id.eq.${rawCode}`
@@ -44,7 +44,7 @@ export async function POST(request: Request) {
 
       await admin.from('kiosks').update(updateData).eq('id', kiosk.id);
     } else {
-      // Auto-register new KIOSK terminal when installer on another laptop connects!
+
       const targetBranchStr = body.branchId || body.branchCode || body.branchName;
       let matchedBranch: any = null;
 
