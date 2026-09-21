@@ -108,7 +108,7 @@ export async function GET() {
         maxCardCapacity,
         cardsRemaining,
         totalCardsPrinted,
-        lastHeartbeat: k.last_heartbeat_at || k.created_at,
+        lastHeartbeat: k.last_heartbeat_at || undefined,
       };
     });
 
@@ -198,7 +198,7 @@ export async function POST(request: Request) {
     const newKiosk: any = {
       kiosk_code: body.code.trim().toUpperCase(),
       name: body.name.trim(),
-      status: body.status || 'ONLINE',
+      status: body.status || 'OFFLINE',
       agent_version: body.agentVersion || 'v1.4.0',
       app_version: body.appVersion || 'v2.1.0',
       ip_address: body.ipAddress || '127.0.0.1',

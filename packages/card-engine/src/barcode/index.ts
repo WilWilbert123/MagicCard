@@ -50,7 +50,8 @@ export function generateBarcodeSvg(
   // For lightweight isomorphic SVG generation without DOM dependence
   const barcodeValue = text.trim() || 'EMP-000000';
   const lineColor = options.lineColor || '#000000';
-  const bgColor = options.backgroundColor || '#ffffff';
+  const rawBgColor = options.backgroundColor;
+  const bgColor = (rawBgColor && rawBgColor !== 'transparent' && rawBgColor !== 'none') ? rawBgColor : null;
   const height = options.height || 60;
   const width = options.width || 200;
 
@@ -70,8 +71,10 @@ export function generateBarcodeSvg(
     ? `<text x="${(width / 2).toFixed(1)}" y="${height}" text-anchor="middle" font-family="monospace" font-size="${options.fontSize || 12}" fill="${lineColor}">${escapeXml(barcodeValue)}</text>`
     : '';
 
+  const backgroundRect = bgColor ? `<rect width="100%" height="100%" fill="${bgColor}"/>` : '';
+
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}">
-    <rect width="100%" height="100%" fill="${bgColor}"/>
+    ${backgroundRect}
     ${rects}
     ${textElement}
   </svg>`;

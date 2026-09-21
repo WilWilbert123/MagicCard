@@ -273,9 +273,15 @@ function MiniCard2DPreview({ layout, settings }: { layout?: any; settings?: any 
                 )}
 
                 {el.type === 'BARCODE' && (
-                  <div className="w-full h-full bg-white p-1 border border-slate-200 flex flex-col items-center justify-center rounded">
-                    <Barcode className="w-full h-3/4 text-black" />
-                    <span className="text-[9px] font-mono text-black">EMP-000125</span>
+                  <div
+                    className="w-full h-full p-1 flex flex-col items-center justify-center rounded"
+                    style={{
+                      backgroundColor: el.backgroundColor && el.backgroundColor !== 'transparent' ? el.backgroundColor : 'transparent',
+                      color: el.lineColor || '#000000',
+                    }}
+                  >
+                    <Barcode className="w-full h-3/4" style={{ color: el.lineColor || '#000000' }} />
+                    <span className="text-[9px] font-mono" style={{ color: el.lineColor || '#000000' }}>EMP-000125</span>
                   </div>
                 )}
 

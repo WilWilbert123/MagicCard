@@ -241,9 +241,15 @@ function PresetCardMiniPreview({
               )}
 
               {el.type === 'BARCODE' && (
-                <div className="w-full h-full bg-white p-1 border border-slate-200 flex flex-col items-center justify-center rounded">
-                  <Barcode className="w-full h-3/4 text-black" />
-                  <span className="text-[9px] font-mono text-black">EMP-000125</span>
+                <div
+                  className="w-full h-full p-1 flex flex-col items-center justify-center rounded"
+                  style={{
+                    backgroundColor: el.backgroundColor && el.backgroundColor !== 'transparent' ? el.backgroundColor : 'transparent',
+                    color: el.lineColor || '#000000',
+                  }}
+                >
+                  <Barcode className="w-full h-3/4" style={{ color: el.lineColor || '#000000' }} />
+                  <span className="text-[9px] font-mono" style={{ color: el.lineColor || '#000000' }}>EMP-000125</span>
                 </div>
               )}
 
@@ -1481,9 +1487,15 @@ export default function CardDesignerPage() {
                     )}
 
                     {el.type === 'BARCODE' && (
-                      <div className="w-full h-full bg-white p-2 border border-slate-200 flex flex-col items-center justify-center rounded pointer-events-none">
-                        <Barcode className="w-full h-12 text-black" />
-                        <span className="text-[10px] font-mono text-black">{activeBindingMap.employeeNumber}</span>
+                      <div
+                        className="w-full h-full p-2 flex flex-col items-center justify-center rounded pointer-events-none"
+                        style={{
+                          backgroundColor: el.backgroundColor && el.backgroundColor !== 'transparent' ? el.backgroundColor : 'transparent',
+                          color: el.lineColor || '#000000',
+                        }}
+                      >
+                        <Barcode className="w-full h-12" style={{ color: el.lineColor || '#000000' }} />
+                        <span className="text-[10px] font-mono" style={{ color: el.lineColor || '#000000' }}>{activeBindingMap.employeeNumber}</span>
                       </div>
                     )}
 
@@ -2454,6 +2466,173 @@ export default function CardDesignerPage() {
                       value={(selectedElement as any).data || '{{system.verificationUrl}}'}
                       onChange={(e) => updateSelectedElement({ data: e.target.value } as any)}
                       className={`w-full border rounded px-2 py-1 text-xs font-mono ${inputCls}`}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Properties for BARCODE */}
+              {selectedElement.type === 'BARCODE' && (
+                <div className={`p-3 rounded-lg border space-y-3 ${cardRow}`}>
+                  <span className={`font-semibold block text-[10px] uppercase ${sectionHdr}`}>Barcode Style & Color</span>
+
+                  {/* Barcode Line & Text Color */}
+                  <div>
+                    <label className={`text-[10px] ${labelCls}`}>Barcode Line & Text Color</label>
+                    <div className="flex items-center gap-2 mb-2">
+                      <input
+                        type="color"
+                        value={(selectedElement as any).lineColor || '#000000'}
+                        onChange={(e) => updateSelectedElement({ lineColor: e.target.value } as any)}
+                        className={`w-7 h-7 rounded border cursor-pointer ${isDark ? 'border-slate-700 bg-transparent' : 'border-slate-300'}`}
+                      />
+                      <input
+                        type="text"
+                        value={(selectedElement as any).lineColor || '#000000'}
+                        onChange={(e) => updateSelectedElement({ lineColor: e.target.value } as any)}
+                        className={`flex-1 border rounded px-2 py-1 text-xs font-mono ${inputCls}`}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-1.5 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => updateSelectedElement({ lineColor: '#ffffff' } as any)}
+                        className={`px-2 py-1 text-[10px] font-medium rounded border flex items-center justify-center gap-1 ${
+                          (selectedElement as any).lineColor === '#ffffff'
+                            ? 'bg-indigo-600 text-white border-indigo-500'
+                            : btnBorder
+                        }`}
+                      >
+                        <span className="w-2.5 h-2.5 rounded-full bg-white border border-slate-300" />
+                        White
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => updateSelectedElement({ lineColor: '#000000' } as any)}
+                        className={`px-2 py-1 text-[10px] font-medium rounded border flex items-center justify-center gap-1 ${
+                          (selectedElement as any).lineColor === '#000000' || !(selectedElement as any).lineColor
+                            ? 'bg-indigo-600 text-white border-indigo-500'
+                            : btnBorder
+                        }`}
+                      >
+                        <span className="w-2.5 h-2.5 rounded-full bg-black border border-slate-600" />
+                        Black
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => updateSelectedElement({ lineColor: '#ef4444' } as any)}
+                        className={`px-2 py-1 text-[10px] font-medium rounded border flex items-center justify-center gap-1 ${
+                          (selectedElement as any).lineColor === '#ef4444'
+                            ? 'bg-indigo-600 text-white border-indigo-500'
+                            : btnBorder
+                        }`}
+                      >
+                        <span className="w-2.5 h-2.5 rounded-full bg-red-500" />
+                        Red
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => updateSelectedElement({ lineColor: '#3b82f6' } as any)}
+                        className={`px-2 py-1 text-[10px] font-medium rounded border flex items-center justify-center gap-1 ${
+                          (selectedElement as any).lineColor === '#3b82f6'
+                            ? 'bg-indigo-600 text-white border-indigo-500'
+                            : btnBorder
+                        }`}
+                      >
+                        <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
+                        Blue
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => updateSelectedElement({ lineColor: '#22c55e' } as any)}
+                        className={`px-2 py-1 text-[10px] font-medium rounded border flex items-center justify-center gap-1 ${
+                          (selectedElement as any).lineColor === '#22c55e'
+                            ? 'bg-indigo-600 text-white border-indigo-500'
+                            : btnBorder
+                        }`}
+                      >
+                        <span className="w-2.5 h-2.5 rounded-full bg-green-500" />
+                        Green
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => updateSelectedElement({ lineColor: '#f59e0b' } as any)}
+                        className={`px-2 py-1 text-[10px] font-medium rounded border flex items-center justify-center gap-1 ${
+                          (selectedElement as any).lineColor === '#f59e0b'
+                            ? 'bg-indigo-600 text-white border-indigo-500'
+                            : btnBorder
+                        }`}
+                      >
+                        <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+                        Gold
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Background Color */}
+                  <div>
+                    <label className={`text-[10px] ${labelCls}`}>Background Color</label>
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <input
+                        type="color"
+                        value={(selectedElement as any).backgroundColor && (selectedElement as any).backgroundColor !== 'transparent' && (selectedElement as any).backgroundColor !== 'none' ? (selectedElement as any).backgroundColor : '#ffffff'}
+                        onChange={(e) => updateSelectedElement({ backgroundColor: e.target.value } as any)}
+                        className={`w-7 h-7 rounded border cursor-pointer ${isDark ? 'border-slate-700 bg-transparent' : 'border-slate-300'}`}
+                      />
+                      <input
+                        type="text"
+                        value={(selectedElement as any).backgroundColor || 'transparent'}
+                        onChange={(e) => updateSelectedElement({ backgroundColor: e.target.value } as any)}
+                        className={`flex-1 border rounded px-2 py-1 text-xs font-mono ${inputCls}`}
+                      />
+                    </div>
+
+                    <div className="flex items-center gap-1.5 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => updateSelectedElement({ backgroundColor: 'transparent' } as any)}
+                        className={`px-2 py-1 text-[10px] font-medium rounded border ${
+                          (selectedElement as any).backgroundColor === 'transparent' || (selectedElement as any).backgroundColor === 'none' || !(selectedElement as any).backgroundColor
+                            ? 'bg-indigo-600 text-white border-indigo-500'
+                            : btnBorder
+                        }`}
+                      >
+                        Transparent
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => updateSelectedElement({ backgroundColor: '#ffffff' } as any)}
+                        className={`px-2 py-1 text-[10px] font-medium rounded border ${
+                          (selectedElement as any).backgroundColor === '#ffffff'
+                            ? 'bg-indigo-600 text-white border-indigo-500'
+                            : btnBorder
+                        }`}
+                      >
+                        White Box
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => updateSelectedElement({ backgroundColor: '#000000' } as any)}
+                        className={`px-2 py-1 text-[10px] font-medium rounded border ${
+                          (selectedElement as any).backgroundColor === '#000000'
+                            ? 'bg-indigo-600 text-white border-indigo-500'
+                            : btnBorder
+                        }`}
+                      >
+                        Black Box
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Display Text Value Toggle */}
+                  <div className="flex items-center justify-between pt-1">
+                    <label className={`text-[10px] ${labelCls}`}>Display Code Text Below</label>
+                    <input
+                      type="checkbox"
+                      checked={(selectedElement as any).displayValue !== false}
+                      onChange={(e) => updateSelectedElement({ displayValue: e.target.checked } as any)}
+                      className="w-4 h-4 accent-indigo-600 rounded cursor-pointer"
                     />
                   </div>
                 </div>
