@@ -7,7 +7,10 @@ Set WshShell = CreateObject("WScript.Shell")
 Set fso = CreateObject("Scripting.FileSystemObject")
 
 Dim currentDir
-currentDir = fso.GetAbsolutePathName(".")
+currentDir = fso.GetParentFolderName(WScript.ScriptFullName)
+
+' Set current directory so child process inherits correct working directory
+WshShell.CurrentDirectory = currentDir
 
 ' Launch Watchdog VBS silently using WScript with Window Style 0 (Hidden)
 WshShell.Run "wscript.exe """ & currentDir & "\watchdog.vbs""", 0, False

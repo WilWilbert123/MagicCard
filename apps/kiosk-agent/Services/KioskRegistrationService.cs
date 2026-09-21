@@ -9,7 +9,7 @@ namespace KioskAgent.Services;
 public interface IKioskRegistrationService
 {
     Task<PairingResponse> RegisterKioskAsync(PairingRequest request, CancellationToken cancellationToken = default);
-    Task<bool> SendHeartbeatAsync(CancellationToken cancellationToken = default);
+    Task<bool> SendHeartbeatAsync(CancellationToken cancellationToken = default, string? statusOverride = null);
 }
 
 public class KioskRegistrationService : IKioskRegistrationService
@@ -108,7 +108,7 @@ public class KioskRegistrationService : IKioskRegistrationService
         }
     }
 
-    public async Task<bool> SendHeartbeatAsync(CancellationToken cancellationToken = default)
+    public async Task<bool> SendHeartbeatAsync(CancellationToken cancellationToken = default, string? statusOverride = null)
     {
         try
         {
@@ -126,6 +126,7 @@ public class KioskRegistrationService : IKioskRegistrationService
                 kioskCode = _kioskOptions.KioskId,
                 deviceToken = creds?.DeviceToken,
                 agentVersion = "1.0.0",
+                status = statusOverride ?? "ONLINE",
                 printerStatus = "READY",
                 cpuUsagePct = 2.5,
                 memoryUsagePct = 45.0,

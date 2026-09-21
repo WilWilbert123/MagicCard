@@ -4,7 +4,7 @@ public class HeartbeatService : BackgroundService
 {
     private readonly IKioskRegistrationService _registrationService;
     private readonly ILogger<HeartbeatService> _logger;
-    private readonly TimeSpan _interval = TimeSpan.FromSeconds(30);
+    private readonly TimeSpan _interval = TimeSpan.FromSeconds(15);
 
     public HeartbeatService(
         IKioskRegistrationService registrationService,
@@ -29,7 +29,24 @@ public class HeartbeatService : BackgroundService
                 _logger.LogWarning(ex, "Heartbeat cycle encountered an exception");
             }
 
-            await Task.Delay(_interval, stoppingToken);
+            try
+            {
+                await Task.Delay(_interval, stoppingToken);
+            }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
+        }
+
+        _logger.LogInformation("KioskAgent stopping. Sending immediate OFFLINE heartbeat ping to backend...");
+        try
+        {
+            await _registrationService.SendHeartbeatAsync(CancellationToken.None, "OFFLINE");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to send OFFLINE ping on shutdown.");
         }
 
         _logger.LogInformation("KioskAgent background HeartbeatService stopped.");
