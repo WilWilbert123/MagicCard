@@ -4,7 +4,7 @@ import { createAdminSupabaseClient } from '@/lib/supabase/server';
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { kioskCode, kioskId, printerStatus, agentVersion, ipAddress } = body;
+    const { kioskCode, kioskId, printerStatus, agentVersion, ipAddress, ribbonLevelPct, ribbonType } = body;
 
     const admin = createAdminSupabaseClient();
     const now = new Date().toISOString();
@@ -38,7 +38,19 @@ export async function POST(request: Request) {
       } else if (kiosk.status !== 'DISABLED') {
         updateData.status = 'ONLINE';
       }
-      if (printerStatus) updateData.printer_status_summary = printerStatus;
+      if (printerStatus) {
+        updateData.printer_status_summary = printerStatus;
+        const match = printerStatus.match(/Ribbon\s*(\d+)%/i);
+        if (match && match[1]) {
+          updateData.ribbon_level_pct = parseInt(match[1], 10);
+        }
+      }
+      if (typeof ribbonLevelPct === 'number') {
+        updateData.ribbon_level_pct = ribbonLevelPct;
+      }
+      if (ribbonType) {
+        updateData.ribbon_type = ribbonType;
+      }
       if (agentVersion) updateData.agent_version = agentVersion;
       if (ipAddress) updateData.ip_address = ipAddress;
 

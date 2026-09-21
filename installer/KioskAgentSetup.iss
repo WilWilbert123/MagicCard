@@ -42,10 +42,12 @@ Source: "..\apps\kiosk-agent\bin\Release\net9.0-windows\win-x64\publish\*"; Dest
 
 [Icons]
 Name: "{group}\Start KioskAgent (Invisible Background)"; Filename: "wscript.exe"; Parameters: """{app}\start_hidden.vbs"""; IconFilename: "shell32.dll"; IconIndex: 1
+Name: "{group}\Launch Fullscreen Kiosk"; Filename: "{app}\launch_kiosk_fullscreen.bat"; IconFilename: "shell32.dll"; IconIndex: 14
 Name: "{group}\View KioskAgent Logs"; Filename: "{app}\logs.bat"; IconFilename: "shell32.dll"; IconIndex: 76
 Name: "{group}\Stop KioskAgent"; Filename: "{app}\stop.bat"; IconFilename: "shell32.dll"; IconIndex: 27
 Name: "{group}\Uninstall {#MyAppName}"; Filename: "{uninstallexe}"
 Name: "{userstartup}\EmployeeID KioskAgent"; Filename: "wscript.exe"; Parameters: """{app}\start_hidden.vbs"""; WorkingDir: "{app}"; IconFilename: "shell32.dll"; IconIndex: 1
+Name: "{autodesktop}\Launch Fullscreen Kiosk"; Filename: "{app}\launch_kiosk_fullscreen.bat"; IconFilename: "shell32.dll"; IconIndex: 14
 Name: "{autodesktop}\KioskAgent Logs"; Filename: "{app}\logs.bat"; IconFilename: "shell32.dll"; IconIndex: 76
 Name: "{autodesktop}\Stop KioskAgent"; Filename: "{app}\stop.bat"; IconFilename: "shell32.dll"; IconIndex: 27
 

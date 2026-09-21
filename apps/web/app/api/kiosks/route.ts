@@ -37,8 +37,8 @@ export async function GET() {
     const staleKioskIds: string[] = [];
 
     const mapped = (kiosks || []).map((k: any) => {
-      // Parse ribbon level % if mentioned in printer status summary e.g. "Ribbon 94%"
-      let ribbonPct = 100;
+      // Parse ribbon level % if explicitly stored in DB column or mentioned in printer status summary
+      let ribbonPct = typeof k.ribbon_level_pct === 'number' ? k.ribbon_level_pct : 100;
       if (k.printer_status_summary) {
         const match = k.printer_status_summary.match(/Ribbon\s*(\d+)%/i);
         if (match && match[1]) {
@@ -104,6 +104,7 @@ export async function GET() {
         printerModel: 'Magicard 600NEO',
         printerStatus: printerStatusSummary,
         ribbonLevelPct: isOffline ? 0 : ribbonPct,
+        ribbonType: k.ribbon_type || 'YMCKO',
         cardsPrinted,
         maxCardCapacity,
         cardsRemaining,

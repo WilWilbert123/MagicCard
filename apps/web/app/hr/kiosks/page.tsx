@@ -415,7 +415,7 @@ export default function HrKiosksPage() {
                       <span className="text-slate-500 block text-[10px] uppercase font-semibold">Ribbon Gauge</span>
                       <div className="flex items-center justify-between mt-1">
                         <span className="font-bold text-slate-900 dark:text-white">{kiosk.ribbonLevelPct}%</span>
-                        <span className="text-[10px] text-slate-400">YMCKO</span>
+                        <span className="text-[10px] text-slate-400 uppercase font-mono">{kiosk.ribbonType || 'YMCKO'}</span>
                       </div>
                       <div className="w-full h-1.5 bg-slate-200 dark:bg-slate-800 rounded-full mt-1.5 overflow-hidden">
                         <div
