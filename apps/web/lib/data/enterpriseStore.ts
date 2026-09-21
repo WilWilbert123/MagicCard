@@ -110,6 +110,7 @@ export interface KioskDevice {
   printerModel: string;
   printerStatus: string;
   ribbonLevelPct: number;
+  ribbonType?: string;
   cardsPrinted?: number;
   maxCardCapacity?: number;
   cardsRemaining?: number;

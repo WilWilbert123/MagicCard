@@ -17,6 +17,7 @@ import {
   X,
   Send,
   Building2,
+  Maximize,
 } from 'lucide-react';
 import { enterpriseStore, Employee, DEFAULT_CR80_TEMPLATE } from '@/lib/data/enterpriseStore';
 import { renderCardToCanvas } from '@workspace/card-engine';
@@ -171,9 +172,32 @@ export default function KioskMainPage() {
       .catch(() => { });
   }, []);
 
+  // Automatically request Fullscreen as soon as the KIOSK page loads or is touched
+  useEffect(() => {
+    const enterFullscreen = () => {
+      if (typeof document !== 'undefined' && !document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      }
+    };
+
+    enterFullscreen();
+
+    const handleGesture = () => enterFullscreen();
+    window.addEventListener('click', handleGesture, { once: false });
+    window.addEventListener('touchstart', handleGesture, { once: false });
+    window.addEventListener('keydown', handleGesture, { once: false });
+
+    return () => {
+      window.removeEventListener('click', handleGesture);
+      window.removeEventListener('touchstart', handleGesture);
+      window.removeEventListener('keydown', handleGesture);
+    };
+  }, []);
+
   const [hardwarePrinterOnline, setHardwarePrinterOnline] = useState<boolean>(false);
   const [printerMode, setPrinterMode] = useState<'HARDWARE' | 'SIMULATION'>('HARDWARE');
   const [localKioskId, setLocalKioskId] = useState<string>('KIOSK-001');
+  const [isTerminalDisabled, setIsTerminalDisabled] = useState<boolean>(false);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -184,6 +208,36 @@ export default function KioskMainPage() {
       }
     }
   }, []);
+
+  // Poll central server every 5 seconds to enforce real-time DISABLE status set by HR Admin
+  useEffect(() => {
+    const checkKioskStatus = async () => {
+      try {
+        const res = await fetch('/api/kiosks');
+        if (res.ok) {
+          const json = await res.json();
+          if (Array.isArray(json.data)) {
+            const currentKiosk = json.data.find(
+              (k: any) =>
+                k.code?.toUpperCase() === localKioskId.toUpperCase() ||
+                k.id === localKioskId
+            );
+            if (currentKiosk && currentKiosk.status === 'DISABLED') {
+              setIsTerminalDisabled(true);
+            } else {
+              setIsTerminalDisabled(false);
+            }
+          }
+        }
+      } catch {
+        // Retain last state on network glitch
+      }
+    };
+
+    checkKioskStatus();
+    const interval = setInterval(checkKioskStatus, 5000);
+    return () => clearInterval(interval);
+  }, [localKioskId]);
 
   // Check hardware printer connectivity on localhost port 7125
   useEffect(() => {
@@ -544,11 +598,32 @@ export default function KioskMainPage() {
 
   return (
     <div className="min-h-screen w-full flex flex-col justify-center items-center bg-[#070a11] text-white select-none overflow-hidden touch-none font-sans relative">
+      {/* Real-Time Terminal Disabled Lock Screen Overlay */}
+      {isTerminalDisabled && (
+        <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-md flex flex-col items-center justify-center p-8 text-center animate-fade-in">
+          <div className="w-24 h-24 rounded-3xl bg-red-950/80 border-2 border-red-500/50 flex items-center justify-center mb-6 shadow-2xl shadow-red-950/80">
+            <AlertCircle className="w-12 h-12 text-red-500 animate-pulse" />
+          </div>
+          <h1 className="text-3xl font-black text-white tracking-wider uppercase mb-3">
+            Terminal Out of Service
+          </h1>
+          <p className="text-base text-slate-400 max-w-md mb-8">
+            This kiosk terminal has been temporarily disabled by an HR Administrator. Please contact the HR Operations Desk for assistance.
+          </p>
+          <div className="px-4 py-2 rounded-xl bg-red-950/40 border border-red-900/60 text-xs text-red-400 font-mono font-bold tracking-widest uppercase flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
+            Status: TERMINAL_DISABLED ({localKioskId})
+          </div>
+        </div>
+      )}
       {/* ======================================================== */}
       {/* 0. SCREENSAVER / ATTRACT SCREEN ("PIXELBLAST")           */}
       {/* ======================================================== */}
       <div
         onClick={() => {
+          if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().catch(() => {});
+          }
           if (step === 'SCREENSAVER') setStep('SEARCH');
         }}
         className={`absolute inset-0 w-full h-full min-h-screen flex flex-col items-center justify-between cursor-pointer overflow-hidden select-none bg-black transition-opacity duration-500 z-20 ${step === 'SCREENSAVER' ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'

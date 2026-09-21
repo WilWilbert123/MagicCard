@@ -4,6 +4,8 @@ using KioskAgent.Configuration;
 using KioskAgent.Models;
 using KioskAgent.Security;
 
+using KioskAgent.Printers;
+
 namespace KioskAgent.Services;
 
 public interface IKioskRegistrationService
@@ -17,17 +19,20 @@ public class KioskRegistrationService : IKioskRegistrationService
     private readonly KioskOptions _kioskOptions;
     private readonly ILocalAgentAuthentication _auth;
     private readonly HttpClient _httpClient;
+    private readonly ICardPrinter _cardPrinter;
     private readonly ILogger<KioskRegistrationService> _logger;
 
     public KioskRegistrationService(
         IOptions<KioskOptions> kioskOptions,
         ILocalAgentAuthentication auth,
         HttpClient httpClient,
+        ICardPrinter cardPrinter,
         ILogger<KioskRegistrationService> logger)
     {
         _kioskOptions = kioskOptions.Value;
         _auth = auth;
         _httpClient = httpClient;
+        _cardPrinter = cardPrinter;
         _logger = logger;
     }
 
@@ -121,13 +126,23 @@ public class KioskRegistrationService : IKioskRegistrationService
             var creds = await _auth.LoadCredentialsAsync();
             var endpoint = $"{_kioskOptions.SupabaseUrl.TrimEnd('/')}/api/kiosks/heartbeat";
             
+            var printerStatus = await _cardPrinter.GetPrinterStatusAsync(cancellationToken);
+            int ribbonPct = 100;
+            var match = System.Text.RegularExpressions.Regex.Match(printerStatus, @"Ribbon\s*(\d+)%", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            if (match.Success && int.TryParse(match.Groups[1].Value, out var parsedPct))
+            {
+                ribbonPct = parsedPct;
+            }
+
             var payload = new
             {
                 kioskCode = _kioskOptions.KioskId,
                 deviceToken = creds?.DeviceToken,
                 agentVersion = "1.0.0",
                 status = statusOverride ?? "ONLINE",
-                printerStatus = "READY",
+                printerStatus = printerStatus,
+                ribbonLevelPct = ribbonPct,
+                ribbonType = "YMCKO",
                 cpuUsagePct = 2.5,
                 memoryUsagePct = 45.0,
                 timestamp = DateTime.UtcNow
