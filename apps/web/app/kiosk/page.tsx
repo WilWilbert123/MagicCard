@@ -239,7 +239,7 @@ export default function KioskMainPage() {
     return () => clearInterval(interval);
   }, [localKioskId]);
 
-  // Check hardware printer connectivity on localhost port 7125
+  // Check hardware printer connectivity on localhost port 7125 and ping central backend
   useEffect(() => {
     const checkPrinterHardware = async () => {
       try {
@@ -262,12 +262,26 @@ export default function KioskMainPage() {
       } catch {
         setHardwarePrinterOnline(false);
       }
+
+      // Also directly ping central backend heartbeat endpoint from web kiosk page
+      try {
+        fetch('/api/kiosks/heartbeat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            kioskCode: localKioskId,
+            status: 'ONLINE',
+            agentVersion: 'v1.4.0',
+            printerStatus: 'READY (Browser Kiosk Session)',
+          }),
+        }).catch(() => {});
+      } catch {}
     };
 
     checkPrinterHardware();
     const interval = setInterval(checkPrinterHardware, 8000);
     return () => clearInterval(interval);
-  }, []);
+  }, [localKioskId]);
 
 
 
