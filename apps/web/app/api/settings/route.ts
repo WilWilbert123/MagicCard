@@ -9,7 +9,7 @@ const DEFAULT_SETTINGS = {
   kioskInactivityTimeoutSeconds: 45,
   defaultBleedMm: 1.5,
   defaultSafeMarginMm: 3.0,
-  verificationBaseUrl: process.env.NEXT_PUBLIC_APP_URL || 'https://magic-card-trust-id.vercel.app',
+  verificationBaseUrl: process.env.NEXT_PUBLIC_APP_URL || '',
   defaultPreviewPhotoUrl: '',
   defaultCompanyLogoUrl: '',
   defaultPreviewName: 'Wilbert Gamis',

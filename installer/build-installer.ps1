@@ -71,10 +71,8 @@ $OneClickScript = Join-Path $OutputDir "install-service.ps1"
 $scriptContent = @"
 # EmployeeID KioskAgent Quick Service Installer
 # Run as Administrator from the folder where you extracted the zip
-param(
-    [string]`$KioskId = "KIOSK-001",
-    [string]`$BranchId = "BRANCH-001"
-)
+# appsettings.json and appsettings.Production.json are already bundled in the zip.
+# Edit them before running this script if you need to change KIOSK ID, Branch, or Server URL.
 
 `$dest = "C:\Program Files\EmployeeID\KioskAgent"
 `$data = "C:\ProgramData\EmployeeID\KioskAgent"
@@ -83,11 +81,12 @@ New-Item -ItemType Directory -Force -Path "`$data\logs" | Out-Null
 
 Copy-Item -Path "*" -Destination `$dest -Recurse -Force
 
-Set-Content -Path "`$dest\appsettings.json" -Value ('{"Kiosk":{"KioskId":"' + `$KioskId + '","Port":7125,"BranchId":"' + `$BranchId + '"},"Printer":{"Name":"Magicard 300 Duo","Type":"MagicCard","UseMock":true}}')
+# appsettings.json and appsettings.Production.json are copied as-is from the zip.
+# To change KIOSK ID, BranchId, or SupabaseUrl - edit appsettings.json BEFORE running this script.
 
 netsh advfirewall firewall add rule name="EmployeeID KioskAgent Port 7125" dir=in action=allow protocol=TCP localport=7125
-sc.exe create EmployeeIDKioskAgent binPath= "`$dest\KioskAgent.exe" start= auto displayName= "EmployeeID KioskAgent Service"
-sc.exe start EmployeeIDKioskAgent
+wscript.exe "`$dest\install_startup.vbs"
+wscript.exe "`$dest\start_hidden.vbs"
 Write-Host "KioskAgent installed and started successfully!"
 "@
 
@@ -97,4 +96,10 @@ Write-Host ""
 Write-Host "=================================================="
 Write-Host "  BUILD COMPLETE"
 Write-Host "  Output: $OutputDir"
+Write-Host ""
+Write-Host "  HOW TO DEPLOY ON KIOSK LAPTOP:"
+Write-Host "  1. Copy EmployeeID-KioskAgent-Setup.zip to KIOSK laptop"
+Write-Host "  2. Extract the zip"
+Write-Host "  3a. Double-click AutoStart_Hidden.vbs  (quick launch)"
+Write-Host "  3b. OR run install-service.ps1 as Admin (full install to Program Files)"
 Write-Host "=================================================="

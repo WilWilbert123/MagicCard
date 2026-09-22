@@ -7,7 +7,7 @@ public class KioskOptions
     public string KioskId { get; set; } = "KIOSK-001";
     public int Port { get; set; } = 7125;
     public string BranchId { get; set; } = "BRANCH-001";
-    public string SupabaseUrl { get; set; } = string.Empty;
+    public string SupabaseUrl { get; set; } = "https://magic-card-trust-id.vercel.app";
     public string SupabaseApiKey { get; set; } = string.Empty;
 }
 

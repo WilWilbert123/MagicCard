@@ -151,7 +151,7 @@ export default function KioskMainPage() {
     }
   };
 
-  const [verificationBaseUrl, setVerificationBaseUrl] = useState<string>(process.env.NEXT_PUBLIC_APP_URL || 'https://magic-card-trust-id.vercel.app');
+  const [verificationBaseUrl, setVerificationBaseUrl] = useState<string>(process.env.NEXT_PUBLIC_APP_URL || '');
 
   useEffect(() => {
     fetch('/api/settings')

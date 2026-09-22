@@ -75,11 +75,12 @@ var
   ConfigPage: TWizardPage;
   KioskIdEdit: TNewEdit;
   BranchIdEdit: TNewEdit;
+  ServerUrlEdit: TNewEdit;
   PairingCodeEdit: TNewEdit;
 
 procedure InitializeWizard;
 var
-  lbl1, lbl2, lbl3: TLabel;
+  lbl1, lbl2, lbl3, lbl4: TLabel;
 begin
   ConfigPage := CreateCustomPage(wpSelectDir, 'KIOSK Device Configuration', 'Configure KIOSK Identity and Server Pairing.');
 
@@ -93,49 +94,74 @@ begin
   KioskIdEdit.Parent := ConfigPage.Surface;
   KioskIdEdit.Left := ScaleX(0);
   KioskIdEdit.Top := ScaleY(30);
-  KioskIdEdit.Width := ScaleX(300);
+  KioskIdEdit.Width := ScaleX(320);
   KioskIdEdit.Text := 'KIOSK-001';
 
   lbl2 := TLabel.Create(WizardForm);
   lbl2.Parent := ConfigPage.Surface;
   lbl2.Caption := 'Branch ID (e.g. BRANCH-001):';
   lbl2.Left := ScaleX(0);
-  lbl2.Top := ScaleY(70);
+  lbl2.Top := ScaleY(65);
 
   BranchIdEdit := TNewEdit.Create(WizardForm);
   BranchIdEdit.Parent := ConfigPage.Surface;
   BranchIdEdit.Left := ScaleX(0);
-  BranchIdEdit.Top := ScaleY(90);
-  BranchIdEdit.Width := ScaleX(300);
+  BranchIdEdit.Top := ScaleY(85);
+  BranchIdEdit.Width := ScaleX(320);
   BranchIdEdit.Text := 'BRANCH-001';
+
+  lbl4 := TLabel.Create(WizardForm);
+  lbl4.Parent := ConfigPage.Surface;
+  lbl4.Caption := 'Central Server / Backend URL:';
+  lbl4.Left := ScaleX(0);
+  lbl4.Top := ScaleY(120);
+
+  ServerUrlEdit := TNewEdit.Create(WizardForm);
+  ServerUrlEdit.Parent := ConfigPage.Surface;
+  ServerUrlEdit.Left := ScaleX(0);
+  ServerUrlEdit.Top := ScaleY(140);
+  ServerUrlEdit.Width := ScaleX(350);
+  ServerUrlEdit.Text := 'https://magic-card-trust-id.vercel.app';
 
   lbl3 := TLabel.Create(WizardForm);
   lbl3.Parent := ConfigPage.Surface;
   lbl3.Caption := 'HR Admin Pairing Code (Optional at setup):';
   lbl3.Left := ScaleX(0);
-  lbl3.Top := ScaleY(130);
+  lbl3.Top := ScaleY(175);
 
   PairingCodeEdit := TNewEdit.Create(WizardForm);
   PairingCodeEdit.Parent := ConfigPage.Surface;
   PairingCodeEdit.Left := ScaleX(0);
-  PairingCodeEdit.Top := ScaleY(150);
-  PairingCodeEdit.Width := ScaleX(300);
+  PairingCodeEdit.Top := ScaleY(195);
+  PairingCodeEdit.Width := ScaleX(320);
   PairingCodeEdit.Text := '';
 end;
 
 procedure CurStepChanged(CurStep: TSetupStep);
 var
-  ConfigContent: String;
   ConfigFilePath: String;
+  Content: String;
+  TargetUrl: String;
 begin
   if CurStep = ssPostInstall then
   begin
     ConfigFilePath := ExpandConstant('{app}\appsettings.json');
-    ConfigContent :=
-      '{"Kiosk":{"KioskId":"' + KioskIdEdit.Text + '","Port":7125,"BranchId":"' + BranchIdEdit.Text + '"},' +
-      '"Printer":{"Name":"Magicard 300 Duo","Type":"MagicCard","UseMock":true},' +
-      '"MagicCard":{"Mode":"Production","InstallationPath":"C:\\Program Files\\Magicard\\TrustID\\"},' +
-      '"Security":{"RequireLocalToken":false}}';
-    SaveStringToFile(ConfigFilePath, ConfigContent, False);
+
+    // Only patch KioskId and BranchId into the existing bundled appsettings.json
+    // All other settings (SupabaseUrl, Printer, MagicCard, Security) come from the
+    // appsettings.json and appsettings.Production.json bundled in the installer.
+    if FileExists(ConfigFilePath) then
+    begin
+      LoadStringFromFile(ConfigFilePath, Content);
+      // Replace KioskId value
+      StringChangeEx(Content, '"KioskId": "KIOSK-001"', '"KioskId": "' + KioskIdEdit.Text + '"', True);
+      // Replace BranchId value
+      StringChangeEx(Content, '"BranchId": "BRANCH-001"', '"BranchId": "' + BranchIdEdit.Text + '"', True);
+      // Replace ServerUrl if user changed it
+      TargetUrl := Trim(ServerUrlEdit.Text);
+      if TargetUrl <> '' then
+        StringChangeEx(Content, '"SupabaseUrl": "https://magic-card-trust-id.vercel.app"', '"SupabaseUrl": "' + TargetUrl + '"', True);
+      SaveStringToFile(ConfigFilePath, Content, False);
+    end;
   end;
 end;

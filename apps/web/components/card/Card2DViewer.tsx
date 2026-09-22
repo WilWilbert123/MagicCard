@@ -50,7 +50,7 @@ export default function Card2DViewer({
 
     renderCardToCanvas(canvas, template, side, employee, {
       scale: 2,
-      baseUrl: baseUrl || settings?.verificationBaseUrl || 'https://magic-card-trust-id.vercel.app',
+      baseUrl: baseUrl || settings?.verificationBaseUrl || '',
       signal: controller.signal,
     }).catch((err) => {
       if (err?.name !== 'AbortError') {

@@ -360,7 +360,7 @@ export default function ThreeCardViewer({
       (employeeNumber ? enterpriseStore.findEmployeeByNumber(employeeNumber) : null) ||
       fallback;
 
-    const activeBaseUrl = baseUrl || settings?.verificationBaseUrl || 'https://magic-card-trust-id.vercel.app';
+    const activeBaseUrl = baseUrl || settings?.verificationBaseUrl || '';
 
     const frontCanvas = document.createElement('canvas');
     frontCanvas.width = (template.card?.width || 340) * 2;

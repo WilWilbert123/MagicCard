@@ -17,6 +17,7 @@ public interface IKioskRegistrationService
 public class KioskRegistrationService : IKioskRegistrationService
 {
     private readonly KioskOptions _kioskOptions;
+    private readonly PrinterOptions _printerOptions;
     private readonly ILocalAgentAuthentication _auth;
     private readonly HttpClient _httpClient;
     private readonly ICardPrinter _cardPrinter;
@@ -24,12 +25,14 @@ public class KioskRegistrationService : IKioskRegistrationService
 
     public KioskRegistrationService(
         IOptions<KioskOptions> kioskOptions,
+        IOptions<PrinterOptions> printerOptions,
         ILocalAgentAuthentication auth,
         HttpClient httpClient,
         ICardPrinter cardPrinter,
         ILogger<KioskRegistrationService> logger)
     {
         _kioskOptions = kioskOptions.Value;
+        _printerOptions = printerOptions.Value;
         _auth = auth;
         _httpClient = httpClient;
         _cardPrinter = cardPrinter;
@@ -141,6 +144,8 @@ public class KioskRegistrationService : IKioskRegistrationService
                 agentVersion = "1.0.0",
                 status = statusOverride ?? "ONLINE",
                 printerStatus = printerStatus,
+                printerModel = _printerOptions.Name,   // from appsettings.json Printer:Name
+                printerType = _printerOptions.Type,    // from appsettings.json Printer:Type
                 ribbonLevelPct = ribbonPct,
                 ribbonType = "YMCKO",
                 cpuUsagePct = 2.5,
