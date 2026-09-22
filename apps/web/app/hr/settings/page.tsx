@@ -2198,7 +2198,7 @@ export default function HrSettingsPage() {
                 <div className="space-y-2 bg-slate-50 dark:bg-slate-900/60 p-3 rounded-xl border border-slate-200 dark:border-slate-800">
                   {systemPermissions.length === 0 ? (
                     <div className="text-[11px] text-slate-400 italic">
-                      Standard module permissions (Dashboard, Card Designs, KIOSKs, Print History, Audit Logs, Settings) will apply after database migration.
+                      Standard module permissions (Dashboard, Employees, Card Designs, KIOSKs, Print History, Audit Logs, Settings) will apply after database migration.
                     </div>
                   ) : (
                     systemPermissions.map((perm) => {
