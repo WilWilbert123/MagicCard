@@ -86,9 +86,11 @@ export async function GET() {
       }
 
       const isOffline = computedStatus === 'OFFLINE';
-      const printerStatusSummary = isOffline
-        ? 'OFFLINE (Agent Disconnected)'
-        : k.printer_status_summary || 'READY';
+      const printerStatusSummary = k.printer_status_summary
+        ? k.printer_status_summary
+        : isOffline
+          ? 'OFFLINE (Agent Disconnected)'
+          : 'READY';
 
       return {
         id: k.id,
@@ -101,9 +103,9 @@ export async function GET() {
         appVersion: k.app_version || 'v2.1.0',
         ipAddress: k.ip_address || '127.0.0.1',
         activeTemplateVersion: activeTag,
-        printerModel: k.printer_model || k.printer_type || 'Unknown Printer',
+        printerModel: k.printer_model || k.printer_type || 'Magicard 600NEO',
         printerStatus: printerStatusSummary,
-        ribbonLevelPct: isOffline ? 0 : ribbonPct,
+        ribbonLevelPct: ribbonPct,
         ribbonType: k.ribbon_type || 'YMCKO',
         cardsPrinted,
         maxCardCapacity,
