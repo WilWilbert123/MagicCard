@@ -26,9 +26,21 @@ export async function GET() {
     .eq('user_id', user.id)
     .maybeSingle();
 
-  const roleName = (userRole?.roles as any)?.name || 'Super Admin';
+  const roleName = (userRole?.roles as any)?.name || 'HR Admin';
   const roleId = userRole?.role_id || (userRole?.roles as any)?.id || null;
   const isSuperAdmin = roleName === 'Super Admin';
+
+  // Fetch user permissions from user_permissions table
+  const { data: userPerms } = await admin
+    .from('user_permissions')
+    .select('permission_id, permissions(id, code, module, description)')
+    .eq('user_id', user.id);
+
+  const permissions = (userPerms || []).map((up: any) => ({
+    id: up.permission_id,
+    code: up.permissions?.code || '',
+    module: up.permissions?.module || '',
+  }));
 
   return NextResponse.json({
     data: {
@@ -38,6 +50,7 @@ export async function GET() {
       roleId,
       roleName,
       isSuperAdmin,
+      permissions,
     },
   });
 }

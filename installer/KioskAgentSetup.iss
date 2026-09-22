@@ -55,10 +55,7 @@ Name: "{autodesktop}\Stop KioskAgent"; Filename: "{app}\stop.bat"; IconFilename:
 ; Open local Windows Firewall port 7125
 Filename: "netsh"; Parameters: "advfirewall firewall add rule name=""EmployeeID KioskAgent Port 7125"" dir=in action=allow protocol=TCP localport=7125"; Flags: runhidden
 
-; Register Startup auto-run shortcut invisibly
-Filename: "wscript.exe"; Parameters: """{app}\install_startup.vbs"""; WorkingDir: "{app}"; Flags: runhidden
-
-; Launch KioskAgent invisibly in background via start_hidden.vbs
+; Launch KioskAgent invisibly in background via start_hidden.vbs (also installs startup shortcut)
 Filename: "wscript.exe"; Parameters: """{app}\start_hidden.vbs"""; WorkingDir: "{app}"; Flags: runhidden
 
 [UninstallRun]
