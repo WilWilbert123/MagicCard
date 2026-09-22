@@ -126,7 +126,7 @@ export default function HrSettingsPage() {
   const [kioskInactivityTimeoutSeconds, setKioskInactivityTimeoutSeconds] = useState(45);
   const [defaultBleedMm, setDefaultBleedMm] = useState(1.5);
   const [defaultSafeMarginMm, setDefaultSafeMarginMm] = useState(3.0);
-  const [verificationBaseUrl, setVerificationBaseUrl] = useState('https://magic-card-trust-id.vercel.app');
+  const [verificationBaseUrl, setVerificationBaseUrl] = useState('');
   const [defaultPreviewPhotoUrl, setDefaultPreviewPhotoUrl] = useState('');
   const [defaultCompanyLogoUrl, setDefaultCompanyLogoUrl] = useState('');
   const [defaultPreviewName, setDefaultPreviewName] = useState('Wilbert Gamis');
@@ -251,7 +251,7 @@ export default function HrSettingsPage() {
           setKioskInactivityTimeoutSeconds(json.data.kioskInactivityTimeoutSeconds ?? 45);
           setDefaultBleedMm(json.data.defaultBleedMm ?? 1.5);
           setDefaultSafeMarginMm(json.data.defaultSafeMarginMm ?? 3.0);
-          setVerificationBaseUrl(json.data.verificationBaseUrl ?? 'https://magic-card-trust-id.vercel.app');
+          setVerificationBaseUrl(json.data.verificationBaseUrl ?? '');
           setDefaultPreviewPhotoUrl(json.data.defaultPreviewPhotoUrl ?? '');
           setDefaultCompanyLogoUrl(json.data.defaultCompanyLogoUrl ?? '');
           setDefaultPreviewName(json.data.defaultPreviewName ?? 'Michael Brown');

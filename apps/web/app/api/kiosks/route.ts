@@ -101,7 +101,7 @@ export async function GET() {
         appVersion: k.app_version || 'v2.1.0',
         ipAddress: k.ip_address || '127.0.0.1',
         activeTemplateVersion: activeTag,
-        printerModel: 'Magicard 600NEO',
+        printerModel: k.printer_model || k.printer_type || 'Unknown Printer',
         printerStatus: printerStatusSummary,
         ribbonLevelPct: isOffline ? 0 : ribbonPct,
         ribbonType: k.ribbon_type || 'YMCKO',

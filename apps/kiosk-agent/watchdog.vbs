@@ -8,8 +8,18 @@ Set fso = CreateObject("Scripting.FileSystemObject")
 
 Dim currentDir, exePath, logFolder, logFile
 currentDir = fso.GetParentFolderName(WScript.ScriptFullName)
-exePath = currentDir & "\KioskAgent.exe"
 logFolder = currentDir & "\logs"
+
+' Locate KioskAgent.exe (Installed location or Development publish location)
+If fso.FileExists(currentDir & "\KioskAgent.exe") Then
+    exePath = currentDir & "\KioskAgent.exe"
+ElseIf fso.FileExists(currentDir & "\bin\Release\net9.0-windows\win-x64\publish\KioskAgent.exe") Then
+    exePath = currentDir & "\bin\Release\net9.0-windows\win-x64\publish\KioskAgent.exe"
+ElseIf fso.FileExists(currentDir & "\bin\Debug\net9.0-windows\win-x64\KioskAgent.exe") Then
+    exePath = currentDir & "\bin\Debug\net9.0-windows\win-x64\KioskAgent.exe"
+Else
+    exePath = currentDir & "\KioskAgent.exe"
+End If
 
 If Not fso.FolderExists(logFolder) Then
     On Error Resume Next
@@ -42,9 +52,14 @@ Do While True
         LogMsg "KioskAgent.exe is NOT running! Restarting invisibly..."
         
         If fso.FileExists(exePath) Then
+            ' Set working directory to exe directory so config appsettings.json loads correctly
+            Dim exeDir
+            exeDir = fso.GetParentFolderName(exePath)
+            WshShell.CurrentDirectory = exeDir
+            
             ' Launch KioskAgent.exe invisibly with window style 0
             WshShell.Run """" & exePath & """", 0, False
-            LogMsg "KioskAgent.exe process spawned."
+            LogMsg "KioskAgent.exe process spawned at " & exePath
             WScript.Sleep 5000 ' Wait 5 seconds after launching to avoid rapid loops
         Else
             LogMsg "ERROR: Could not locate KioskAgent.exe at " & exePath

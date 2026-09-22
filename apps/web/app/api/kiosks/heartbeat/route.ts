@@ -4,7 +4,7 @@ import { createAdminSupabaseClient } from '@/lib/supabase/server';
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { kioskCode, kioskId, printerStatus, agentVersion, ipAddress, ribbonLevelPct, ribbonType } = body;
+    const { kioskCode, kioskId, printerStatus, agentVersion, ipAddress, ribbonLevelPct, ribbonType, printerModel, printerType } = body;
 
     const admin = createAdminSupabaseClient();
     const now = new Date().toISOString();
@@ -53,6 +53,8 @@ export async function POST(request: Request) {
       }
       if (agentVersion) updateData.agent_version = agentVersion;
       if (ipAddress) updateData.ip_address = ipAddress;
+      if (printerModel) updateData.printer_model = printerModel;
+      if (printerType) updateData.printer_type = printerType;
 
       await admin.from('kiosks').update(updateData).eq('id', kiosk.id);
     } else {
