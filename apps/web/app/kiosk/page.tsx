@@ -271,7 +271,7 @@ export default function KioskMainPage() {
       try {
         fetch('/api/kiosks/heartbeat', {
           method: 'POST',
-          headers: { 
+          headers: {
             'Content-Type': 'application/json',
             'x-kiosk-request': 'true',
           },
@@ -283,8 +283,8 @@ export default function KioskMainPage() {
             printerType: agentPrinterType || 'MagicCard',
             printerStatus: agentPrinterStatus || (hardwarePrinterOnline ? 'READY (Agent Online)' : 'READY (Kiosk Active)'),
           }),
-        }).catch(() => {});
-      } catch {}
+        }).catch(() => { });
+      } catch { }
     };
 
     checkPrinterHardware();
@@ -295,7 +295,7 @@ export default function KioskMainPage() {
 
 
 
-  // Touchscreen Inactivity Timeout — Auto-resets KIOSK to SCREENSAVER if abandoned during search, preview, confirm or error
+
   useEffect(() => {
     if (step === 'SCREENSAVER' || step === 'PRINTING' || step === 'SUCCESS') return;
 
@@ -359,7 +359,7 @@ export default function KioskMainPage() {
       let json = res.ok ? await res.json() : null;
       let emp = json?.data?.[0];
 
-      // 2. If not found, try broad query search (partial number or name) via API
+
       if (!emp) {
         res = await fetch(`/api/employees?q=${encodeURIComponent(term)}`, { headers: kioskHeaders });
         json = res.ok ? await res.json() : null;
