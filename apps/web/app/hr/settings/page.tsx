@@ -28,7 +28,8 @@ import {
   Database,
   RefreshCw,
   AlertTriangle,
-  Lock
+  Lock,
+  Sliders
 } from 'lucide-react';
 import { Branch, Department } from '@/lib/data/enterpriseStore';
 import { compressImageFile } from '@/lib/utils/imageCompressor';
@@ -109,15 +110,25 @@ export default function HrSettingsPage() {
   const [showForgotPasswordHelp, setShowForgotPasswordHelp] = useState(false);
   const [adminUsers, setAdminUsers] = useState<any[]>([]);
   const [availableRoles, setAvailableRoles] = useState<any[]>([]);
+  const [systemPermissions, setSystemPermissions] = useState<any[]>([]);
   const [isSuperAdmin, setIsSuperAdmin] = useState(true);
   const [usersLoading, setUsersLoading] = useState(true);
   const [showAddUserModal, setShowAddUserModal] = useState(false);
+  const [showEditUserModal, setShowEditUserModal] = useState(false);
+  const [editingUser, setEditingUser] = useState<any>(null);
   const [userForm, setUserForm] = useState({
     displayName: '',
     email: '',
     password: '',
     roleId: '',
+    permissionIds: [] as string[],
   });
+  const [editUserForm, setEditUserForm] = useState({
+    userId: '',
+    roleId: '',
+    permissionIds: [] as string[],
+  });
+  const [userUpdating, setUserUpdating] = useState(false);
   const [userCreating, setUserCreating] = useState(false);
 
   // Policy States
@@ -285,6 +296,9 @@ export default function HrSettingsPage() {
       const json = await res.json();
       if (json.data) {
         setAdminUsers(json.data);
+      }
+      if (json.systemPermissions) {
+        setSystemPermissions(json.systemPermissions);
       }
       if (typeof json.isSuperAdmin === 'boolean') {
         setIsSuperAdmin(json.isSuperAdmin);
@@ -473,13 +487,38 @@ export default function HrSettingsPage() {
       if (!res.ok) throw new Error(json.error || 'Failed to create user account.');
 
       toast.success(`New ${json.data?.role?.name || 'HR Admin'} user created!`);
-      setUserForm({ displayName: '', email: '', password: '', roleId: availableRoles[0]?.id || '' });
+      setUserForm({ displayName: '', email: '', password: '', roleId: availableRoles[0]?.id || '', permissionIds: [] });
       setShowAddUserModal(false);
       loadUsers();
     } catch (err: any) {
       toast.error(err.message);
     } finally {
       setUserCreating(false);
+    }
+  };
+
+  const handleUpdateUserPermissions = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editUserForm.userId) return;
+
+    setUserUpdating(true);
+    try {
+      const res = await fetch('/api/auth/users', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editUserForm),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Failed to update user permissions.');
+
+      toast.success('User accessibility permissions updated successfully!');
+      setShowEditUserModal(false);
+      setEditingUser(null);
+      loadUsers();
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setUserUpdating(false);
     }
   };
 
@@ -1030,6 +1069,21 @@ export default function HrSettingsPage() {
                               <Shield className="w-3 h-3" />
                               {roleName}
                             </span>
+                            {u.permissionIds && u.permissionIds.length > 0 && (
+                              <div className="mt-1 flex flex-wrap gap-1">
+                                {u.permissionIds.map((pId: string) => {
+                                  const permObj = systemPermissions.find((sp) => sp.id === pId);
+                                  return (
+                                    <span
+                                      key={pId}
+                                      className="px-1.5 py-0.2 text-[9px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded border border-slate-200 dark:border-slate-700"
+                                    >
+                                      {permObj?.module || 'Module'}
+                                    </span>
+                                  );
+                                })}
+                              </div>
+                            )}
                           </td>
                           <td className="px-5 py-3">
                             <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
@@ -1043,13 +1097,30 @@ export default function HrSettingsPage() {
                             {u.isCurrent ? (
                               <span className="text-[10px] text-slate-400 italic">Current Session</span>
                             ) : isSuperAdmin ? (
-                              <button
-                                onClick={() => handleDeleteUser(u.id, u.email)}
-                                className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition"
-                                title="Delete user account"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
+                              <div className="flex items-center justify-end gap-1">
+                                <button
+                                  onClick={() => {
+                                    setEditingUser(u);
+                                    setEditUserForm({
+                                      userId: u.id,
+                                      roleId: u.role?.id || availableRoles[0]?.id || '',
+                                      permissionIds: u.permissionIds || [],
+                                    });
+                                    setShowEditUserModal(true);
+                                  }}
+                                  className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition"
+                                  title="Edit accessibility & permissions"
+                                >
+                                  <Sliders className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteUser(u.id, u.email)}
+                                  className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition"
+                                  title="Delete user account"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
                             ) : (
                               <span className="text-[10px] text-slate-400">Protected</span>
                             )}
@@ -2056,7 +2127,7 @@ export default function HrSettingsPage() {
       )}
       {showAddUserModal && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 p-6 shadow-2xl">
+          <div className="w-full max-w-lg rounded-2xl bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4 border-b border-slate-200 dark:border-slate-800 pb-3">
               <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
                 <UserPlus className="w-5 h-5 text-red-500" />
@@ -2115,6 +2186,58 @@ export default function HrSettingsPage() {
                 </p>
               </div>
 
+              {/* Module Accessibility Setup */}
+              <div className="pt-2 border-t border-slate-200 dark:border-slate-800">
+                <label className="block text-slate-900 dark:text-white font-bold mb-1 flex items-center gap-1.5">
+                  <ShieldCheck className="w-4 h-4 text-emerald-500" /> Page & Module Accessibility Setup
+                </label>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 mb-2">
+                  Select which pages and modules this user can access in the portal:
+                </p>
+
+                <div className="space-y-2 bg-slate-50 dark:bg-slate-900/60 p-3 rounded-xl border border-slate-200 dark:border-slate-800">
+                  {systemPermissions.length === 0 ? (
+                    <div className="text-[11px] text-slate-400 italic">
+                      Standard module permissions (Dashboard, Card Designs, KIOSKs, Print History, Audit Logs, Settings) will apply after database migration.
+                    </div>
+                  ) : (
+                    systemPermissions.map((perm) => {
+                      const isChecked = userForm.permissionIds.includes(perm.id);
+                      return (
+                        <label
+                          key={perm.id}
+                          className={`flex items-start gap-2.5 p-2 rounded-lg border transition cursor-pointer ${
+                            isChecked
+                              ? 'bg-red-50/50 dark:bg-red-950/20 border-red-300 dark:border-red-800/60'
+                              : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setUserForm({ ...userForm, permissionIds: [...userForm.permissionIds, perm.id] });
+                              } else {
+                                setUserForm({
+                                  ...userForm,
+                                  permissionIds: userForm.permissionIds.filter((id) => id !== perm.id),
+                                });
+                              }
+                            }}
+                            className="mt-0.5 rounded border-slate-300 dark:border-slate-700 text-red-600 focus:ring-red-500"
+                          />
+                          <div>
+                            <div className="font-semibold text-slate-900 dark:text-white text-xs">{perm.module}</div>
+                            <div className="text-[10px] text-slate-500 dark:text-slate-400">{perm.description}</div>
+                          </div>
+                        </label>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+
               <div>
                 <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Initial Password * (min 12 chars)</label>
                 <input
@@ -2142,6 +2265,102 @@ export default function HrSettingsPage() {
                   className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white font-semibold shadow-md shadow-red-600/30 transition disabled:opacity-50"
                 >
                   {userCreating ? 'Creating User...' : 'Create Account'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showEditUserModal && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-lg rounded-2xl bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4 border-b border-slate-200 dark:border-slate-800 pb-3">
+              <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <Sliders className="w-5 h-5 text-blue-500" />
+                Edit Accessibility & Role ({editingUser?.displayName})
+              </h3>
+              <button onClick={() => setShowEditUserModal(false)} className="text-slate-400 hover:text-slate-700 dark:hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateUserPermissions} className="space-y-4 text-xs">
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Corporate Role</label>
+                <select
+                  required
+                  value={editUserForm.roleId}
+                  onChange={(e) => setEditUserForm({ ...editUserForm, roleId: e.target.value })}
+                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white font-medium"
+                >
+                  {availableRoles.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.name} {r.description ? `(${r.description})` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="pt-2 border-t border-slate-200 dark:border-slate-800">
+                <label className="block text-slate-900 dark:text-white font-bold mb-1 flex items-center gap-1.5">
+                  <ShieldCheck className="w-4 h-4 text-emerald-500" /> Page & Module Accessibility Checklist
+                </label>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 mb-2">
+                  Check or uncheck page module permissions for {editingUser?.email}:
+                </p>
+
+                <div className="space-y-2 bg-slate-50 dark:bg-slate-900/60 p-3 rounded-xl border border-slate-200 dark:border-slate-800">
+                  {systemPermissions.map((perm) => {
+                    const isChecked = editUserForm.permissionIds.includes(perm.id);
+                    return (
+                      <label
+                        key={perm.id}
+                        className={`flex items-start gap-2.5 p-2 rounded-lg border transition cursor-pointer ${
+                          isChecked
+                            ? 'bg-blue-50/50 dark:bg-blue-950/20 border-blue-300 dark:border-blue-800/60'
+                            : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setEditUserForm({ ...editUserForm, permissionIds: [...editUserForm.permissionIds, perm.id] });
+                            } else {
+                              setEditUserForm({
+                                ...editUserForm,
+                                permissionIds: editUserForm.permissionIds.filter((id) => id !== perm.id),
+                              });
+                            }
+                          }}
+                          className="mt-0.5 rounded border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500"
+                        />
+                        <div>
+                          <div className="font-semibold text-slate-900 dark:text-white text-xs">{perm.module}</div>
+                          <div className="text-[10px] text-slate-500 dark:text-slate-400">{perm.description}</div>
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowEditUserModal(false)}
+                  className="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={userUpdating}
+                  className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold shadow-md shadow-blue-600/30 transition disabled:opacity-50"
+                >
+                  {userUpdating ? 'Saving...' : 'Save Permissions'}
                 </button>
               </div>
             </form>
