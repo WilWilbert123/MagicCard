@@ -242,6 +242,10 @@ export default function KioskMainPage() {
   // Check hardware printer connectivity on localhost port 7125 and ping central backend
   useEffect(() => {
     const checkPrinterHardware = async () => {
+      let agentPrinterName = '';
+      let agentPrinterStatus = '';
+      let agentPrinterType = '';
+
       try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 2000);
@@ -251,11 +255,11 @@ export default function KioskMainPage() {
         if (res.ok) {
           const data = await res.json();
           setHardwarePrinterOnline(true);
-          if (data.kioskId) {
-            setLocalKioskId(data.kioskId);
-          }
+          if (data.kioskId) setLocalKioskId(data.kioskId);
+          if (data.printerName) agentPrinterName = data.printerName;
+          if (data.printerStatus) agentPrinterStatus = data.printerStatus;
+          if (data.printerType) agentPrinterType = data.printerType;
         } else {
-          // Fallback check to /api/status if /api/kiosk/status differs
           const statusRes = await fetch(`${agentBaseUrl}/api/status`);
           setHardwarePrinterOnline(statusRes.ok);
         }
@@ -263,7 +267,7 @@ export default function KioskMainPage() {
         setHardwarePrinterOnline(false);
       }
 
-      // Also directly ping central backend heartbeat endpoint from web kiosk page
+      // Send telemetry ping to central server using actual local printer info if available
       try {
         fetch('/api/kiosks/heartbeat', {
           method: 'POST',
@@ -272,7 +276,9 @@ export default function KioskMainPage() {
             kioskCode: localKioskId,
             status: 'ONLINE',
             agentVersion: 'v1.4.0',
-            printerStatus: 'READY (Browser Kiosk Session)',
+            printerModel: agentPrinterName || undefined,
+            printerType: agentPrinterType || undefined,
+            printerStatus: agentPrinterStatus || (hardwarePrinterOnline ? 'READY (Agent Online)' : 'READY (Browser Kiosk Session)'),
           }),
         }).catch(() => {});
       } catch {}
@@ -281,7 +287,7 @@ export default function KioskMainPage() {
     checkPrinterHardware();
     const interval = setInterval(checkPrinterHardware, 8000);
     return () => clearInterval(interval);
-  }, [localKioskId]);
+  }, [localKioskId, hardwarePrinterOnline]);
 
 
 
