@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { KioskDevice, Branch } from '@/lib/data/enterpriseStore';
 import { toast } from '@/components/ui/Toast';
+import { createClient } from '@/lib/supabase/client';
 
 export default function HrKiosksPage() {
   const [kiosks, setKiosks] = useState<KioskDevice[]>([]);
@@ -75,8 +76,27 @@ export default function HrKiosksPage() {
 
   useEffect(() => {
     loadKiosks();
+    
+    // 10-second polling fallback
     const interval = setInterval(loadKiosks, 10000);
-    return () => clearInterval(interval);
+
+    // Supabase Realtime Subscription for instant heartbeat & status updates
+    const supabase = createClient();
+    const channel = supabase
+      .channel('kiosk-fleet-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'kiosks' },
+        () => {
+          loadKiosks();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      clearInterval(interval);
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const handleRegister = async (e: React.FormEvent) => {
