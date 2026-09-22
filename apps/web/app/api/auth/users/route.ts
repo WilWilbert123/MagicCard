@@ -71,6 +71,23 @@ export async function GET() {
       }
     });
 
+    // 4. Fetch permissions master list & user_permissions mapping
+    const { data: systemPermissions } = await admin
+      .from('permissions')
+      .select('id, code, module, description')
+      .order('module', { ascending: true });
+
+    const { data: userPermissions } = await admin
+      .from('user_permissions')
+      .select('user_id, permission_id');
+
+    const userPermsMap = new Map<string, string[]>();
+    (userPermissions || []).forEach((up: any) => {
+      const existing = userPermsMap.get(up.user_id) || [];
+      existing.push(up.permission_id);
+      userPermsMap.set(up.user_id, existing);
+    });
+
     // Default HR Admin role query fallback from DB if user has no role record yet
     const { data: hrAdminRole } = await admin
       .from('roles')
@@ -80,10 +97,11 @@ export async function GET() {
 
     const defaultRoleObj = hrAdminRole || { id: null, name: 'HR Admin', description: '' };
 
-    // Map profiles combined with Auth and Supabase Role info
+    // Map profiles combined with Auth, Role, and Permissions info
     const list: any[] = (profiles || []).map((p: any) => {
       const authUser = authMap.get(p.id);
       const roleInfo = roleMap.get(p.id) || defaultRoleObj;
+      const permIds = userPermsMap.get(p.id) || [];
 
       return {
         id: p.id,
@@ -91,6 +109,7 @@ export async function GET() {
         displayName: p.full_name || authUser?.user_metadata?.full_name || 'HR Admin',
         isActive: p.is_active ?? true,
         role: roleInfo,
+        permissionIds: permIds,
         createdAt: p.created_at || authUser?.created_at || new Date().toISOString(),
         lastSignInAt: authUser?.last_sign_in_at || null,
         isCurrent: p.id === auth.user.id,
@@ -101,6 +120,7 @@ export async function GET() {
     (authUsers?.users || []).forEach((u) => {
       if (!list.some((item) => item.id === u.id)) {
         const roleInfo = roleMap.get(u.id) || defaultRoleObj;
+        const permIds = userPermsMap.get(u.id) || [];
 
         list.push({
           id: u.id,
@@ -108,6 +128,7 @@ export async function GET() {
           displayName: u.user_metadata?.full_name || u.email?.split('@')[0] || 'HR Admin',
           isActive: true,
           role: roleInfo,
+          permissionIds: permIds,
           createdAt: u.created_at || new Date().toISOString(),
           lastSignInAt: u.last_sign_in_at || null,
           isCurrent: u.id === auth.user.id,
@@ -117,10 +138,11 @@ export async function GET() {
 
     return NextResponse.json({
       data: list,
+      systemPermissions: systemPermissions || [],
       isSuperAdmin: isCallerSuperAdmin,
     });
   } catch (err: any) {
-    return NextResponse.json({ error: err.message, data: [], isSuperAdmin: false }, { status: 500 });
+    return NextResponse.json({ error: err.message, data: [], systemPermissions: [], isSuperAdmin: false }, { status: 500 });
   }
 }
 
@@ -144,6 +166,7 @@ export async function POST(request: Request) {
     const password = String(body.password || '');
     const displayName = String(body.displayName || '').trim();
     const requestedRoleId = body.roleId ? String(body.roleId).trim() : null;
+    const permissionIds: string[] = Array.isArray(body.permissionIds) ? body.permissionIds : [];
 
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return NextResponse.json({ error: 'Valid email address is required.' }, { status: 400 });
@@ -267,6 +290,18 @@ export async function POST(request: Request) {
       }
     }
 
+    // 7. Insert user_permissions if specified
+    if (permissionIds.length > 0) {
+      const permRows = permissionIds.map((pId) => ({
+        user_id: userId,
+        permission_id: pId,
+      }));
+      const { error: permErr } = await admin.from('user_permissions').insert(permRows);
+      if (permErr) {
+        console.warn('Could not assign permissions to user_permissions table:', permErr.message);
+      }
+    }
+
     // Fetch assigned role details directly from public.roles
     const { data: assignedRole } = finalRoleId
       ? await admin.from('roles').select('id, name, description').eq('id', finalRoleId).maybeSingle()
@@ -279,7 +314,7 @@ export async function POST(request: Request) {
       entityType: 'User',
       entityId: userId,
       entityName: `${displayName} (${email})`,
-      details: `Created new user account for "${displayName}" (${email}) with role "${assignedRole?.name || 'HR Admin'}".`,
+      details: `Created new user account for "${displayName}" (${email}) with role "${assignedRole?.name || 'HR Admin'}" and ${permissionIds.length} custom permissions.`,
     });
 
     return NextResponse.json(
@@ -289,6 +324,7 @@ export async function POST(request: Request) {
           email,
           displayName,
           role: assignedRole || { id: finalRoleId, name: 'HR Admin' },
+          permissionIds,
           createdAt,
         },
       },
@@ -300,6 +336,62 @@ export async function POST(request: Request) {
       { error: err.message || 'An unexpected error occurred while creating user.' },
       { status: 500 }
     );
+  }
+}
+
+export async function PUT(request: Request) {
+  const auth = await requireAuth();
+  if (!auth.authenticated) return auth.response;
+
+  try {
+    const admin = createAdminSupabaseClient();
+    const isCallerSuperAdmin = await checkIsSuperAdmin(admin, auth.user.id);
+
+    if (!isCallerSuperAdmin) {
+      return NextResponse.json(
+        { error: 'Forbidden: Only Super Admins can update administrator accounts.' },
+        { status: 403 }
+      );
+    }
+
+    const body = await request.json();
+    const userId = String(body.userId || '').trim();
+    const roleId = body.roleId ? String(body.roleId).trim() : null;
+    const permissionIds: string[] = Array.isArray(body.permissionIds) ? body.permissionIds : [];
+
+    if (!userId) {
+      return NextResponse.json({ error: 'User ID is required.' }, { status: 400 });
+    }
+
+    // Update role if provided
+    if (roleId) {
+      await admin.from('user_roles').delete().eq('user_id', userId);
+      await admin.from('user_roles').insert({ user_id: userId, role_id: roleId });
+    }
+
+    // Update permissions
+    await admin.from('user_permissions').delete().eq('user_id', userId);
+    if (permissionIds.length > 0) {
+      const permRows = permissionIds.map((pId) => ({
+        user_id: userId,
+        permission_id: pId,
+      }));
+      await admin.from('user_permissions').insert(permRows);
+    }
+
+    await recordAuditLog({
+      actorId: auth.user.id,
+      actorEmail: auth.user.email,
+      action: 'UPDATE_USER_PERMISSIONS',
+      entityType: 'User',
+      entityId: userId,
+      entityName: `User ID ${userId}`,
+      details: `Updated permissions for user ID "${userId}" (${permissionIds.length} permissions assigned).`,
+    });
+
+    return NextResponse.json({ success: true, permissionIds });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
 
@@ -330,6 +422,8 @@ export async function DELETE(request: Request) {
 
     // Delete from user_roles
     await admin.from('user_roles').delete().eq('user_id', id);
+    // Delete from user_permissions
+    await admin.from('user_permissions').delete().eq('user_id', id);
 
     // Delete from auth.users
     const { error: authErr } = await admin.auth.admin.deleteUser(id);

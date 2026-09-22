@@ -56,7 +56,12 @@ export async function POST(request: Request) {
       if (printerModel) updateData.printer_model = printerModel;
       if (printerType) updateData.printer_type = printerType;
 
-      await admin.from('kiosks').update(updateData).eq('id', kiosk.id);
+      const { error: updateError } = await admin.from('kiosks').update(updateData).eq('id', kiosk.id);
+      if (updateError) {
+        console.error('[Heartbeat] DB update FAILED for kiosk', kiosk.id, ':', updateError.message, '| hint:', updateError.hint, '| code:', updateError.code);
+      } else {
+        console.log('[Heartbeat] DB updated OK for kiosk', kiosk.kiosk_code, '- last_heartbeat_at =', now);
+      }
     } else {
 
       const targetBranchStr = body.branchId || body.branchCode || body.branchName;
