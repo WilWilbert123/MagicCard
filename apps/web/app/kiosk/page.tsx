@@ -267,32 +267,35 @@ export default function KioskMainPage() {
         setHardwarePrinterOnline(false);
       }
 
-      // Send telemetry ping to central server using actual local printer info if available
+      // Send real-time telemetry ping to central server from kiosk interface
       try {
         fetch('/api/kiosks/heartbeat', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'x-kiosk-request': 'true',
+          },
           body: JSON.stringify({
             kioskCode: localKioskId,
             status: 'ONLINE',
             agentVersion: 'v1.4.0',
-            printerModel: agentPrinterName || undefined,
-            printerType: agentPrinterType || undefined,
-            printerStatus: agentPrinterStatus || (hardwarePrinterOnline ? 'READY (Agent Online)' : 'READY (Browser Kiosk Session)'),
+            printerModel: agentPrinterName || 'Magicard 600NEO',
+            printerType: agentPrinterType || 'MagicCard',
+            printerStatus: agentPrinterStatus || (hardwarePrinterOnline ? 'READY (Agent Online)' : 'READY (Kiosk Active)'),
           }),
-        }).catch(() => {});
-      } catch {}
+        }).catch(() => { });
+      } catch { }
     };
 
     checkPrinterHardware();
-    const interval = setInterval(checkPrinterHardware, 8000);
+    const interval = setInterval(checkPrinterHardware, 5000);
     return () => clearInterval(interval);
   }, [localKioskId, hardwarePrinterOnline]);
 
 
 
 
-  // Touchscreen Inactivity Timeout — Auto-resets KIOSK to SCREENSAVER if abandoned during search, preview, confirm or error
+
   useEffect(() => {
     if (step === 'SCREENSAVER' || step === 'PRINTING' || step === 'SUCCESS') return;
 
@@ -356,7 +359,7 @@ export default function KioskMainPage() {
       let json = res.ok ? await res.json() : null;
       let emp = json?.data?.[0];
 
-      // 2. If not found, try broad query search (partial number or name) via API
+
       if (!emp) {
         res = await fetch(`/api/employees?q=${encodeURIComponent(term)}`, { headers: kioskHeaders });
         json = res.ok ? await res.json() : null;
