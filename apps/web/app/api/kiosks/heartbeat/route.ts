@@ -99,6 +99,8 @@ export async function POST(request: Request) {
           status: 'ONLINE',
           agent_version: agentVersion || 'v1.4.0',
           ip_address: ipAddress || '127.0.0.1',
+          printer_model: printerModel || printerType || 'Magicard 600NEO',
+          printer_type: printerType || 'MagicCard',
           printer_status_summary: printerStatus || 'READY',
           max_card_capacity: 50,
           last_heartbeat_at: now,
