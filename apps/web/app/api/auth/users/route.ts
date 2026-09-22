@@ -72,10 +72,36 @@ export async function GET() {
     });
 
     // 4. Fetch permissions master list & user_permissions mapping
-    const { data: systemPermissions } = await admin
+    let { data: systemPermissions } = await admin
       .from('permissions')
       .select('id, code, module, description')
       .order('module', { ascending: true });
+
+    // Fallback standard module permissions if permissions table is not seeded yet
+    const DEFAULT_MODULE_PERMISSIONS = [
+      { id: 'perm-dashboard', code: 'dashboard:view', module: 'Dashboard', description: 'Access overview metrics and fleet stats dashboard' },
+      { id: 'perm-employees', code: 'employees:manage', module: 'Employees', description: 'Manage corporate employee records, badges, and credentials' },
+      { id: 'perm-card-designs', code: 'card_designs:manage', module: 'Card Designs', description: 'Design enterprise ID credentials, assign custom layouts per branch, and publish versions across fleet KIOSKs' },
+      { id: 'perm-kiosks', code: 'kiosks:manage', module: 'KIOSKs Fleet', description: 'Monitor real-time heartbeats, printer status, and template synchronization across physical terminals' },
+      { id: 'perm-print-history', code: 'print_history:view', module: 'Print History', description: 'View printed card logs, badge activity, and issuance history' },
+      { id: 'perm-audit-logs', code: 'audit_logs:view', module: 'Audit Logs', description: 'View system security audit logs and admin user activity' },
+      { id: 'perm-settings', code: 'settings:manage', module: 'Settings', description: 'Access backend settings, HR Admin user account creation, and system configuration' },
+    ];
+
+    if (!systemPermissions || systemPermissions.length === 0) {
+      systemPermissions = DEFAULT_MODULE_PERMISSIONS;
+    } else {
+      // Ensure 'Employees' permission exists in the list if DB seed has not been re-run yet
+      const hasEmployees = systemPermissions.some((p: any) => p.code === 'employees:manage' || p.module === 'Employees');
+      if (!hasEmployees) {
+        systemPermissions.push({
+          id: 'perm-employees',
+          code: 'employees:manage',
+          module: 'Employees',
+          description: 'Manage corporate employee records, badges, and credentials',
+        });
+      }
+    }
 
     const { data: userPermissions } = await admin
       .from('user_permissions')
