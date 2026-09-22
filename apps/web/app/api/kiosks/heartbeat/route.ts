@@ -13,23 +13,39 @@ export async function POST(request: Request) {
     if (!rawCode) {
       return NextResponse.json({ error: 'Missing required kioskCode or kioskId in request body' }, { status: 400 });
     }
-    const altCode = rawCode.includes('-00')
-      ? rawCode.replace('-00', '-0')
-      : rawCode.includes('-0')
-        ? rawCode.replace('-0', '-00')
-        : rawCode;
 
-    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rawCode);
-    const filterQuery = isUuid
-      ? `kiosk_code.ilike.${rawCode},kiosk_code.ilike.${altCode},id.eq.${rawCode}`
-      : `kiosk_code.ilike.${rawCode},kiosk_code.ilike.${altCode}`;
-
-    const { data: kiosk } = await admin
+    // Step 1: Try exact match (case-insensitive)
+    let { data: kiosk } = await admin
       .from('kiosks')
       .select('id, kiosk_code, status')
-      .or(filterQuery)
+      .ilike('kiosk_code', rawCode)
       .limit(1)
       .maybeSingle();
+
+    // Step 2: If exact match fails, try UUID lookup (if rawCode is a UUID)
+    if (!kiosk) {
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rawCode);
+      if (isUuid) {
+        const { data: byId } = await admin
+          .from('kiosks')
+          .select('id, kiosk_code, status')
+          .eq('id', rawCode)
+          .maybeSingle();
+        kiosk = byId;
+      }
+    }
+
+    // Step 3: Last resort — fetch all and find partial match
+    if (!kiosk) {
+      const { data: allKiosks } = await admin
+        .from('kiosks')
+        .select('id, kiosk_code, status');
+      kiosk = (allKiosks || []).find((k: any) =>
+        k.kiosk_code?.toLowerCase() === rawCode.toLowerCase()
+      ) || null;
+    }
+
+    console.log(`[Heartbeat] Lookup for "${rawCode}" =>`, kiosk ? `found id=${kiosk.id}` : 'NOT FOUND');
 
     if (kiosk) {
       const updateData: any = {
