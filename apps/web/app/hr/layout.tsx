@@ -52,6 +52,8 @@ export default function HrLayout({ children }: { children: React.ReactNode }) {
   const [selectedBranch, setSelectedBranch] = useState('ALL');
   const { isDark, toggleTheme } = useTheme();
   const [adminUser, setAdminUser] = useState<{ email: string; name: string } | null>(null);
+  const [userPermissions, setUserPermissions] = useState<Array<{ code: string; module: string }> | null>(null);
+  const [isSuperAdmin, setIsSuperAdmin] = useState<boolean>(true);
   const [showDevModal, setShowDevModal] = useState(false);
 
   // If on login page, DO NOT render the sidebar, top navigation, or any protected UI
@@ -66,6 +68,8 @@ export default function HrLayout({ children }: { children: React.ReactNode }) {
         .then((json) => {
           if (json.data) {
             setAdminUser({ email: json.data.email, name: json.data.displayName });
+            setIsSuperAdmin(json.data.isSuperAdmin ?? true);
+            setUserPermissions(json.data.permissions || []);
           }
         })
         .catch(() => { });
@@ -201,15 +205,29 @@ export default function HrLayout({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
 
-  const navItems = [
-    { name: 'Dashboard', href: '/hr/dashboard', icon: LayoutDashboard },
-    { name: 'Employees', href: '/hr/employees', icon: Users },
-    { name: 'Card Designs', href: '/hr/card-designs', icon: Palette },
-    { name: 'KIOSKs', href: '/hr/kiosks', icon: Monitor },
-    { name: 'Print History', href: '/hr/print-history', icon: Printer },
-    { name: 'Audit Logs', href: '/hr/audit-logs', icon: FileText },
-    { name: 'Settings', href: '/hr/settings', icon: Settings },
+  const allNavItems = [
+    { name: 'Dashboard', href: '/hr/dashboard', icon: LayoutDashboard, code: 'dashboard:view', module: 'Dashboard' },
+    { name: 'Employees', href: '/hr/employees', icon: Users, code: 'employees:manage', module: 'Employees' },
+    { name: 'Card Designs', href: '/hr/card-designs', icon: Palette, code: 'card_designs:manage', module: 'Card Designs' },
+    { name: 'KIOSKs', href: '/hr/kiosks', icon: Monitor, code: 'kiosks:manage', module: 'KIOSKs Fleet' },
+    { name: 'Print History', href: '/hr/print-history', icon: Printer, code: 'print_history:view', module: 'Print History' },
+    { name: 'Audit Logs', href: '/hr/audit-logs', icon: FileText, code: 'audit_logs:view', module: 'Audit Logs' },
+    { name: 'Settings', href: '/hr/settings', icon: Settings, code: 'settings:manage', module: 'Settings' },
   ];
+
+  // Filter sidebar items according to user permissions
+  const navItems = allNavItems.filter((item) => {
+    if (isSuperAdmin) return true;
+    if (!userPermissions || userPermissions.length === 0) return true;
+
+    return userPermissions.some(
+      (p) =>
+        p.code === item.code ||
+        p.module === item.module ||
+        p.module?.toLowerCase() === item.name.toLowerCase() ||
+        (item.name === 'KIOSKs' && p.module?.toLowerCase().includes('kiosk'))
+    );
+  });
 
   return (
     <div className={`min-h-screen flex ${isDark ? 'bg-[#0b0f17] text-white' : 'bg-slate-50 text-slate-900'}`}>
