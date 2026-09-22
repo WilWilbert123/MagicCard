@@ -267,25 +267,28 @@ export default function KioskMainPage() {
         setHardwarePrinterOnline(false);
       }
 
-      // Send telemetry ping to central server using actual local printer info if available
+      // Send real-time telemetry ping to central server from kiosk interface
       try {
         fetch('/api/kiosks/heartbeat', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'x-kiosk-request': 'true',
+          },
           body: JSON.stringify({
             kioskCode: localKioskId,
             status: 'ONLINE',
             agentVersion: 'v1.4.0',
-            printerModel: agentPrinterName || undefined,
-            printerType: agentPrinterType || undefined,
-            printerStatus: agentPrinterStatus || (hardwarePrinterOnline ? 'READY (Agent Online)' : 'READY (Browser Kiosk Session)'),
+            printerModel: agentPrinterName || 'Magicard 600NEO',
+            printerType: agentPrinterType || 'MagicCard',
+            printerStatus: agentPrinterStatus || (hardwarePrinterOnline ? 'READY (Agent Online)' : 'READY (Kiosk Active)'),
           }),
         }).catch(() => {});
       } catch {}
     };
 
     checkPrinterHardware();
-    const interval = setInterval(checkPrinterHardware, 8000);
+    const interval = setInterval(checkPrinterHardware, 5000);
     return () => clearInterval(interval);
   }, [localKioskId, hardwarePrinterOnline]);
 
