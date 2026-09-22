@@ -126,3 +126,23 @@ export async function POST(request: Request) {
   }
 }
 
+export async function GET() {
+  return NextResponse.json({
+    status: 'ONLINE',
+    endpoint: '/api/kiosks/heartbeat',
+    message: 'Kiosk heartbeat endpoint is active. Send POST requests with kiosk telemetry.',
+  });
+}
+
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 200,
+    headers: {
+      'Allow': 'POST, GET, OPTIONS',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-kiosk-request',
+    },
+  });
+}
+
