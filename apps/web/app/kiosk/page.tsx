@@ -176,7 +176,7 @@ export default function KioskMainPage() {
   useEffect(() => {
     const enterFullscreen = () => {
       if (typeof document !== 'undefined' && !document.fullscreenElement) {
-        document.documentElement.requestFullscreen().catch(() => {});
+        document.documentElement.requestFullscreen().catch(() => { });
       }
     };
 
@@ -622,7 +622,7 @@ export default function KioskMainPage() {
       <div
         onClick={() => {
           if (!document.fullscreenElement) {
-            document.documentElement.requestFullscreen().catch(() => {});
+            document.documentElement.requestFullscreen().catch(() => { });
           }
           if (step === 'SCREENSAVER') setStep('SEARCH');
         }}
@@ -661,7 +661,7 @@ export default function KioskMainPage() {
         {/* Center branding */}
         <div className="relative z-20 flex-1 flex flex-col items-center justify-center text-center px-6 pointer-events-none">
           <h1 className="text-6xl sm:text-7xl md:text-8xl font-black tracking-tight leading-none text-white drop-shadow-[0_4px_35px_rgba(0,0,0,0.9)] uppercase">
-            MAGIC CARD
+            BISMAC CARD
           </h1>
 
           <div className="flex items-center gap-4 mt-4">
