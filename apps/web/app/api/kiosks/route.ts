@@ -73,15 +73,15 @@ export async function GET() {
       const lastHbTime = k.last_heartbeat_at ? new Date(k.last_heartbeat_at).getTime() : 0;
       const diffMs = now - lastHbTime;
 
-      let computedStatus = k.status || 'OFFLINE';
-      if (computedStatus !== 'DISABLED') {
-        if (!k.last_heartbeat_at || isNaN(diffMs) || diffMs > 90000) {
-          computedStatus = 'OFFLINE';
-          if (k.status === 'ONLINE') {
-            staleKioskIds.push(k.id);
-          }
-        } else {
-          computedStatus = 'ONLINE';
+      let computedStatus = 'OFFLINE';
+      if (k.status === 'DISABLED') {
+        computedStatus = 'DISABLED';
+      } else if (k.last_heartbeat_at && !isNaN(diffMs) && diffMs <= 90000) {
+        computedStatus = 'ONLINE';
+      } else {
+        computedStatus = 'OFFLINE';
+        if (k.status === 'ONLINE') {
+          staleKioskIds.push(k.id);
         }
       }
 
