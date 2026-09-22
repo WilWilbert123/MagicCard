@@ -9,23 +9,26 @@ export async function POST(request: Request) {
     const admin = createAdminSupabaseClient();
     const now = new Date().toISOString();
 
-    const rawCode = kioskCode || kioskId || 'KIOSK-01';
+    const rawCode = (kioskCode || kioskId || '').toString().trim();
+    if (!rawCode) {
+      return NextResponse.json({ error: 'Missing required kioskCode or kioskId in request body' }, { status: 400 });
+    }
     const altCode = rawCode.includes('-00')
       ? rawCode.replace('-00', '-0')
       : rawCode.includes('-0')
         ? rawCode.replace('-0', '-00')
         : rawCode;
 
-
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rawCode);
     const filterQuery = isUuid
-      ? `kiosk_code.eq.${rawCode},kiosk_code.eq.${altCode},id.eq.${rawCode}`
-      : `kiosk_code.eq.${rawCode},kiosk_code.eq.${altCode}`;
+      ? `kiosk_code.ilike.${rawCode},kiosk_code.ilike.${altCode},id.eq.${rawCode}`
+      : `kiosk_code.ilike.${rawCode},kiosk_code.ilike.${altCode}`;
 
     const { data: kiosk } = await admin
       .from('kiosks')
       .select('id, kiosk_code, status')
       .or(filterQuery)
+      .limit(1)
       .maybeSingle();
 
     if (kiosk) {
