@@ -14,7 +14,7 @@ export async function GET() {
       .select('*')
       .order('name', { ascending: true });
 
-    if (error || !data || data.length === 0) {
+    if (!data || data.length === 0) {
       const admin = createAdminSupabaseClient();
       const adminRes = await admin
         .from('branches')

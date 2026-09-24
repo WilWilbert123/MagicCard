@@ -99,15 +99,33 @@ export async function POST(request: Request) {
         const { data: defaultBranch } = await admin
           .from('branches')
           .select('id')
-          .or('name.eq.BRANCH-001,code.eq.BR-001')
+          .or('code.eq.BRANCH-001,name.eq.BRANCH-001,code.eq.BR-001')
           .maybeSingle();
         matchedBranch = defaultBranch || (await admin.from('branches').select('id').limit(1).maybeSingle()).data;
       }
 
-      const { data: defaultCompany } = await admin.from('companies').select('id').limit(1).maybeSingle();
+      let { data: defaultCompany } = await admin.from('companies').select('id').limit(1).maybeSingle();
+      if (!defaultCompany) {
+        const { data: newComp } = await admin
+          .from('companies')
+          .insert([{ name: 'Main Enterprise', code: 'HQ' }])
+          .select('id')
+          .single();
+        defaultCompany = newComp;
+      }
+
+      if (!matchedBranch && defaultCompany) {
+        const branchCode = (targetBranchStr || 'BRANCH-001').toString().toUpperCase();
+        const { data: newBranch } = await admin
+          .from('branches')
+          .insert([{ company_id: defaultCompany.id, name: branchCode, code: branchCode, is_active: true }])
+          .select('id')
+          .single();
+        matchedBranch = newBranch;
+      }
 
       if (defaultCompany && matchedBranch) {
-        await admin.from('kiosks').insert([{
+        const { error: insertErr } = await admin.from('kiosks').insert([{
           kiosk_code: rawCode.toUpperCase(),
           name: `Terminal (${rawCode})`,
           company_id: defaultCompany.id,
@@ -121,6 +139,12 @@ export async function POST(request: Request) {
           max_card_capacity: 50,
           last_heartbeat_at: now,
         }]);
+
+        if (insertErr) {
+          console.error('[Heartbeat] Failed to auto-create kiosk:', insertErr.message);
+        } else {
+          console.log('[Heartbeat] Auto-registered new kiosk in Supabase:', rawCode);
+        }
       }
     }
 
