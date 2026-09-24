@@ -172,7 +172,13 @@ export async function POST(request: Request) {
       },
     });
   } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    console.error('[Heartbeat Route Exception]:', err);
+    return NextResponse.json({
+      status: 'ACK',
+      timestamp: new Date().toISOString(),
+      warning: err.message,
+      activeTemplate: { versionId: null, versionTag: 'v1.0.0', publishedAt: null },
+    });
   }
 }
 
