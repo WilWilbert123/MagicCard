@@ -89,9 +89,22 @@ export async function GET() {
       }
 
       const isOffline = computedStatus === 'OFFLINE';
+      
+      let rawSummary = k.printer_status_summary || 'READY';
+      let extractedModel = k.printer_model || k.printer_type || '';
+      
+      if (rawSummary) {
+        const matchModel = rawSummary.match(/\[(.*?)\]/);
+        if (matchModel && matchModel[1]) {
+          extractedModel = matchModel[1];
+          rawSummary = rawSummary.replace(/\[.*?\]/, '').trim();
+        }
+      }
+      if (!rawSummary) rawSummary = 'READY';
+
       const printerStatusSummary = isOffline
         ? 'OFFLINE (Agent Disconnected)'
-        : k.printer_status_summary || 'READY';
+        : (rawSummary.startsWith('READY') ? 'READY (Kiosk Active)' : rawSummary);
 
       return {
         id: k.id,
@@ -104,7 +117,7 @@ export async function GET() {
         appVersion: k.app_version || 'v2.1.0',
         ipAddress: k.ip_address || '127.0.0.1',
         activeTemplateVersion: activeTag,
-        printerModel: k.printer_model || k.printer_type || 'Unknown Printer',
+        printerModel: extractedModel || 'Magicard 600NEO',
         printerStatus: printerStatusSummary,
         ribbonLevelPct: isOffline ? 0 : ribbonPct,
         ribbonType: k.ribbon_type || 'YMCKO',

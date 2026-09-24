@@ -60,9 +60,11 @@ export async function POST(request: Request) {
       } else if (kiosk.status !== 'DISABLED') {
         updateData.status = 'ONLINE';
       }
-      if (printerStatus) {
-        updateData.printer_status_summary = printerStatus;
-        const match = printerStatus.match(/Ribbon\s*(\d+)%/i);
+      if (printerStatus || printerModel) {
+        const pStatus = printerStatus || 'READY';
+        const pModel = printerModel || printerType || '';
+        updateData.printer_status_summary = pModel ? `${pStatus} [${pModel}]` : pStatus;
+        const match = pStatus.match(/Ribbon\s*(\d+)%/i);
         if (match && match[1]) {
           updateData.ribbon_level_pct = parseInt(match[1], 10);
         }
