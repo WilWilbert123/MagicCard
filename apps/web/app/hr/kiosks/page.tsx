@@ -44,12 +44,15 @@ export default function HrKiosksPage() {
 
   const formatHeartbeatTime = (dateStr?: string) => {
     if (!dateStr) return 'never';
-    const date = new Date(dateStr);
+    let rawStr = String(dateStr).trim();
+    if (!rawStr.endsWith('Z') && !rawStr.includes('+') && !rawStr.includes('-')) {
+      rawStr += 'Z';
+    }
+    const date = new Date(rawStr);
     const now = new Date();
     const diffSec = Math.floor((now.getTime() - date.getTime()) / 1000);
     if (isNaN(diffSec)) return 'never';
-    if (diffSec < 0) return 'just now';
-    if (diffSec < 15) return 'just now';
+    if (diffSec < 0 || diffSec < 15) return 'just now';
     if (diffSec < 60) return `${diffSec}s ago`;
     if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`;
     if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`;
