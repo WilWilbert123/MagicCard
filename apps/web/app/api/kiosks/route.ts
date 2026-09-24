@@ -3,6 +3,9 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { requireAuth } from '@/lib/auth/require-auth';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 async function getSupabaseClient() {
   try {
     return createAdminClient();
