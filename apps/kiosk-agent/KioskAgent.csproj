@@ -22,4 +22,8 @@
     <PackageReference Include="System.Drawing.Common" Version="9.0.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="start_hidden.vbs;watchdog.vbs;logs.bat;stop.bat;ecosystem.config.js" CopyToOutputDirectory="Always" />
+  </ItemGroup>
+
 </Project>

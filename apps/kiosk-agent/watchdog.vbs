@@ -43,21 +43,21 @@ LogMsg "KioskAgent Watchdog Worker Started."
 LogMsg "Monitoring: " & exePath
 LogMsg "=================================================="
 
+Dim wmi
+Set wmi = GetObject("winmgmts:\\.\root\cimv2")
+
 Do While True
-    Dim wmi, colProcesses
-    Set wmi = GetObject("winmgmts:\\.\root\cimv2")
+    Dim colProcesses
     Set colProcesses = wmi.ExecQuery("Select * from Win32_Process Where Name = 'KioskAgent.exe'")
     
     If colProcesses.Count = 0 Then
         LogMsg "KioskAgent.exe is NOT running! Restarting invisibly..."
         
         If fso.FileExists(exePath) Then
-            ' Set working directory to exe directory so config appsettings.json loads correctly
             Dim exeDir
             exeDir = fso.GetParentFolderName(exePath)
             WshShell.CurrentDirectory = exeDir
             
-            ' Launch KioskAgent.exe invisibly with window style 0
             WshShell.Run """" & exePath & """", 0, False
             LogMsg "KioskAgent.exe process spawned at " & exePath
             WScript.Sleep 5000 ' Wait 5 seconds after launching to avoid rapid loops
@@ -66,7 +66,6 @@ Do While True
             WScript.Sleep 10000
         End If
     Else
-        ' KioskAgent.exe is healthy and running
-        WScript.Sleep 3000 ' Polling interval: 3 seconds
+        WScript.Sleep 5000 ' Polling interval: 5 seconds
     End If
 Loop
