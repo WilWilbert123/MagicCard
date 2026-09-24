@@ -39,16 +39,6 @@ public class HeartbeatService : BackgroundService
             }
         }
 
-        _logger.LogInformation("KioskAgent stopping. Sending immediate OFFLINE heartbeat ping to backend...");
-        try
-        {
-            await _registrationService.SendHeartbeatAsync(CancellationToken.None, "OFFLINE");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to send OFFLINE ping on shutdown.");
-        }
-
         _logger.LogInformation("KioskAgent background HeartbeatService stopped.");
     }
 }
