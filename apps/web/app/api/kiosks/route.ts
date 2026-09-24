@@ -72,14 +72,14 @@ export async function GET() {
         ? templateMap.get(k.active_template_version_id) || defaultPublishedTag
         : defaultPublishedTag;
 
-      // Real-time heartbeat validation: Kiosk sends ping every 15s. If no heartbeat within 90s, it's OFFLINE.
+      // Real-time heartbeat validation: Kiosk sends ping every 15s. If no heartbeat within 35s (~2 cycles), it's OFFLINE.
       const lastHbTime = k.last_heartbeat_at ? new Date(k.last_heartbeat_at).getTime() : 0;
       const diffMs = now - lastHbTime;
 
       let computedStatus = 'OFFLINE';
       if (k.status === 'DISABLED') {
         computedStatus = 'DISABLED';
-      } else if (k.last_heartbeat_at && !isNaN(diffMs) && diffMs <= 90000) {
+      } else if (k.last_heartbeat_at && !isNaN(diffMs) && diffMs <= 35000) {
         computedStatus = 'ONLINE';
       } else {
         computedStatus = 'OFFLINE';
