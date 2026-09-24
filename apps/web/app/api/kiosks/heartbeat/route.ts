@@ -63,17 +63,10 @@ export async function POST(request: Request) {
       if (printerStatus || printerModel) {
         const pStatus = printerStatus || 'READY';
         const pModel = printerModel || printerType || '';
-        updateData.printer_status_summary = pModel ? `${pStatus} [${pModel}]` : pStatus;
-        const match = pStatus.match(/Ribbon\s*(\d+)%/i);
-        if (match && match[1]) {
-          updateData.ribbon_level_pct = parseInt(match[1], 10);
-        }
-      }
-      if (typeof ribbonLevelPct === 'number') {
-        updateData.ribbon_level_pct = ribbonLevelPct;
-      }
-      if (ribbonType) {
-        updateData.ribbon_type = ribbonType;
+        const rPct = typeof ribbonLevelPct === 'number' ? ribbonLevelPct : (ribbonType ? 100 : null);
+        const rStr = rPct !== null ? `Ribbon ${rPct}%` : '';
+        const combinedStatus = rStr && !pStatus.toLowerCase().includes('ribbon') ? `${pStatus} (${rStr})` : pStatus;
+        updateData.printer_status_summary = pModel ? `${combinedStatus} [${pModel}]` : combinedStatus;
       }
       if (agentVersion) updateData.agent_version = agentVersion;
       if (ipAddress) updateData.ip_address = ipAddress;
