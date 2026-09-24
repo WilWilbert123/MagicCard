@@ -79,7 +79,7 @@ export async function GET() {
       let computedStatus = 'OFFLINE';
       if (k.status === 'DISABLED') {
         computedStatus = 'DISABLED';
-      } else if (k.last_heartbeat_at && !isNaN(diffMs) && diffMs <= 35000) {
+      } else if (k.last_heartbeat_at && !isNaN(diffMs) && diffMs >= 0 && diffMs <= 35000) {
         computedStatus = 'ONLINE';
       } else {
         computedStatus = 'OFFLINE';

@@ -47,8 +47,10 @@ export default function HrKiosksPage() {
     const date = new Date(dateStr);
     const now = new Date();
     const diffSec = Math.floor((now.getTime() - date.getTime()) / 1000);
-    if (isNaN(diffSec) || diffSec < 0) return 'just now';
-    if (diffSec < 45) return 'just now';
+    if (isNaN(diffSec)) return 'never';
+    if (diffSec < 0) return 'just now';
+    if (diffSec < 15) return 'just now';
+    if (diffSec < 60) return `${diffSec}s ago`;
     if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`;
     if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`;
     return date.toLocaleDateString();
