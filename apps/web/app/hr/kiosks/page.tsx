@@ -57,8 +57,8 @@ export default function HrKiosksPage() {
   const loadKiosks = async () => {
     try {
       const [kRes, bRes] = await Promise.all([
-        fetch('/api/kiosks').then((r) => r.json()),
-        fetch('/api/branches').then((r) => r.json()),
+        fetch('/api/kiosks', { cache: 'no-store' }).then((r) => r.json()),
+        fetch('/api/branches', { cache: 'no-store' }).then((r) => r.json()),
       ]);
 
       setKiosks(kRes.data ?? []);

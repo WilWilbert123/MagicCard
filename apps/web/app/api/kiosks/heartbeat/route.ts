@@ -81,6 +81,7 @@ export async function POST(request: Request) {
       const { error: updateError } = await admin.from('kiosks').update(updateData).eq('id', kiosk.id);
       if (updateError) {
         console.error('[Heartbeat] DB update FAILED for kiosk', kiosk.id, ':', updateError.message, '| hint:', updateError.hint, '| code:', updateError.code);
+        return NextResponse.json({ status: 'ERROR', error: updateError.message, hint: updateError.hint }, { status: 500 });
       } else {
         console.log('[Heartbeat] DB updated OK for kiosk', kiosk.kiosk_code, '- last_heartbeat_at =', now);
       }
@@ -150,6 +151,7 @@ export async function POST(request: Request) {
 
         if (insertErr) {
           console.error('[Heartbeat] Failed to auto-create kiosk:', insertErr.message);
+          return NextResponse.json({ status: 'ERROR', error: insertErr.message }, { status: 500 });
         } else {
           console.log('[Heartbeat] Auto-registered new kiosk in Supabase:', rawCode);
         }
