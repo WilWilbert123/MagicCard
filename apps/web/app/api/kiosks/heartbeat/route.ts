@@ -87,10 +87,15 @@ export async function POST(request: Request) {
       let matchedBranch: any = null;
 
       if (targetBranchStr) {
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(targetBranchStr);
+        const queryStr = isUuid
+          ? `id.eq.${targetBranchStr},name.eq.${targetBranchStr},code.eq.${targetBranchStr}`
+          : `name.eq.${targetBranchStr},code.eq.${targetBranchStr}`;
+
         const { data: b } = await admin
           .from('branches')
           .select('id')
-          .or(`id.eq.${targetBranchStr},name.eq.${targetBranchStr},code.eq.${targetBranchStr}`)
+          .or(queryStr)
           .maybeSingle();
         matchedBranch = b;
       }
