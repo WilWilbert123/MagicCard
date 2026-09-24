@@ -140,8 +140,9 @@ public class KioskRegistrationService : IKioskRegistrationService
             var payload = new
             {
                 kioskCode = _kioskOptions.KioskId,
+                branchId = _kioskOptions.BranchId,
                 deviceToken = creds?.DeviceToken,
-                agentVersion = "1.0.0",
+                agentVersion = _kioskOptions.AgentVersion,
                 status = statusOverride ?? "ONLINE",
                 printerStatus = printerStatus,
                 printerModel = _printerOptions.Name,   // from appsettings.json Printer:Name
