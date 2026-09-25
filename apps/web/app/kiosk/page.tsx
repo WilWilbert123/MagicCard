@@ -891,10 +891,10 @@ export default function KioskMainPage() {
             </div>
           </div>
 
-          {/* Center Full-Screen Stage (Centered 3D/2D Card Geometry) */}
-          <div className="w-full h-full relative flex items-center justify-center pt-16 pb-24">
+          {/* Center Stage Container (Centered 3D/2D Card with balanced margins on top, bottom, left, right) */}
+          <div className="w-full h-full relative flex items-center justify-center pt-24 pb-32 px-6 sm:px-12 md:px-16 lg:px-24">
             {previewMode === '3D' ? (
-              <div className="w-full h-full flex items-center justify-center">
+              <div className="w-full max-w-5xl h-full max-h-[68vh] flex items-center justify-center relative">
                 <ThreeCardViewer
                   template={kioskTemplate}
                   employeeNumber={foundEmployee.employeeNumber}
@@ -906,7 +906,7 @@ export default function KioskMainPage() {
                 />
               </div>
             ) : (
-              <div className="w-full h-full flex flex-col items-center justify-center space-y-6">
+              <div className="w-full max-w-5xl h-full max-h-[68vh] flex flex-col items-center justify-center space-y-6">
                 {/* 2D Interactive Card Canvas - Powered by Card Engine */}
                 <Card2DViewer
                   template={kioskTemplate}

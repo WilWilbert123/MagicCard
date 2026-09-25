@@ -73,12 +73,26 @@ export default function ThreeCardViewer({
     // ── Scene ──────────────────────────────────────────────────────
     const scene = new THREE.Scene();
 
+    // Helper to calculate camera distance that fits card with balanced margins on all screens
+    const calculateOptimalCameraDistance = (aspectRatio: number, verticalCard: boolean) => {
+      const cardW = verticalCard ? 2.14 : 3.4;
+      const cardH = verticalCard ? 3.4 : 2.14;
+      const fovRad = (36 * Math.PI) / 180;
+      // Target fill ratio (~0.54) ensures the card sits accurately centered with breathing room on top, bottom, left, and right
+      const targetFillRatio = 0.54;
+      const distForHeight = (cardH / (2 * Math.tan(fovRad / 2))) / targetFillRatio;
+      const distForWidth = (cardW / (2 * Math.tan(fovRad / 2) * aspectRatio)) / targetFillRatio;
+      return Math.max(distForHeight, distForWidth, 5.5);
+    };
+
     // ── Camera ─────────────────────────────────────────────────────
     const isVertical = template?.card?.orientation === 'vertical' || (template?.card?.height > template?.card?.width);
     const width = container.clientWidth || 800;
     const height = container.clientHeight || 520;
-    const camera = new THREE.PerspectiveCamera(36, width / height, 0.1, 100);
-    camera.position.set(0, 0, isVertical ? 5.2 : 4.4);
+    const aspect = width / height;
+    const initialDist = calculateOptimalCameraDistance(aspect, isVertical);
+    const camera = new THREE.PerspectiveCamera(36, aspect, 0.1, 100);
+    camera.position.set(0, 0, initialDist);
 
     // ── Renderer ───────────────────────────────────────────────────
     const renderer = new THREE.WebGLRenderer({
@@ -136,7 +150,7 @@ export default function ThreeCardViewer({
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
     controls.minDistance = 2.2;
-    controls.maxDistance = 7.5;
+    controls.maxDistance = 20.0;
     controls.autoRotateSpeed = 1.4;
     controls.target.set(0, 0, 0);
 
@@ -400,7 +414,8 @@ export default function ThreeCardViewer({
 
     // ── Double-click reset ─────────────────────────────────────────
     const handleDblClick = () => {
-      camera.position.set(0, 0, 4.4);
+      const resetDist = calculateOptimalCameraDistance(camera.aspect, isVertical);
+      camera.position.set(0, 0, resetDist);
       controls.target.set(0, 0, 0);
       controls.update();
     };
