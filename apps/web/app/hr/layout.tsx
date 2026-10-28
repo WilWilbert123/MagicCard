@@ -21,7 +21,9 @@ import {
   Sun,
   Moon,
   Info,
-  X
+  X,
+  ChevronDown,
+  ChevronRight
 } from 'lucide-react';
 import { useTheme } from '@/components/ThemeProvider';
 import type { KioskDevice, PrintJobRecord } from '@/lib/data/enterpriseStore';
@@ -201,13 +203,25 @@ export default function HrLayout({ children }: { children: React.ReactNode }) {
     router.refresh();
   };
 
+  const [employeesMenuOpen, setEmployeesMenuOpen] = useState(true);
+
   if (isLoginPage) {
     return <>{children}</>;
   }
 
   const allNavItems = [
     { name: 'Dashboard', href: '/hr/dashboard', icon: LayoutDashboard, code: 'dashboard:view', module: 'Dashboard' },
-    { name: 'Employees', href: '/hr/employees', icon: Users, code: 'employees:manage', module: 'Employees' },
+    {
+      name: 'Employees',
+      href: '/hr/employees',
+      icon: Users,
+      code: 'employees:manage',
+      module: 'Employees',
+      subItems: [
+        { name: 'Directory', href: '/hr/employees', icon: Users },
+        { name: 'Mass Print ID', href: '/hr/employees/mass-print', icon: Printer, badge: 'Group' },
+      ],
+    },
     { name: 'Card Designs', href: '/hr/card-designs', icon: Palette, code: 'card_designs:manage', module: 'Card Designs' },
     { name: 'KIOSKs', href: '/hr/kiosks', icon: Monitor, code: 'kiosks:manage', module: 'KIOSKs Fleet' },
     { name: 'Print History', href: '/hr/print-history', icon: Printer, code: 'print_history:view', module: 'Print History' },
@@ -249,15 +263,103 @@ export default function HrLayout({ children }: { children: React.ReactNode }) {
           <nav className="p-4 space-y-1.5">
             {navItems.map((item) => {
               const Icon = item.icon;
-              const isActive = pathname === item.href || (item.href !== '/hr/dashboard' && pathname.startsWith(item.href));
+              const hasSub = !!item.subItems;
+              const isParentActive = item.href === '/hr/dashboard'
+                ? pathname === '/hr/dashboard'
+                : pathname.startsWith(item.href);
+
+              if (hasSub) {
+                const isExpanded = employeesMenuOpen || isParentActive;
+
+                return (
+                  <div key={item.name} className="space-y-1">
+                    <div
+                      className={`flex items-center justify-between px-3.5 py-2.5 rounded-lg text-sm font-medium transition cursor-pointer ${
+                        isParentActive
+                          ? 'bg-red-600 text-white shadow-md shadow-red-600/20 font-semibold'
+                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/50'
+                      }`}
+                      onClick={() => {
+                        setEmployeesMenuOpen((prev) => !prev);
+                        if (!isParentActive) router.push(item.href);
+                      }}
+                    >
+                      <Link
+                        href={item.href}
+                        onClick={(e) => e.stopPropagation()}
+                        className="flex items-center gap-3 flex-1"
+                      >
+                        <Icon className="w-4 h-4 shrink-0" />
+                        <span>{item.name}</span>
+                      </Link>
+
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEmployeesMenuOpen((prev) => !prev);
+                        }}
+                        className="p-0.5 hover:bg-black/10 dark:hover:bg-white/10 rounded transition"
+                        title={isExpanded ? 'Collapse menu' : 'Expand menu'}
+                      >
+                        {isExpanded ? (
+                          <ChevronDown className="w-4 h-4" />
+                        ) : (
+                          <ChevronRight className="w-4 h-4" />
+                        )}
+                      </button>
+                    </div>
+
+                    {/* Submenu Items */}
+                    {isExpanded && (
+                      <div className="pl-6 pr-1 py-1 space-y-1 border-l-2 border-red-500/20 dark:border-red-500/30 ml-4">
+                        {item.subItems!.map((sub) => {
+                          const SubIcon = sub.icon;
+                          const isSubActive = sub.href === '/hr/employees'
+                            ? pathname === '/hr/employees'
+                            : pathname.startsWith(sub.href);
+
+                          return (
+                            <Link
+                              key={sub.name}
+                              href={sub.href}
+                              className={`flex items-center justify-between px-3 py-1.5 rounded-lg text-xs font-medium transition ${
+                                isSubActive
+                                  ? 'bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400 font-semibold border border-red-200/60 dark:border-red-900/40'
+                                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/80 dark:hover:bg-slate-800/40'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2">
+                                <SubIcon className="w-3.5 h-3.5 shrink-0" />
+                                <span>{sub.name}</span>
+                              </div>
+                              {sub.badge && (
+                                <span className={`text-[9px] uppercase px-1.5 py-0.5 rounded font-bold ${
+                                  isSubActive
+                                    ? 'bg-red-600 text-white'
+                                    : 'bg-red-100 text-red-700 dark:bg-red-950/80 dark:text-red-300'
+                                }`}>
+                                  {sub.badge}
+                                </span>
+                              )}
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+
               return (
                 <Link
                   key={item.name}
                   href={item.href}
-                  className={`flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition ${isActive
+                  className={`flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition ${
+                    isParentActive
                       ? 'bg-red-600 text-white shadow-md shadow-red-600/20 font-semibold'
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/50'
-                    }`}
+                  }`}
                 >
                   <Icon className="w-4 h-4 shrink-0" />
                   <span>{item.name}</span>
