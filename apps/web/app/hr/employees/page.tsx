@@ -60,6 +60,13 @@ export default function HrEmployeesPage() {
   const [selectedDept, setSelectedDept] = useState('ALL');
   const [selectedStatus, setSelectedStatus] = useState('ALL');
   const [selectedCardStatus, setSelectedCardStatus] = useState('ALL');
+  const [selectedEmpIds, setSelectedEmpIds] = useState<Set<string>>(new Set());
+
+  const handleSelectFirst20 = () => {
+    const ids = filteredEmployees.slice(0, 20).map((e) => e.id);
+    setSelectedEmpIds(new Set(ids));
+    toast.success(`Selected ${ids.length} employees for mass printing.`);
+  };
 
   // Branch Security & Policy states
   const [restrictCrossBranchPrinting, setRestrictCrossBranchPrinting] = useState(false);
@@ -744,6 +751,14 @@ export default function HrEmployeesPage() {
         </div>
 
         <div className="flex items-center gap-2.5">
+          <Link
+            href="/hr/employees/mass-print"
+            className="px-3.5 py-1.5 rounded-lg border border-red-200 dark:border-red-900/60 bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900/60 text-red-700 dark:text-red-300 text-xs font-semibold shadow-2xs transition flex items-center gap-1.5"
+          >
+            <Printer className="w-3.5 h-3.5 text-red-600 dark:text-red-400" />
+            <span>Mass Print ID</span>
+            <span className="px-1.5 py-0.2 rounded text-[9px] bg-red-600 text-white font-bold">Group</span>
+          </Link>
           <button
             onClick={() => { setShowImportModal(true); setParseError(''); setParsedPreview([]); }}
             className="px-3.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/80 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-semibold shadow-sm transition flex items-center gap-1.5"
@@ -878,8 +893,32 @@ export default function HrEmployeesPage() {
           </select>
         </div>
 
-        <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-          Showing <span className="text-slate-900 dark:text-white font-bold">{filteredEmployees.length}</span> of {employees.length} employees
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleSelectFirst20}
+            className="px-2.5 py-1 rounded-md bg-red-50 hover:bg-red-100 dark:bg-red-950/50 dark:hover:bg-red-900/50 text-red-700 dark:text-red-300 font-semibold text-xs border border-red-200 dark:border-red-900/60 transition flex items-center gap-1 shadow-2xs"
+          >
+            <Sparkles className="w-3 h-3 text-red-500" />
+            <span>Select 20</span>
+          </button>
+          {selectedEmpIds.size > 0 && (
+            <button
+              type="button"
+              onClick={() => setSelectedEmpIds(new Set())}
+              className="px-2 py-1 rounded-md text-xs text-slate-500 hover:text-red-600 transition"
+            >
+              Clear
+            </button>
+          )}
+          <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+            Showing <span className="text-slate-900 dark:text-white font-bold">{filteredEmployees.length}</span> of {employees.length} employees
+            {selectedEmpIds.size > 0 && (
+              <span className="ml-2 text-red-600 dark:text-red-400 font-bold">
+                ({selectedEmpIds.size} selected)
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
@@ -889,7 +928,18 @@ export default function HrEmployeesPage() {
           <thead className="bg-slate-50 dark:bg-slate-900/80 border-b border-slate-200 dark:border-slate-800 uppercase tracking-wider text-[10px] text-slate-500 dark:text-slate-400">
             <tr>
               <th className="px-5 py-3 w-10">
-                <input type="checkbox" className="rounded border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-red-600 focus:ring-0" />
+                <input
+                  type="checkbox"
+                  checked={filteredEmployees.length > 0 && filteredEmployees.every((e) => selectedEmpIds.has(e.id))}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setSelectedEmpIds(new Set(filteredEmployees.map((e) => e.id)));
+                    } else {
+                      setSelectedEmpIds(new Set());
+                    }
+                  }}
+                  className="rounded border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-red-600 focus:ring-0 cursor-pointer"
+                />
               </th>
               <th className="px-5 py-3">Photo</th>
               <th className="px-5 py-3">Employee</th>
@@ -924,12 +974,15 @@ export default function HrEmployeesPage() {
               filteredEmployees.map((emp) => {
                 const isSuspended = emp.employmentStatus === 'SUSPENDED';
                 const isInactive = emp.employmentStatus === 'INACTIVE';
+                const isRowSelected = selectedEmpIds.has(emp.id);
 
                 return (
                   <tr
                     key={emp.id}
                     className={`transition ${
-                      isSuspended
+                      isRowSelected
+                        ? 'bg-red-50/70 dark:bg-red-950/30 hover:bg-red-100/60 dark:hover:bg-red-950/40'
+                        : isSuspended
                         ? 'bg-red-50/50 dark:bg-red-950/20 hover:bg-red-50 dark:hover:bg-red-950/30 border-l-4 border-l-red-500'
                         : isInactive
                         ? 'opacity-70 bg-slate-50/60 dark:bg-slate-900/40 hover:opacity-100 border-l-4 border-l-slate-400'
@@ -937,7 +990,19 @@ export default function HrEmployeesPage() {
                     }`}
                   >
                     <td className="px-5 py-3">
-                      <input type="checkbox" className="rounded border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-red-600 focus:ring-0" />
+                      <input
+                        type="checkbox"
+                        checked={isRowSelected}
+                        onChange={() => {
+                          setSelectedEmpIds((prev) => {
+                            const next = new Set(prev);
+                            if (next.has(emp.id)) next.delete(emp.id);
+                            else next.add(emp.id);
+                            return next;
+                          });
+                        }}
+                        className="rounded border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-red-600 focus:ring-0 cursor-pointer"
+                      />
                     </td>
                     <td className="px-5 py-3">
                       {emp.photoUrl ? (
@@ -1935,6 +2000,42 @@ export default function HrEmployeesPage() {
           </div>
         </div>,
         document.body
+      )}
+      {/* Floating Action Dock for Selected Employees */}
+      {selectedEmpIds.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-[#0e1424]/95 text-white backdrop-blur-md border border-slate-700/80 rounded-2xl shadow-2xl px-6 py-3.5 flex items-center gap-4 animate-in fade-in slide-in-from-bottom-4 duration-200">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-red-600 flex items-center justify-center font-bold text-sm shadow-md shadow-red-600/30">
+              {selectedEmpIds.size}
+            </div>
+            <div>
+              <div className="text-xs font-bold leading-tight">
+                {selectedEmpIds.size} Employee{selectedEmpIds.size === 1 ? '' : 's'} Selected
+              </div>
+              <div className="text-[10px] text-slate-400">
+                Ready for Mass Print ID / Group Badge Print
+              </div>
+            </div>
+          </div>
+
+          <div className="h-6 w-px bg-slate-700/80 mx-1" />
+
+          <Link
+            href={`/hr/employees/mass-print?ids=${Array.from(selectedEmpIds).join(',')}`}
+            className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold shadow-md shadow-red-600/30 flex items-center gap-1.5 transition"
+          >
+            <Printer className="w-3.5 h-3.5" />
+            <span>Mass Print ({selectedEmpIds.size}) Badges</span>
+          </Link>
+
+          <button
+            onClick={() => setSelectedEmpIds(new Set())}
+            className="p-1.5 text-slate-400 hover:text-white rounded-lg transition"
+            title="Clear selection"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
       )}
     </div>
   );
