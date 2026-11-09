@@ -697,8 +697,8 @@ export default function CardDesignerPage() {
       const dx = Math.round((e.clientX - dragStartPos.x) / zoomLevel);
       const dy = Math.round((e.clientY - dragStartPos.y) / zoomLevel);
 
-      let rawX = Math.max(0, elementStartPos.x + dx);
-      let rawY = Math.max(0, elementStartPos.y + dy);
+      let rawX = elementStartPos.x + dx;
+      let rawY = elementStartPos.y + dy;
 
       const surface = activeSide === 'front' ? template.front : template.back;
       const draggingEl = surface.elements.find((el) => el.id === dragElementId);
