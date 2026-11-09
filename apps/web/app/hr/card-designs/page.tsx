@@ -15,7 +15,6 @@ import {
   RefreshCw,
   Edit3,
   Check,
-  Sparkles,
   QrCode,
   Barcode,
   Eye,
@@ -828,7 +827,6 @@ export default function HrCardDesignsPage() {
           <div className="w-full max-w-md rounded-2xl bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
               <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-red-500" />
                 {cloneFromId ? 'Duplicate Template for Branch' : 'Create Branch ID Template'}
               </h2>
             </div>

@@ -27,7 +27,6 @@ import {
   ZoomIn,
   ZoomOut,
   Palette,
-  Sparkles,
   X,
   RectangleHorizontal,
   RectangleVertical,
@@ -1280,7 +1279,6 @@ export default function CardDesignerPage() {
             onClick={() => setShowPublishModal(true)}
             className="px-4 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-bold shadow-md shadow-red-600/30 transition flex items-center gap-1.5"
           >
-            <Sparkles className="w-3.5 h-3.5" />
             Publish
           </button>
         </div>
@@ -1322,7 +1320,7 @@ export default function CardDesignerPage() {
               { label: 'Horizontal Wave', icon: <Waves className="w-4 h-4 text-cyan-400" />, action: () => addElement('SHAPE', { shapeType: 'WAVE_HORIZONTAL', width: 856, height: 160, fill: '#0284c7' }) },
               { label: 'Vertical Wave', icon: <Waves className="w-4 h-4 text-sky-400 rotate-90" />, action: () => addElement('SHAPE', { shapeType: 'WAVE_VERTICAL', width: 180, height: 856, fill: '#0284c7' }) },
               { label: 'Signature Line', icon: <PenTool className="w-4 h-4 text-amber-400" />, action: () => addElement('SHAPE', { shapeType: 'SIGNATURE_LINE', width: 280, height: 40, fill: '#cbd5e1' }) },
-              { label: 'Smoke / Blob Accent', icon: <Sparkles className="w-4 h-4 text-pink-400" />, action: () => addElement('SHAPE', { shapeType: 'SMOKE', width: 180, height: 180, fill: '#dc2626' }) },
+              { label: 'Smoke / Blob Accent', icon: <Palette className="w-4 h-4 text-pink-400" />, action: () => addElement('SHAPE', { shapeType: 'SMOKE', width: 180, height: 180, fill: '#dc2626' }) },
             ].map(({ label, icon, action }) => (
               <button
                 key={label}
@@ -2787,7 +2785,6 @@ export default function CardDesignerPage() {
                   </div>
 
                   <button className="mt-4 w-full py-2 rounded-xl bg-indigo-600 text-white font-bold text-xs group-hover:bg-indigo-500 transition shadow-md shadow-indigo-600/20 flex items-center justify-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5" />
                     Apply {modalPreviewOrientation === 'vertical' ? 'Vertical' : 'Horizontal'} Layout
                   </button>
                 </div>
@@ -2839,7 +2836,6 @@ export default function CardDesignerPage() {
           <div className="w-full max-w-md rounded-2xl bg-[#0e1320] border border-slate-800 p-6 shadow-2xl">
             <div className="flex items-center justify-between mb-4 border-b border-slate-800 pb-3">
               <h2 className="text-base font-bold text-white flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-red-500" />
                 Publish Card Template Version
               </h2>
               <button onClick={() => setShowPublishModal(false)} className="text-slate-400 hover:text-white">
