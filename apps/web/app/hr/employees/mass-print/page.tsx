@@ -71,7 +71,7 @@ function MassPrintContent() {
 
   // Browser Print Sheet state
   const [isPreparingPrintSheet, setIsPreparingPrintSheet] = useState(false);
-  const [printSheetImages, setPrintSheetImages] = useState<Array<{ employee: Employee; frontUrl: string; backUrl?: string }>>([]);
+  const [printSheetImages, setPrintSheetImages] = useState<Array<{ employee: Employee; frontUrl: string; backUrl?: string; isPortrait?: boolean }>>([]);
   const [showPrintModal, setShowPrintModal] = useState(false);
 
   useEffect(() => {
@@ -311,7 +311,7 @@ function MassPrintContent() {
     toast.info(`Rendering ${selectedEmployees.length} badges for physical printing...`);
 
     try {
-      const renderedList: Array<{ employee: Employee; frontUrl: string; backUrl?: string }> = [];
+      const renderedList: Array<{ employee: Employee; frontUrl: string; backUrl?: string; isPortrait?: boolean }> = [];
 
       for (const emp of selectedEmployees) {
         const tpl = resolveTemplateForEmployee(emp);
@@ -323,6 +323,7 @@ function MassPrintContent() {
           baseUrl: settings?.verificationBaseUrl || window.location.origin,
         });
         const frontUrl = canvasFront.toDataURL('image/png');
+        const isPortrait = canvasFront.height > canvasFront.width;
 
         // Render Back if requested
         let backUrl: string | undefined = undefined;
@@ -335,7 +336,7 @@ function MassPrintContent() {
           backUrl = canvasBack.toDataURL('image/png');
         }
 
-        renderedList.push({ employee: emp, frontUrl, backUrl });
+        renderedList.push({ employee: emp, frontUrl, backUrl, isPortrait });
       }
 
       setPrintSheetImages(renderedList);
@@ -352,6 +353,29 @@ function MassPrintContent() {
     window.print();
   };
 
+  // Helper to safely trigger file download with delay and Blob URL
+  const triggerCanvasDownload = (canvas: HTMLCanvasElement, filename: string): Promise<void> => {
+    return new Promise((resolve) => {
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          resolve();
+          return;
+        }
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        setTimeout(() => {
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+          resolve();
+        }, 500); // 500ms delay between consecutive downloads prevents browser multi-download suppression
+      }, 'image/png');
+    });
+  };
+
   // 5. Download Badges as PNG
   const handleDownloadAllPng = async () => {
     if (selectedEmployees.length === 0) {
@@ -359,29 +383,34 @@ function MassPrintContent() {
       return;
     }
 
-    toast.info(`Preparing image downloads for ${selectedEmployees.length} employees...`);
+    toast.info(`Preparing image downloads for ${selectedEmployees.length} employee(s)...`);
     try {
+      const baseUrl = settings?.verificationBaseUrl || (typeof window !== 'undefined' ? window.location.origin : '');
+
       for (const emp of selectedEmployees) {
         const tpl = resolveTemplateForEmployee(emp);
 
-        // Download front
-        const canvasFront = document.createElement('canvas');
-        await renderCardToCanvas(canvasFront, tpl, 'front', emp, { scale: 3 });
-        const linkF = document.createElement('a');
-        linkF.download = `${emp.employeeNumber || emp.id}_ID_Front.png`;
-        linkF.href = canvasFront.toDataURL('image/png');
-        linkF.click();
+        // Download front if requested
+        if (printSide === 'front' || printSide === 'both') {
+          const canvasFront = document.createElement('canvas');
+          await renderCardToCanvas(canvasFront, tpl, 'front', emp, {
+            scale: 3,
+            baseUrl,
+          });
+          await triggerCanvasDownload(canvasFront, `${emp.employeeNumber || emp.id}_ID_Front.png`);
+        }
 
-        if (printSide === 'both') {
+        // Download back if requested
+        if (printSide === 'back' || printSide === 'both') {
           const canvasBack = document.createElement('canvas');
-          await renderCardToCanvas(canvasBack, tpl, 'back', emp, { scale: 3 });
-          const linkB = document.createElement('a');
-          linkB.download = `${emp.employeeNumber || emp.id}_ID_Back.png`;
-          linkB.href = canvasBack.toDataURL('image/png');
-          linkB.click();
+          await renderCardToCanvas(canvasBack, tpl, 'back', emp, {
+            scale: 3,
+            baseUrl,
+          });
+          await triggerCanvasDownload(canvasBack, `${emp.employeeNumber || emp.id}_ID_Back.png`);
         }
       }
-      toast.success(`Downloaded badges for ${selectedEmployees.length} employees.`);
+      toast.success(`Downloaded badge images for ${selectedEmployees.length} employee(s).`);
     } catch (err: any) {
       toast.error('Download error: ' + err.message);
     }
@@ -430,14 +459,18 @@ function MassPrintContent() {
                   <img
                     src={item.frontUrl}
                     alt="Badge Front"
-                    className="w-[85.6mm] h-[54mm] object-contain rounded-[3mm] border border-gray-300 shadow-sm"
+                    className={`object-contain rounded-[3mm] border border-gray-300 shadow-sm ${
+                      item.isPortrait ? 'w-[54mm] h-[85.6mm]' : 'w-[85.6mm] h-[54mm]'
+                    }`}
                   />
                 )}
                 {(printSide === 'back' || printSide === 'both') && item.backUrl && (
                   <img
                     src={item.backUrl}
                     alt="Badge Back"
-                    className="w-[85.6mm] h-[54mm] object-contain rounded-[3mm] border border-gray-300 shadow-sm"
+                    className={`object-contain rounded-[3mm] border border-gray-300 shadow-sm ${
+                      item.isPortrait ? 'w-[54mm] h-[85.6mm]' : 'w-[85.6mm] h-[54mm]'
+                    }`}
                   />
                 )}
               </div>
@@ -1046,30 +1079,47 @@ function MassPrintContent() {
                 <span className="font-mono text-emerald-400 font-bold">300 DPI High Resolution</span>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+              <div className={`grid gap-6 ${printSheetImages.length === 1 ? 'grid-cols-1 max-w-3xl mx-auto' : 'grid-cols-1 xl:grid-cols-2'}`}>
                 {printSheetImages.map((card, idx) => (
                   <div
                     key={card.employee.id + idx}
-                    className="p-4 rounded-xl bg-slate-900 border border-slate-800 flex flex-col items-center justify-center space-y-3"
+                    className="p-5 rounded-2xl bg-slate-900 border border-slate-800 flex flex-col items-center justify-center space-y-4 shadow-xl"
                   >
-                    <div className="text-xs font-semibold text-slate-300 text-center">
-                      {card.employee.fullName}
-                      <span className="block text-[10px] text-slate-500 font-mono">{card.employee.employeeNumber}</span>
+                    <div className="text-center">
+                      <div className="text-sm font-bold text-white">
+                        {card.employee.fullName}
+                      </div>
+                      <div className="text-xs text-slate-400 font-mono mt-0.5">
+                        {card.employee.employeeNumber} • {card.employee.departmentName || 'Department'}
+                      </div>
                     </div>
 
-                    <img
-                      src={card.frontUrl}
-                      alt="Front Badge"
-                      className="w-full max-w-[280px] h-auto object-contain rounded-xl border border-slate-700 shadow-md"
-                    />
+                    {/* Front and Back side-by-side horizontally */}
+                    <div className="flex flex-row flex-wrap items-center justify-center gap-6 w-full">
+                      <div className="flex flex-col items-center gap-2">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 bg-slate-800 px-2.5 py-0.5 rounded-full border border-slate-700">
+                          Front Side
+                        </span>
+                        <img
+                          src={card.frontUrl}
+                          alt="Front Badge"
+                          className={`${card.isPortrait ? 'h-[360px] w-auto' : 'w-full max-w-[340px] h-auto'} object-contain rounded-xl border border-slate-700 shadow-lg bg-slate-950`}
+                        />
+                      </div>
 
-                    {card.backUrl && (
-                      <img
-                        src={card.backUrl}
-                        alt="Back Badge"
-                        className="w-full max-w-[280px] h-auto object-contain rounded-xl border border-slate-700 shadow-md"
-                      />
-                    )}
+                      {card.backUrl && (
+                        <div className="flex flex-col items-center gap-2">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 bg-slate-800 px-2.5 py-0.5 rounded-full border border-slate-700">
+                            Back Side
+                          </span>
+                          <img
+                            src={card.backUrl}
+                            alt="Back Badge"
+                            className={`${card.isPortrait ? 'h-[360px] w-auto' : 'w-full max-w-[340px] h-auto'} object-contain rounded-xl border border-slate-700 shadow-lg bg-slate-950`}
+                          />
+                        </div>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
