@@ -3,29 +3,29 @@ import { createServerSupabaseClient, createAdminSupabaseClient } from '@/lib/sup
 import { requireAuth } from '@/lib/auth/require-auth';
 import { recordAuditLog } from '@/lib/audit/logger';
 
+let departmentsCache: { data: any[]; timestamp: number } | null = null;
+const CACHE_TTL_MS = 60 * 1000;
+
 export async function GET() {
   const auth = await requireAuth();
   if (!auth.authenticated) return auth.response;
 
   try {
-    const supabase = await createServerSupabaseClient();
-    let { data, error } = await supabase
+    const now = Date.now();
+    if (departmentsCache && (now - departmentsCache.timestamp < CACHE_TTL_MS)) {
+      return NextResponse.json({ data: departmentsCache.data });
+    }
+
+    const admin = createAdminSupabaseClient();
+    const adminRes = await admin
       .from('departments')
       .select('*')
       .order('name', { ascending: true });
 
-    if (error || !data || data.length === 0) {
-      const admin = createAdminSupabaseClient();
-      const adminRes = await admin
-        .from('departments')
-        .select('*')
-        .order('name', { ascending: true });
-      if (!adminRes.error && adminRes.data) {
-        data = adminRes.data;
-      }
-    }
+    const data = adminRes.data ?? [];
+    departmentsCache = { data, timestamp: now };
 
-    return NextResponse.json({ data: data ?? [] });
+    return NextResponse.json({ data });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
@@ -72,6 +72,8 @@ export async function POST(request: Request) {
 
     if (error) throw error;
 
+    departmentsCache = null; // Invalidate cache
+
     await recordAuditLog({
       actorId: auth.user.id,
       actorEmail: auth.user.email,
@@ -102,6 +104,8 @@ export async function DELETE(request: Request) {
 
     const { error } = await admin.from('departments').delete().eq('id', id);
     if (error) throw error;
+
+    departmentsCache = null; // Invalidate cache
 
     await recordAuditLog({
       actorId: auth.user.id,
@@ -151,6 +155,8 @@ export async function PUT(request: Request) {
 
     if (error) throw error;
 
+    departmentsCache = null; // Invalidate cache
+
     const changeMsg = oldDept
       ? `Updated department from "${oldDept.name}" (${oldDept.code}) to "${name}" (${code}).`
       : `Updated department details for "${name}" (${code}).`;
@@ -170,4 +176,3 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
-

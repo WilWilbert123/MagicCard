@@ -9,7 +9,6 @@ import {
   CheckCircle2,
   Clock,
   RotateCcw,
-  Sparkles,
   Filter,
   Download,
   RefreshCw,
@@ -58,7 +57,7 @@ function MassPrintContent() {
   const [selectedEmploymentStatus, setSelectedEmploymentStatus] = useState('ALL');
 
   // Print Configuration states
-  const [printSide, setPrintSide] = useState<'both' | 'front' | 'back'>('front');
+  const [printSide, setPrintSide] = useState<'both' | 'front' | 'back'>('both');
   const [printLayout, setPrintLayout] = useState<'single' | 'sheet'>('single');
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('AUTO');
 
@@ -71,7 +70,7 @@ function MassPrintContent() {
 
   // Browser Print Sheet state
   const [isPreparingPrintSheet, setIsPreparingPrintSheet] = useState(false);
-  const [printSheetImages, setPrintSheetImages] = useState<Array<{ employee: Employee; frontUrl: string; backUrl?: string }>>([]);
+  const [printSheetImages, setPrintSheetImages] = useState<Array<{ employee: Employee; frontUrl: string; backUrl?: string; isPortrait?: boolean }>>([]);
   const [showPrintModal, setShowPrintModal] = useState(false);
 
   useEffect(() => {
@@ -271,7 +270,7 @@ function MassPrintContent() {
       });
 
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error || 'Failed to dispatch batch print jobs.');
+      if (!res.ok) throw new Error(json.error || 'Failed to submit batch print jobs.');
 
       // Update progress to 100%
       setDispatchProgress({
@@ -292,9 +291,9 @@ function MassPrintContent() {
         origin: { y: 0.6 },
       });
 
-      toast.success(`Successfully dispatched ${selectedEmployees.length} ID card print jobs!`);
+      toast.success(`Successfully sent ${selectedEmployees.length} ID card print jobs to queue!`);
     } catch (err: any) {
-      toast.error(err.message || 'Batch print dispatch failed.');
+      toast.error(err.message || 'Batch print queueing failed.');
     } finally {
       setIsDispatching(false);
     }
@@ -311,7 +310,7 @@ function MassPrintContent() {
     toast.info(`Rendering ${selectedEmployees.length} badges for physical printing...`);
 
     try {
-      const renderedList: Array<{ employee: Employee; frontUrl: string; backUrl?: string }> = [];
+      const renderedList: Array<{ employee: Employee; frontUrl: string; backUrl?: string; isPortrait?: boolean }> = [];
 
       for (const emp of selectedEmployees) {
         const tpl = resolveTemplateForEmployee(emp);
@@ -323,6 +322,7 @@ function MassPrintContent() {
           baseUrl: settings?.verificationBaseUrl || window.location.origin,
         });
         const frontUrl = canvasFront.toDataURL('image/png');
+        const isPortrait = canvasFront.height > canvasFront.width;
 
         // Render Back if requested
         let backUrl: string | undefined = undefined;
@@ -335,7 +335,7 @@ function MassPrintContent() {
           backUrl = canvasBack.toDataURL('image/png');
         }
 
-        renderedList.push({ employee: emp, frontUrl, backUrl });
+        renderedList.push({ employee: emp, frontUrl, backUrl, isPortrait });
       }
 
       setPrintSheetImages(renderedList);
@@ -352,6 +352,29 @@ function MassPrintContent() {
     window.print();
   };
 
+  // Helper to safely trigger file download with delay and Blob URL
+  const triggerCanvasDownload = (canvas: HTMLCanvasElement, filename: string): Promise<void> => {
+    return new Promise((resolve) => {
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          resolve();
+          return;
+        }
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        setTimeout(() => {
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+          resolve();
+        }, 700); // 700ms delay between consecutive downloads prevents browser multi-download suppression
+      }, 'image/png');
+    });
+  };
+
   // 5. Download Badges as PNG
   const handleDownloadAllPng = async () => {
     if (selectedEmployees.length === 0) {
@@ -359,29 +382,38 @@ function MassPrintContent() {
       return;
     }
 
-    toast.info(`Preparing image downloads for ${selectedEmployees.length} employees...`);
+    if (printSide === 'both') {
+      toast.info(`Downloading Front and Back images for ${selectedEmployees.length} employee(s)... (If prompted by your browser, please click 'Allow' for multiple downloads)`);
+    } else {
+      toast.info(`Preparing image downloads for ${selectedEmployees.length} employee(s)...`);
+    }
     try {
+      const baseUrl = settings?.verificationBaseUrl || (typeof window !== 'undefined' ? window.location.origin : '');
+
       for (const emp of selectedEmployees) {
         const tpl = resolveTemplateForEmployee(emp);
 
-        // Download front
-        const canvasFront = document.createElement('canvas');
-        await renderCardToCanvas(canvasFront, tpl, 'front', emp, { scale: 3 });
-        const linkF = document.createElement('a');
-        linkF.download = `${emp.employeeNumber || emp.id}_ID_Front.png`;
-        linkF.href = canvasFront.toDataURL('image/png');
-        linkF.click();
+        // Download front if requested
+        if (printSide === 'front' || printSide === 'both') {
+          const canvasFront = document.createElement('canvas');
+          await renderCardToCanvas(canvasFront, tpl, 'front', emp, {
+            scale: 3,
+            baseUrl,
+          });
+          await triggerCanvasDownload(canvasFront, `${emp.employeeNumber || emp.id}_ID_Front.png`);
+        }
 
-        if (printSide === 'both') {
+        // Download back if requested
+        if (printSide === 'back' || printSide === 'both') {
           const canvasBack = document.createElement('canvas');
-          await renderCardToCanvas(canvasBack, tpl, 'back', emp, { scale: 3 });
-          const linkB = document.createElement('a');
-          linkB.download = `${emp.employeeNumber || emp.id}_ID_Back.png`;
-          linkB.href = canvasBack.toDataURL('image/png');
-          linkB.click();
+          await renderCardToCanvas(canvasBack, tpl, 'back', emp, {
+            scale: 3,
+            baseUrl,
+          });
+          await triggerCanvasDownload(canvasBack, `${emp.employeeNumber || emp.id}_ID_Back.png`);
         }
       }
-      toast.success(`Downloaded badges for ${selectedEmployees.length} employees.`);
+      toast.success(`Downloaded badge images for ${selectedEmployees.length} employee(s).`);
     } catch (err: any) {
       toast.error('Download error: ' + err.message);
     }
@@ -418,9 +450,8 @@ function MassPrintContent() {
           {printSheetImages.map((item, idx) => (
             <div
               key={item.employee.id + idx}
-              className={`flex flex-col items-center justify-center p-4 break-inside-avoid ${
-                printLayout === 'single' ? 'page-break-after-always' : ''
-              }`}
+              className={`flex flex-col items-center justify-center p-4 break-inside-avoid ${printLayout === 'single' ? 'page-break-after-always' : ''
+                }`}
             >
               <div className="text-[10px] text-gray-500 font-mono mb-1 text-center">
                 {item.employee.fullName} • {item.employee.employeeNumber} • {item.employee.departmentName}
@@ -430,14 +461,16 @@ function MassPrintContent() {
                   <img
                     src={item.frontUrl}
                     alt="Badge Front"
-                    className="w-[85.6mm] h-[54mm] object-contain rounded-[3mm] border border-gray-300 shadow-sm"
+                    className={`object-contain rounded-[3mm] border border-gray-300 shadow-sm ${item.isPortrait ? 'w-[54mm] h-[85.6mm]' : 'w-[85.6mm] h-[54mm]'
+                      }`}
                   />
                 )}
                 {(printSide === 'back' || printSide === 'both') && item.backUrl && (
                   <img
                     src={item.backUrl}
                     alt="Badge Back"
-                    className="w-[85.6mm] h-[54mm] object-contain rounded-[3mm] border border-gray-300 shadow-sm"
+                    className={`object-contain rounded-[3mm] border border-gray-300 shadow-sm ${item.isPortrait ? 'w-[54mm] h-[85.6mm]' : 'w-[85.6mm] h-[54mm]'
+                      }`}
                   />
                 )}
               </div>
@@ -455,7 +488,7 @@ function MassPrintContent() {
             <span>Employees</span>
           </Link>
           <span>/</span>
-          <span className="text-slate-800 dark:text-slate-200 font-semibold">Mass Print ID (Group Badge Dispatch)</span>
+          <span className="text-slate-800 dark:text-slate-200 font-semibold">Mass Print ID (Group Badge Printing)</span>
         </div>
 
         {/* Hero Title & Actions */}
@@ -470,7 +503,7 @@ function MassPrintContent() {
               </span>
             </div>
             <p className="text-slate-500 dark:text-slate-400 text-xs mt-1">
-              Select 20+ employees or group by department and branch to print badges in bulk, export printable sheets, or dispatch to KIOSK queues.
+              Select 20+ employees or group by department and branch to print badges in bulk, export printable sheets, or send to print queues.
             </p>
           </div>
 
@@ -497,8 +530,7 @@ function MassPrintContent() {
               disabled={selectedIds.size === 0 || isDispatching}
               className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-semibold shadow-md shadow-red-600/30 transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Sparkles className="w-4 h-4" />
-              <span>Dispatch to KIOSKs ({selectedIds.size})</span>
+              <span>Send to Print Queue ({selectedIds.size})</span>
             </button>
           </div>
         </div>
@@ -521,7 +553,7 @@ function MassPrintContent() {
           <div>
             <span className="text-[11px] font-semibold uppercase tracking-wider text-red-600 dark:text-red-400 block">Selected for Print</span>
             <span className="text-2xl font-bold text-red-600 dark:text-red-400 mt-0.5 block">{selectedIds.size}</span>
-            <span className="text-[10px] text-red-500/80">ready to dispatch</span>
+            <span className="text-[10px] text-red-500/80">ready to print</span>
           </div>
           <div className="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-950/80 border border-red-200/80 dark:border-red-900/60 flex items-center justify-center text-red-600 dark:text-red-400">
             <FileCheck2 className="w-5 h-5" />
@@ -555,12 +587,11 @@ function MassPrintContent() {
         </div>
       </div>
 
-      {/* Main Content Layout */}
       <div className="space-y-4">
-        {/* Filter and Selection Header */}
+
         <div className="p-5 rounded-2xl bg-white dark:bg-[#111827]/90 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-            {/* Quick Selection Buttons (Specifically requested: 20 employees selection) */}
+
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mr-1">
                 <SlidersHorizontal className="w-3.5 h-3.5" /> Quick Select:
@@ -571,7 +602,6 @@ function MassPrintContent() {
                 onClick={handleSelectFirst20}
                 className="px-3 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 dark:bg-red-950/50 dark:hover:bg-red-900/50 text-red-700 dark:text-red-300 font-bold text-xs border border-red-200 dark:border-red-900/60 transition flex items-center gap-1.5 shadow-2xs"
               >
-                <Sparkles className="w-3.5 h-3.5 text-red-500" />
                 <span>Select 20 Employees</span>
               </button>
 
@@ -618,28 +648,26 @@ function MassPrintContent() {
                 <button
                   type="button"
                   onClick={() => setPrintSide('front')}
-                  className={`px-2.5 py-1 rounded-md transition ${
-                    printSide === 'front'
-                      ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-semibold shadow-xs'
-                      : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
-                  }`}
+                  className={`px-2.5 py-1 rounded-md transition ${printSide === 'front'
+                    ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-semibold shadow-xs'
+                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                    }`}
                 >
                   Front Only
                 </button>
                 <button
                   type="button"
                   onClick={() => setPrintSide('both')}
-                  className={`px-2.5 py-1 rounded-md transition ${
-                    printSide === 'both'
-                      ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-semibold shadow-xs'
-                      : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
-                  }`}
+                  className={`px-2.5 py-1 rounded-md transition ${printSide === 'both'
+                    ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-semibold shadow-xs'
+                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                    }`}
                 >
                   Front & Back
                 </button>
               </div>
 
-              {/* Template Override */}
+
               <select
                 value={selectedTemplateId}
                 onChange={(e) => setSelectedTemplateId(e.target.value)}
@@ -657,7 +685,7 @@ function MassPrintContent() {
 
           {/* Group Filter Bar */}
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3 pt-3 border-t border-slate-100 dark:border-slate-800/80">
-            {/* Search */}
+
             <div className="relative">
               <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
               <input
@@ -669,7 +697,7 @@ function MassPrintContent() {
               />
             </div>
 
-            {/* Department Filter */}
+
             <div>
               <select
                 value={selectedDept}
@@ -801,11 +829,10 @@ function MassPrintContent() {
                       <tr
                         key={emp.id}
                         onClick={() => toggleSelectOne(emp.id)}
-                        className={`transition cursor-pointer ${
-                          isSelected
-                            ? 'bg-red-50/70 dark:bg-red-950/30 hover:bg-red-100/60 dark:hover:bg-red-950/40'
-                            : 'hover:bg-slate-50 dark:hover:bg-slate-800/30'
-                        }`}
+                        className={`transition cursor-pointer ${isSelected
+                          ? 'bg-red-50/70 dark:bg-red-950/30 hover:bg-red-100/60 dark:hover:bg-red-950/40'
+                          : 'hover:bg-slate-50 dark:hover:bg-slate-800/30'
+                          }`}
                       >
                         <td className="px-5 py-3" onClick={(e) => e.stopPropagation()}>
                           <input
@@ -908,28 +935,25 @@ function MassPrintContent() {
             <button
               onClick={handlePrepareBrowserPrint}
               disabled={isPreparingPrintSheet}
-              className="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-100 text-xs font-semibold border border-slate-600 flex items-center gap-1.5 transition"
+              className="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-100 text-xs font-semibold border border-slate-600 transition"
             >
-              <Printer className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Print Badge Sheet</span>
+              Print Badge Sheet
             </button>
 
             <button
               onClick={handleDownloadAllPng}
-              className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-600 flex items-center gap-1.5 transition"
+              className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-600 transition"
               title="Download all badges as PNG images"
             >
-              <Download className="w-3.5 h-3.5" />
-              <span>Export Images</span>
+              Export Images
             </button>
 
             <button
               onClick={handleBatchDispatchToQueue}
               disabled={isDispatching}
-              className="px-4 py-1.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold shadow-md shadow-red-600/30 flex items-center gap-1.5 transition"
+              className="px-4 py-1.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold shadow-md shadow-red-600/30 transition"
             >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Dispatch Batch</span>
+              Send to Print Queue
             </button>
 
             <button
@@ -949,14 +973,13 @@ function MassPrintContent() {
           <div className="w-full max-w-md bg-[#0f172a] border border-slate-800 rounded-2xl p-6 text-white shadow-2xl space-y-5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                  dispatchProgress.completed ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-500 animate-pulse'
-                }`}>
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${dispatchProgress.completed ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-500 animate-pulse'
+                  }`}>
                   <Printer className="w-5 h-5" />
                 </div>
                 <div>
                   <h3 className="font-bold text-base leading-tight">
-                    {dispatchProgress.completed ? 'Batch Dispatched!' : 'Printing Badges in Batch...'}
+                    {dispatchProgress.completed ? 'Print Jobs Sent!' : 'Processing Batch Print Jobs...'}
                   </h3>
                   <p className="text-xs text-slate-400">
                     {dispatchProgress.current} of {dispatchProgress.total} cards processed
@@ -1049,30 +1072,47 @@ function MassPrintContent() {
                 <span className="font-mono text-emerald-400 font-bold">300 DPI High Resolution</span>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+              <div className={`grid gap-6 ${printSheetImages.length === 1 ? 'grid-cols-1 max-w-3xl mx-auto' : 'grid-cols-1 xl:grid-cols-2'}`}>
                 {printSheetImages.map((card, idx) => (
                   <div
                     key={card.employee.id + idx}
-                    className="p-4 rounded-xl bg-slate-900 border border-slate-800 flex flex-col items-center justify-center space-y-3"
+                    className="p-5 rounded-2xl bg-slate-900 border border-slate-800 flex flex-col items-center justify-center space-y-4 shadow-xl"
                   >
-                    <div className="text-xs font-semibold text-slate-300 text-center">
-                      {card.employee.fullName}
-                      <span className="block text-[10px] text-slate-500 font-mono">{card.employee.employeeNumber}</span>
+                    <div className="text-center">
+                      <div className="text-sm font-bold text-white">
+                        {card.employee.fullName}
+                      </div>
+                      <div className="text-xs text-slate-400 font-mono mt-0.5">
+                        {card.employee.employeeNumber} • {card.employee.departmentName || 'Department'}
+                      </div>
                     </div>
 
-                    <img
-                      src={card.frontUrl}
-                      alt="Front Badge"
-                      className="w-full max-w-[280px] h-auto object-contain rounded-xl border border-slate-700 shadow-md"
-                    />
+                    {/* Front and Back side-by-side horizontally */}
+                    <div className="flex flex-row flex-wrap items-center justify-center gap-6 w-full">
+                      <div className="flex flex-col items-center gap-2">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 bg-slate-800 px-2.5 py-0.5 rounded-full border border-slate-700">
+                          Front Side
+                        </span>
+                        <img
+                          src={card.frontUrl}
+                          alt="Front Badge"
+                          className={`${card.isPortrait ? 'h-[360px] w-auto' : 'w-full max-w-[340px] h-auto'} object-contain rounded-xl border border-slate-700 shadow-lg bg-slate-950`}
+                        />
+                      </div>
 
-                    {card.backUrl && (
-                      <img
-                        src={card.backUrl}
-                        alt="Back Badge"
-                        className="w-full max-w-[280px] h-auto object-contain rounded-xl border border-slate-700 shadow-md"
-                      />
-                    )}
+                      {card.backUrl && (
+                        <div className="flex flex-col items-center gap-2">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 bg-slate-800 px-2.5 py-0.5 rounded-full border border-slate-700">
+                            Back Side
+                          </span>
+                          <img
+                            src={card.backUrl}
+                            alt="Back Badge"
+                            className={`${card.isPortrait ? 'h-[360px] w-auto' : 'w-full max-w-[340px] h-auto'} object-contain rounded-xl border border-slate-700 shadow-lg bg-slate-950`}
+                          />
+                        </div>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1114,11 +1154,10 @@ function MassPrintContent() {
                   toggleSelectOne(inspectEmployee.id);
                   setInspectEmployee(null);
                 }}
-                className={`px-4 py-2 rounded-xl text-xs font-semibold transition ${
-                  selectedIds.has(inspectEmployee.id)
-                    ? 'bg-red-950 text-red-400 border border-red-800'
-                    : 'bg-red-600 hover:bg-red-500 text-white'
-                }`}
+                className={`px-4 py-2 rounded-xl text-xs font-semibold transition ${selectedIds.has(inspectEmployee.id)
+                  ? 'bg-red-950 text-red-400 border border-red-800'
+                  : 'bg-red-600 hover:bg-red-500 text-white'
+                  }`}
               >
                 {selectedIds.has(inspectEmployee.id) ? 'Deselect Employee' : 'Select for Batch Print'}
               </button>
@@ -1142,7 +1181,7 @@ export default function MassPrintPage() {
     <Suspense fallback={
       <div className="p-8 text-center text-slate-500 text-sm">
         <div className="w-5 h-5 border-2 border-red-500 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-        Loading Mass Print ID suite...
+        Loading Mass Print ID...
       </div>
     }>
       <MassPrintContent />

@@ -250,11 +250,13 @@ export default function HrLayout({ children }: { children: React.ReactNode }) {
         <div>
           {/* Logo Header */}
           <div className="h-16 px-6 border-b border-slate-200/80 dark:border-slate-800/80 flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-red-600 flex items-center justify-center font-bold text-white shadow-md shadow-red-600/30">
-              ID
-            </div>
+            <img
+              src="/icon.png"
+              alt="Bismac Card System"
+              className="w-8 h-8 rounded-lg object-contain"
+            />
             <div>
-              <div className="font-bold text-sm tracking-tight text-slate-900 dark:text-white">ID Card System</div>
+              <div className="font-bold text-sm tracking-tight text-slate-900 dark:text-white">Bismac Card System</div>
               <div className="text-[11px] text-slate-500 dark:text-slate-400">Enterprise HR Suite</div>
             </div>
           </div>

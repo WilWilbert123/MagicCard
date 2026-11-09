@@ -67,7 +67,7 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const { name, description, branchId, isDefault, cloneFromTemplateId } = body;
+    const { name, description, branchId, isDefault, cloneFromTemplateId, layout } = body;
 
     if (!name || !name.trim()) {
       return NextResponse.json({ error: 'Template name is required' }, { status: 400 });
@@ -85,7 +85,9 @@ export async function POST(request: Request) {
     // Determine layout json to use
     let layoutToUse = JSON.parse(JSON.stringify(DEFAULT_CR80_TEMPLATE));
 
-    if (cloneFromTemplateId) {
+    if (layout && typeof layout === 'object' && (layout.front || layout.back || layout.card)) {
+      layoutToUse = layout;
+    } else if (cloneFromTemplateId) {
       const { data: cloneVer } = await admin
         .from('card_template_versions')
         .select('layout_json')

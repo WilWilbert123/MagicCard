@@ -5,6 +5,14 @@ import './globals.css';
 export const metadata: Metadata = {
   title: 'Enterprise ID Card Management & Self-Service KIOSK',
   description: 'Enterprise Employee ID Card Designer, Fleet KIOSK Management, and MagicCard Trust ID Hardware Printing Platform',
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/icon.png', type: 'image/png' },
+    ],
+    shortcut: '/favicon.ico',
+    apple: '/icon.png',
+  },
 };
 
 import { ToastContainer } from '@/components/ui/Toast';
