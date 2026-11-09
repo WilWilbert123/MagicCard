@@ -58,7 +58,7 @@ function MassPrintContent() {
   const [selectedEmploymentStatus, setSelectedEmploymentStatus] = useState('ALL');
 
   // Print Configuration states
-  const [printSide, setPrintSide] = useState<'both' | 'front' | 'back'>('front');
+  const [printSide, setPrintSide] = useState<'both' | 'front' | 'back'>('both');
   const [printLayout, setPrintLayout] = useState<'single' | 'sheet'>('single');
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('AUTO');
 
@@ -271,7 +271,7 @@ function MassPrintContent() {
       });
 
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error || 'Failed to dispatch batch print jobs.');
+      if (!res.ok) throw new Error(json.error || 'Failed to submit batch print jobs.');
 
       // Update progress to 100%
       setDispatchProgress({
@@ -292,9 +292,9 @@ function MassPrintContent() {
         origin: { y: 0.6 },
       });
 
-      toast.success(`Successfully dispatched ${selectedEmployees.length} ID card print jobs!`);
+      toast.success(`Successfully sent ${selectedEmployees.length} ID card print jobs to queue!`);
     } catch (err: any) {
-      toast.error(err.message || 'Batch print dispatch failed.');
+      toast.error(err.message || 'Batch print queueing failed.');
     } finally {
       setIsDispatching(false);
     }
@@ -455,7 +455,7 @@ function MassPrintContent() {
             <span>Employees</span>
           </Link>
           <span>/</span>
-          <span className="text-slate-800 dark:text-slate-200 font-semibold">Mass Print ID (Group Badge Dispatch)</span>
+          <span className="text-slate-800 dark:text-slate-200 font-semibold">Mass Print ID (Group Badge Printing)</span>
         </div>
 
         {/* Hero Title & Actions */}
@@ -470,7 +470,7 @@ function MassPrintContent() {
               </span>
             </div>
             <p className="text-slate-500 dark:text-slate-400 text-xs mt-1">
-              Select 20+ employees or group by department and branch to print badges in bulk, export printable sheets, or dispatch to KIOSK queues.
+              Select 20+ employees or group by department and branch to print badges in bulk, export printable sheets, or send to print queues.
             </p>
           </div>
 
@@ -498,7 +498,7 @@ function MassPrintContent() {
               className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-semibold shadow-md shadow-red-600/30 transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Sparkles className="w-4 h-4" />
-              <span>Dispatch to KIOSKs ({selectedIds.size})</span>
+              <span>Send to Print Queue ({selectedIds.size})</span>
             </button>
           </div>
         </div>
@@ -521,7 +521,7 @@ function MassPrintContent() {
           <div>
             <span className="text-[11px] font-semibold uppercase tracking-wider text-red-600 dark:text-red-400 block">Selected for Print</span>
             <span className="text-2xl font-bold text-red-600 dark:text-red-400 mt-0.5 block">{selectedIds.size}</span>
-            <span className="text-[10px] text-red-500/80">ready to dispatch</span>
+            <span className="text-[10px] text-red-500/80">ready to print</span>
           </div>
           <div className="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-950/80 border border-red-200/80 dark:border-red-900/60 flex items-center justify-center text-red-600 dark:text-red-400">
             <FileCheck2 className="w-5 h-5" />
@@ -908,28 +908,25 @@ function MassPrintContent() {
             <button
               onClick={handlePrepareBrowserPrint}
               disabled={isPreparingPrintSheet}
-              className="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-100 text-xs font-semibold border border-slate-600 flex items-center gap-1.5 transition"
+              className="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-100 text-xs font-semibold border border-slate-600 transition"
             >
-              <Printer className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Print Badge Sheet</span>
+              Print Badge Sheet
             </button>
 
             <button
               onClick={handleDownloadAllPng}
-              className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-600 flex items-center gap-1.5 transition"
+              className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-600 transition"
               title="Download all badges as PNG images"
             >
-              <Download className="w-3.5 h-3.5" />
-              <span>Export Images</span>
+              Export Images
             </button>
 
             <button
               onClick={handleBatchDispatchToQueue}
               disabled={isDispatching}
-              className="px-4 py-1.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold shadow-md shadow-red-600/30 flex items-center gap-1.5 transition"
+              className="px-4 py-1.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold shadow-md shadow-red-600/30 transition"
             >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Dispatch Batch</span>
+              Send to Print Queue
             </button>
 
             <button
@@ -956,7 +953,7 @@ function MassPrintContent() {
                 </div>
                 <div>
                   <h3 className="font-bold text-base leading-tight">
-                    {dispatchProgress.completed ? 'Batch Dispatched!' : 'Printing Badges in Batch...'}
+                    {dispatchProgress.completed ? 'Print Jobs Sent!' : 'Processing Batch Print Jobs...'}
                   </h3>
                   <p className="text-xs text-slate-400">
                     {dispatchProgress.current} of {dispatchProgress.total} cards processed
