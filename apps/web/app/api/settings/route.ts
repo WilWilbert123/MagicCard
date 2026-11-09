@@ -18,6 +18,9 @@ const DEFAULT_SETTINGS = {
   defaultPreviewPosition: 'Software Engineer',
 };
 
+let settingsCache: { data: any; timestamp: number } | null = null;
+const CACHE_TTL_MS = 60 * 1000;
+
 function cleanVerificationUrl(rawUrl: any): string {
   if (!rawUrl) return DEFAULT_SETTINGS.verificationBaseUrl;
   let str = String(rawUrl).trim();
@@ -33,6 +36,11 @@ function cleanVerificationUrl(rawUrl: any): string {
 
 export async function GET() {
   try {
+    const now = Date.now();
+    if (settingsCache && (now - settingsCache.timestamp < CACHE_TTL_MS)) {
+      return NextResponse.json({ data: settingsCache.data });
+    }
+
     const admin = createAdminSupabaseClient();
     const [{ data: company }, { data: sysSettings }] = await Promise.all([
       admin.from('companies').select('id, settings').limit(1).maybeSingle(),
@@ -59,6 +67,8 @@ export async function GET() {
       defaultPreviewDepartment: settings.defaultPreviewDepartment ?? settings.default_preview_department ?? 'Engineering & Technology',
       defaultPreviewPosition: settings.defaultPreviewPosition ?? settings.default_preview_position ?? 'Software Engineer',
     };
+
+    settingsCache = { data: merged, timestamp: now };
 
     return NextResponse.json({ data: merged });
   } catch (err: any) {
@@ -104,6 +114,8 @@ export async function POST(request: Request) {
 
       if (error) throw error;
     }
+
+    settingsCache = null; // Invalidate cache
 
     // Try to update system_settings table if it exists
     if (company?.id) {

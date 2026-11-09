@@ -371,7 +371,7 @@ function MassPrintContent() {
           document.body.removeChild(link);
           URL.revokeObjectURL(url);
           resolve();
-        }, 500); // 500ms delay between consecutive downloads prevents browser multi-download suppression
+        }, 700); // 700ms delay between consecutive downloads prevents browser multi-download suppression
       }, 'image/png');
     });
   };
@@ -383,7 +383,11 @@ function MassPrintContent() {
       return;
     }
 
-    toast.info(`Preparing image downloads for ${selectedEmployees.length} employee(s)...`);
+    if (printSide === 'both') {
+      toast.info(`Downloading Front and Back images for ${selectedEmployees.length} employee(s)... (If prompted by your browser, please click 'Allow' for multiple downloads)`);
+    } else {
+      toast.info(`Preparing image downloads for ${selectedEmployees.length} employee(s)...`);
+    }
     try {
       const baseUrl = settings?.verificationBaseUrl || (typeof window !== 'undefined' ? window.location.origin : '');
 

@@ -275,36 +275,26 @@ export default function HrEmployeesPage() {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [empRes, brRes, deptRes, tplRes, setRes, profRes] = await Promise.all([
-        fetch('/api/employees', { cache: 'no-store' }).then(async (r) => {
-          if (!r.ok) throw new Error('Employees API request failed.');
-          return r.json();
-        }),
-        fetch('/api/branches', { cache: 'no-store' }).then(async (r) => {
-          if (!r.ok) throw new Error('Branches API request failed.');
-          return r.json();
-        }),
-        fetch('/api/departments', { cache: 'no-store' }).then(async (r) => {
-          if (!r.ok) throw new Error('Departments API request failed.');
-          return r.json();
-        }),
-        fetch('/api/card-templates', { cache: 'no-store' }).then(async (r) => {
-          if (!r.ok) return null;
-          return r.json();
-        }),
-        fetch('/api/settings', { cache: 'no-store' }).then(async (r) => {
-          if (!r.ok) return null;
-          return r.json();
-        }),
-        fetch('/api/auth/profile', { cache: 'no-store' }).then(async (r) => {
-          if (!r.ok) return null;
-          return r.json();
-        }),
+      // 1. Instantly fetch employees (and embedded branch/dept maps) to render table in <250ms
+      const empRes = await fetch('/api/employees').then((r) => r.ok ? r.json() : null);
+      if (empRes?.data) {
+        setEmployees(empRes.data);
+        if (empRes.branches?.length) setBranches(empRes.branches);
+        if (empRes.departments?.length) setDepartments(empRes.departments);
+        setIsLoading(false); // Unblock UI table immediately!
+      }
+
+      // 2. Fetch auxiliary metadata in parallel
+      const [brRes, deptRes, tplRes, setRes, profRes] = await Promise.all([
+        fetch('/api/branches').then((r) => r.ok ? r.json() : null),
+        fetch('/api/departments').then((r) => r.ok ? r.json() : null),
+        fetch('/api/card-templates').then((r) => r.ok ? r.json() : null),
+        fetch('/api/settings').then((r) => r.ok ? r.json() : null),
+        fetch('/api/auth/profile').then((r) => r.ok ? r.json() : null),
       ]);
 
-      const loadedEmployees = empRes?.data ?? [];
-      const loadedBranches = brRes?.data ?? [];
-      const loadedDepartments = deptRes?.data ?? [];
+      const loadedBranches = brRes?.data?.length ? brRes.data : (empRes?.branches ?? []);
+      const loadedDepartments = deptRes?.data?.length ? deptRes.data : (empRes?.departments ?? []);
       const loadedTemplates = tplRes?.data ?? [];
 
       if (setRes?.data) setRestrictCrossBranchPrinting(setRes.data.restrictCrossBranchPrinting ?? false);
@@ -314,9 +304,8 @@ export default function HrEmployeesPage() {
         setIsSuperAdmin(profRes.data.isSuperAdmin ?? true);
       }
 
-      setEmployees(loadedEmployees);
-      setBranches(loadedBranches);
-      setDepartments(loadedDepartments);
+      if (loadedBranches.length > 0) setBranches(loadedBranches);
+      if (loadedDepartments.length > 0) setDepartments(loadedDepartments);
       setCardTemplates(loadedTemplates);
 
       if (loadedBranches.length > 0 && !formData.branchId) {

@@ -6,29 +6,29 @@ import { recordAuditLog } from '@/lib/audit/logger';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+let branchesCache: { data: any[]; timestamp: number } | null = null;
+const CACHE_TTL_MS = 60 * 1000;
+
 export async function GET() {
   const auth = await requireAuth();
   if (!auth.authenticated) return auth.response;
 
   try {
-    const supabase = await createServerSupabaseClient();
-    let { data, error } = await supabase
+    const now = Date.now();
+    if (branchesCache && (now - branchesCache.timestamp < CACHE_TTL_MS)) {
+      return NextResponse.json({ data: branchesCache.data });
+    }
+
+    const admin = createAdminSupabaseClient();
+    const adminRes = await admin
       .from('branches')
       .select('*')
       .order('name', { ascending: true });
 
-    if (!data || data.length === 0) {
-      const admin = createAdminSupabaseClient();
-      const adminRes = await admin
-        .from('branches')
-        .select('*')
-        .order('name', { ascending: true });
-      if (!adminRes.error && adminRes.data) {
-        data = adminRes.data;
-      }
-    }
+    const data = adminRes.data ?? [];
+    branchesCache = { data, timestamp: now };
 
-    return NextResponse.json({ data: data ?? [] });
+    return NextResponse.json({ data });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
@@ -84,6 +84,8 @@ export async function POST(request: Request) {
 
     if (error) throw error;
 
+    branchesCache = null; // Invalidate cache
+
     await recordAuditLog({
       actorId: auth.user.id,
       actorEmail: auth.user.email,
@@ -114,6 +116,8 @@ export async function DELETE(request: Request) {
 
     const { error } = await admin.from('branches').delete().eq('id', id);
     if (error) throw error;
+
+    branchesCache = null; // Invalidate cache
 
     await recordAuditLog({
       actorId: auth.user.id,
@@ -169,6 +173,8 @@ export async function PUT(request: Request) {
 
     if (error) throw error;
 
+    branchesCache = null; // Invalidate cache
+
     const changeMsg = oldBranch
       ? `Updated branch location from "${oldBranch.name}" (${oldBranch.code}) to "${name}" (${code}).`
       : `Updated branch location details for "${name}" (${code}).`;
@@ -188,4 +194,3 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
-

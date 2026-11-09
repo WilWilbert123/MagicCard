@@ -172,7 +172,27 @@ export default function KioskMainPage() {
       .catch(() => { });
   }, []);
 
-  // Automatically request Fullscreen as soon as the KIOSK page loads or is touched
+  const [cachedTemplates, setCachedTemplates] = useState<any[]>([]);
+
+  // Pre-load card templates in background so employee search template resolution is 0ms
+  useEffect(() => {
+    const preloadTemplates = async () => {
+      try {
+        const res = await fetch('/api/card-templates', { headers: { 'x-kiosk-request': 'true' } });
+        if (res.ok) {
+          const json = await res.json();
+          if (Array.isArray(json.data) && json.data.length > 0) {
+            setCachedTemplates(json.data);
+            const defaultTpl = json.data.find((t: any) => t.isDefault) || json.data[0];
+            if (defaultTpl?.layout) {
+              setKioskTemplate(defaultTpl.layout);
+            }
+          }
+        }
+      } catch { }
+    };
+    preloadTemplates();
+  }, []);
   useEffect(() => {
     const enterFullscreen = () => {
       if (typeof document !== 'undefined' && !document.fullscreenElement) {
@@ -343,7 +363,7 @@ export default function KioskMainPage() {
 
   const [isSearching, setIsSearching] = useState(false);
 
-  // Search Logic via Supabase API
+  // Search Logic via Supabase API (Optimized single-round-trip + pre-cached templates)
   const handleSearch = async () => {
     const term = employeeInput.trim();
     if (!term) return;
@@ -354,28 +374,14 @@ export default function KioskMainPage() {
     try {
       const kioskHeaders = { 'x-kiosk-request': 'true' };
 
-      // 1. Try matching by exact employee number via API
-      let res = await fetch(`/api/employees?employeeNumber=${encodeURIComponent(term)}`, { headers: kioskHeaders });
-      let json = res.ok ? await res.json() : null;
+      // 1. Single optimized API query for the employee (matches exact ID or fuzzy search)
+      const res = await fetch(`/api/employees?employeeNumber=${encodeURIComponent(term)}&q=${encodeURIComponent(term)}`, {
+        headers: kioskHeaders,
+      });
+      const json = res.ok ? await res.json() : null;
       let emp = json?.data?.[0];
 
-
-      if (!emp) {
-        res = await fetch(`/api/employees?q=${encodeURIComponent(term)}`, { headers: kioskHeaders });
-        json = res.ok ? await res.json() : null;
-        emp = json?.data?.[0];
-      }
-
-      // 3. If not found, try direct employee number route
-      if (!emp) {
-        res = await fetch(`/api/employees/${encodeURIComponent(term)}`, { headers: kioskHeaders });
-        json = res.ok ? await res.json() : null;
-        if (json?.data) {
-          emp = json.data;
-        }
-      }
-
-      // 4. Fallback search in enterpriseStore local state if network or API lookup returned nothing
+      // 2. Instant fallback search in enterpriseStore local state if network glitch or local demo IDs
       if (!emp) {
         const localEmp = enterpriseStore.findEmployeeByNumber(term) || enterpriseStore.employees.find(e =>
           e.employeeNumber.toLowerCase() === term.toLowerCase() ||
@@ -412,48 +418,23 @@ export default function KioskMainPage() {
         return;
       }
 
-      // Check print job history in Supabase to accurately reflect card issuance status
-      try {
-        const pjRes = await fetch(`/api/print-jobs?q=${encodeURIComponent(emp.employeeNumber)}`, { headers: kioskHeaders });
-        const pjJson = pjRes.ok ? await pjRes.json() : null;
-        if (pjJson?.data && Array.isArray(pjJson.data) && pjJson.data.length > 0) {
-          const hasCompletedJob = pjJson.data.some((j: any) => j.status === 'COMPLETED');
-          if (hasCompletedJob && emp.cardStatus !== 'REPRINT_REQUESTED') {
-            emp.cardStatus = 'ISSUED';
-          }
-        }
-      } catch { }
-
       setFoundEmployee(emp);
 
-      // Fetch dynamic active published card template for employee's branch or global default
-      try {
-        const tplRes = await fetch('/api/card-templates', { headers: kioskHeaders });
-        const tplJson = tplRes.ok ? await tplRes.json() : null;
-        if (tplJson?.data && Array.isArray(tplJson.data)) {
-          const templates = tplJson.data;
-          const matchingBranchTpl = templates.find(
-            (t: any) =>
-              t.branchId &&
-              (t.branchId === emp.branchId ||
-                (emp.branchName && t.branchName?.toLowerCase() === emp.branchName?.toLowerCase()) ||
-                (emp.branchCode && t.branchCode === emp.branchCode))
-          );
-          const defaultTpl = templates.find((t: any) => t.isDefault) || templates[0];
-          const targetTpl = matchingBranchTpl || defaultTpl;
-
-          if (targetTpl) {
-            const detailRes = await fetch(`/api/card-templates/${targetTpl.id}`, { headers: kioskHeaders });
-            const detailJson = detailRes.ok ? await detailRes.json() : null;
-            if (detailJson?.data?.layout) {
-              setKioskTemplate(detailJson.data.layout);
-            } else if (targetTpl.layout) {
-              setKioskTemplate(targetTpl.layout);
-            }
-          }
+      // 3. Instant Template Assignment from in-memory cache (0ms latency)
+      const templates = cachedTemplates.length > 0 ? cachedTemplates : [];
+      if (templates.length > 0) {
+        const matchingBranchTpl = templates.find(
+          (t: any) =>
+            t.branchId &&
+            (t.branchId === emp.branchId ||
+              (emp.branchName && t.branchName?.toLowerCase() === emp.branchName?.toLowerCase()) ||
+              (emp.branchCode && t.branchCode === emp.branchCode))
+        );
+        const defaultTpl = templates.find((t: any) => t.isDefault) || templates[0];
+        const targetTpl = matchingBranchTpl || defaultTpl;
+        if (targetTpl?.layout) {
+          setKioskTemplate(targetTpl.layout);
         }
-      } catch (err) {
-        console.warn('Failed to fetch published card template for KIOSK:', err);
       }
 
       setStep('PREVIEW');

@@ -3,6 +3,30 @@ import { createServerSupabaseClient, createAdminSupabaseClient } from '@/lib/sup
 import { requireAuth } from '@/lib/auth/require-auth';
 import { recordAuditLog } from '@/lib/audit/logger';
 
+// In-memory cache for reference tables to eliminate duplicate database round-trips
+let cachedBranches: { data: any[]; timestamp: number } | null = null;
+let cachedDepartments: { data: any[]; timestamp: number } | null = null;
+const CACHE_TTL_MS = 60 * 1000; // 60 seconds
+
+async function getCachedBranchesAndDepartments(admin: any) {
+  const now = Date.now();
+  const branchValid = cachedBranches && (now - cachedBranches.timestamp < CACHE_TTL_MS);
+  const deptValid = cachedDepartments && (now - cachedDepartments.timestamp < CACHE_TTL_MS);
+
+  if (branchValid && deptValid) {
+    return { branches: cachedBranches!.data, departments: cachedDepartments!.data };
+  }
+
+  const [bRes, dRes] = await Promise.all([
+    branchValid ? Promise.resolve({ data: cachedBranches!.data }) : admin.from('branches').select('id, name, code'),
+    deptValid ? Promise.resolve({ data: cachedDepartments!.data }) : admin.from('departments').select('id, name, code'),
+  ]);
+
+  if (bRes.data) cachedBranches = { data: bRes.data, timestamp: now };
+  if (dRes.data) cachedDepartments = { data: dRes.data, timestamp: now };
+
+  return { branches: bRes.data || [], departments: dRes.data || [] };
+}
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -22,73 +46,80 @@ export async function GET(request: Request) {
     const admin = createAdminSupabaseClient();
     let employees: any[] = [];
 
-    if (employeeNumber) {
-      // Use admin client directly for single employee lookup to bypass RLS for public QR verification scans
-      const { data: empData, error: empErr } = await admin
+    const cleanEmpNo = employeeNumber?.trim();
+    const cleanQ = query?.trim();
+
+    // Fast indexed path for employee lookups (Kiosk search, single employee, or query)
+    if (cleanEmpNo || cleanQ) {
+      const term = cleanEmpNo || cleanQ || '';
+      // 1. Try exact or case-insensitive employee_number match first (fastest indexed query)
+      const { data: exactEmps } = await admin
         .from('employees')
         .select('*')
-        .ilike('employee_number', employeeNumber.trim());
+        .ilike('employee_number', term)
+        .limit(5);
 
-      if (!empErr && empData && empData.length > 0) {
-        employees = empData;
+      if (exactEmps && exactEmps.length > 0) {
+        employees = exactEmps;
+      } else {
+        // 2. Fuzzy search across employee_number, names, and email
+        const { data: fuzzyEmps } = await admin
+          .from('employees')
+          .select('*')
+          .or(`employee_number.ilike.%${term}%,first_name.ilike.%${term}%,last_name.ilike.%${term}%,email.ilike.%${term}%`)
+          .limit(10);
+
+        if (fuzzyEmps && fuzzyEmps.length > 0) {
+          employees = fuzzyEmps;
+        }
       }
-    }
-
-    if (!employees || employees.length === 0) {
-      const supabase = await createServerSupabaseClient();
-      let queryBuilder = supabase
+    } else {
+      // General full directory list
+      let queryBuilder = admin
         .from('employees')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (employeeNumber) {
-        queryBuilder = queryBuilder.ilike('employee_number', employeeNumber.trim());
-      } else if (query) {
-        const q = query.trim();
-        queryBuilder = queryBuilder.or(
-          `employee_number.ilike.%${q}%,first_name.ilike.%${q}%,last_name.ilike.%${q}%,email.ilike.%${q}%`
-        );
-      }
-
       if (branchId && branchId !== 'ALL') queryBuilder = queryBuilder.eq('branch_id', branchId);
       if (deptId && deptId !== 'ALL') queryBuilder = queryBuilder.eq('department_id', deptId);
 
-      const { data: rlsEmps, error: empError } = await queryBuilder;
-      if (!empError && rlsEmps && rlsEmps.length > 0) {
-        employees = rlsEmps;
-      } else {
-        let adminBuilder = admin
-          .from('employees')
-          .select('*')
-          .order('created_at', { ascending: false });
-
-        if (employeeNumber) {
-          adminBuilder = adminBuilder.ilike('employee_number', employeeNumber.trim());
-        } else if (query) {
-          const q = query.trim();
-          adminBuilder = adminBuilder.or(
-            `employee_number.ilike.%${q}%,first_name.ilike.%${q}%,last_name.ilike.%${q}%,email.ilike.%${q}%`
-          );
-        }
-        if (branchId && branchId !== 'ALL') adminBuilder = adminBuilder.eq('branch_id', branchId);
-        if (deptId && deptId !== 'ALL') adminBuilder = adminBuilder.eq('department_id', deptId);
-
-        const adminRes = await adminBuilder;
-        if (!adminRes.error && adminRes.data) {
-          employees = adminRes.data;
-        }
-      }
+      const { data: allEmps } = await queryBuilder;
+      if (allEmps) employees = allEmps;
     }
 
-    // Fetch branches, departments, and completed print_jobs to guarantee real-time card status
-    const [{ data: branches }, { data: departments }, { data: completedJobs }] = await Promise.all([
-      admin.from('branches').select('id, name, code'),
-      admin.from('departments').select('id, name, code'),
-      admin.from('print_jobs').select('employee_id, printer_metadata, status').eq('status', 'COMPLETED'),
-    ]);
+    // Short-circuit: If no employees matched, return immediately without loading branches/print-jobs
+    if (!employees || employees.length === 0) {
+      return NextResponse.json({
+        data: [],
+        total: 0,
+      });
+    }
 
-    const branchMap = new Map((branches || []).map((b) => [b.id, b.name]));
-    const deptMap = new Map((departments || []).map((d) => [d.id, d.name]));
+    // Fetch branches and departments from fast memory cache
+    const { branches, departments } = await getCachedBranchesAndDepartments(admin);
+
+    // Fetch completed print jobs specifically for the matched employee(s) to optimize latency
+    const targetEmpIds = employees.map((e) => e.id);
+    const targetEmpNums = employees.map((e) => e.employee_number).filter(Boolean);
+
+    let completedJobs: any[] = [];
+    if (employees.length <= 25) {
+      const { data: specificJobs } = await admin
+        .from('print_jobs')
+        .select('employee_id, printer_metadata, status')
+        .eq('status', 'COMPLETED')
+        .in('employee_id', targetEmpIds);
+      completedJobs = specificJobs || [];
+    } else {
+      const { data: allJobs } = await admin
+        .from('print_jobs')
+        .select('employee_id, printer_metadata, status')
+        .eq('status', 'COMPLETED');
+      completedJobs = allJobs || [];
+    }
+
+    const branchMap = new Map((branches || []).map((b: any) => [b.id, b.name]));
+    const deptMap = new Map((departments || []).map((d: any) => [d.id, d.name]));
 
     const printedEmpIds = new Set((completedJobs || []).map((j: any) => j.employee_id).filter(Boolean));
     const printedEmpNums = new Set(
@@ -97,7 +128,7 @@ export async function GET(request: Request) {
 
     const staleCardStatusEmpIds: string[] = [];
 
-    const mapped = (employees || []).map((e: any) => {
+    const mapped = employees.map((e: any) => {
       const hasCompletedJob = printedEmpIds.has(e.id) || (e.employee_number && printedEmpNums.has(e.employee_number));
       let status = e.card_status || 'NOT_ISSUED';
       if (status === 'ISSUED') status = 'PRINTED';
@@ -414,4 +445,3 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
-
