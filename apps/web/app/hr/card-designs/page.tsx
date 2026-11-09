@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import {
   Palette,
@@ -20,10 +20,14 @@ import {
   Eye,
   X,
   Filter,
+  Download,
+  Upload,
+  AlertCircle,
+  FileText,
 } from 'lucide-react';
 import { toast } from '@/components/ui/Toast';
 import { resolveDataBinding } from '@workspace/card-engine';
-import { createFallbackEmployee, DEFAULT_AVATAR_PLACEHOLDER } from '@/lib/data/enterpriseStore';
+import { createFallbackEmployee, DEFAULT_AVATAR_PLACEHOLDER, DEFAULT_CR80_TEMPLATE } from '@/lib/data/enterpriseStore';
 
 interface BranchOption {
   id: string;
@@ -395,6 +399,17 @@ export default function HrCardDesignsPage() {
   const [cloneFromId, setCloneFromId] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Modal State for Import Template
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importedLayout, setImportedLayout] = useState<any | null>(null);
+  const [importTemplateName, setImportTemplateName] = useState('');
+  const [importTemplateDesc, setImportTemplateDesc] = useState('');
+  const [importBranchId, setImportBranchId] = useState('ALL');
+  const [importError, setImportError] = useState('');
+  const [isImporting, setIsImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   // Modal State for Version History
   const [historyTemplate, setHistoryTemplate] = useState<CardTemplateItem | null>(null);
 
@@ -506,6 +521,145 @@ export default function HrCardDesignsPage() {
     }
   };
 
+  const handleExportTemplate = (tpl: CardTemplateItem, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+
+    try {
+      const exportData = {
+        schema: 'magiccard-card-template',
+        schemaVersion: '1.0',
+        exportedAt: new Date().toISOString(),
+        template: {
+          name: tpl.name,
+          description: tpl.description || '',
+          versionTag: tpl.versionTag,
+          cardDimensions: tpl.layout?.card || {
+            width: 1013,
+            height: 638,
+            orientation: 'horizontal',
+          },
+          layout: tpl.layout || DEFAULT_CR80_TEMPLATE,
+        },
+      };
+
+      const jsonStr = JSON.stringify(exportData, null, 2);
+      const blob = new Blob([jsonStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      const safeName = (tpl.name || 'template').toLowerCase().replace(/[^a-z0-9]+/g, '_');
+      link.setAttribute('download', `magiccard_${safeName}_${tpl.versionTag || 'v1'}.json`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast.success(`Exported "${tpl.name}" successfully!`);
+    } catch (err: any) {
+      toast.error('Failed to export template: ' + (err.message || 'Unknown error'));
+    }
+  };
+
+  const handleFileSelect = (file: File) => {
+    setImportError('');
+    setImportFile(file);
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const text = evt.target?.result as string;
+        if (!text) throw new Error('File content is empty.');
+
+        const parsed = JSON.parse(text);
+
+        let layoutToUse: any = null;
+        let detectedName = file.name
+          .replace(/\.[^/.]+$/, '')
+          .replace(/^magiccard_/i, '')
+          .replace(/_v\d+.*$/i, '')
+          .replace(/_template.*$/i, '')
+          .replace(/_/g, ' ');
+        let detectedDesc = '';
+
+        if (parsed?.template?.layout) {
+          layoutToUse = parsed.template.layout;
+          if (parsed.template.name) detectedName = parsed.template.name;
+          if (parsed.template.description) detectedDesc = parsed.template.description;
+        } else if (parsed?.layout) {
+          layoutToUse = parsed.layout;
+          if (parsed.name) detectedName = parsed.name;
+          if (parsed.description) detectedDesc = parsed.description;
+        } else if (parsed?.front || parsed?.back || parsed?.card) {
+          layoutToUse = parsed;
+        } else {
+          throw new Error('Invalid template format. The JSON file must contain card, front, or back definitions.');
+        }
+
+        if (!layoutToUse.front && !layoutToUse.back) {
+          throw new Error('Invalid card template: missing front or back definitions.');
+        }
+
+        if (!layoutToUse.card) {
+          layoutToUse.card = {
+            width: 1013,
+            height: 638,
+            orientation: 'horizontal',
+            unit: 'px',
+          };
+        }
+        if (!layoutToUse.front) layoutToUse.front = { elements: [] };
+        if (!layoutToUse.back) layoutToUse.back = { elements: [] };
+
+        setImportedLayout(layoutToUse);
+        setImportTemplateName(detectedName.trim().charAt(0).toUpperCase() + detectedName.trim().slice(1));
+        setImportTemplateDesc(detectedDesc || 'Imported enterprise ID credential template.');
+      } catch (err: any) {
+        setImportError(err.message || 'Failed to parse JSON template file.');
+        setImportedLayout(null);
+      }
+    };
+    reader.onerror = () => {
+      setImportError('Failed to read file from disk.');
+    };
+    reader.readAsText(file);
+  };
+
+  const handleConfirmImport = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!importedLayout || !importTemplateName.trim()) return;
+
+    setIsImporting(true);
+    try {
+      const res = await fetch('/api/card-templates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: importTemplateName.trim(),
+          description: importTemplateDesc.trim(),
+          branchId: importBranchId,
+          isDefault: importBranchId === 'ALL',
+          layout: importedLayout,
+        }),
+      });
+
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Failed to import template');
+
+      toast.success(`Template "${importTemplateName}" imported successfully!`);
+      setShowImportModal(false);
+      setImportFile(null);
+      setImportedLayout(null);
+      setImportTemplateName('');
+      setImportTemplateDesc('');
+      setImportBranchId('ALL');
+      loadData();
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
   const filteredTemplates = templates.filter((tpl) => {
     if (selectedBranchFilter === 'ALL') return true;
     if (selectedBranchFilter === 'GLOBAL_ONLY') return tpl.isDefault;
@@ -526,7 +680,7 @@ export default function HrCardDesignsPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
           <button
             onClick={loadData}
             disabled={loading}
@@ -534,6 +688,21 @@ export default function HrCardDesignsPage() {
             title="Refresh Templates"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+          <button
+            onClick={() => {
+              setShowImportModal(true);
+              setImportError('');
+              setImportedLayout(null);
+              setImportFile(null);
+              setImportTemplateName('');
+              setImportTemplateDesc('');
+              setImportBranchId('ALL');
+            }}
+            className="px-3.5 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#111827] hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold shadow-xs transition flex items-center gap-1.5"
+          >
+            <Upload className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+            <span>Import Template</span>
           </button>
           <button
             onClick={() => setShowCreateModal(true)}
@@ -727,6 +896,14 @@ export default function HrCardDesignsPage() {
                       <Copy className="w-3.5 h-3.5" />
                     </button>
 
+                    <button
+                      onClick={(e) => handleExportTemplate(tpl, e)}
+                      className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 hover:bg-slate-100 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium text-[11px] flex items-center gap-1 transition"
+                      title="Export Template (JSON)"
+                    >
+                      <Download className="w-3.5 h-3.5 text-blue-500" />
+                    </button>
+
                     {!tpl.isDefault && (
                       <button
                         onClick={() => handleDeleteTemplate(tpl)}
@@ -895,6 +1072,187 @@ export default function HrCardDesignsPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Import Card Template */}
+      {showImportModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="w-full max-w-2xl rounded-2xl bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 p-6 shadow-2xl space-y-4 my-8 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+              <div>
+                <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <Upload className="w-4 h-4 text-red-500" />
+                  Import Card Template
+                </h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  Upload an exported MagicCard JSON template to add it to your fleet.
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setShowImportModal(false);
+                  setImportFile(null);
+                  setImportedLayout(null);
+                }}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Upload Area */}
+            <div>
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  const file = e.dataTransfer.files?.[0];
+                  if (file) handleFileSelect(file);
+                }}
+                className={`p-6 border-2 border-dashed rounded-xl text-center cursor-pointer transition ${
+                  importFile
+                    ? 'border-emerald-400 dark:border-emerald-600 bg-emerald-50/40 dark:bg-emerald-950/20'
+                    : 'border-slate-300 dark:border-slate-700 hover:border-red-500/60 bg-slate-50 dark:bg-slate-900/50'
+                }`}
+              >
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".json,application/json"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleFileSelect(file);
+                  }}
+                />
+                {importFile ? (
+                  <div className="flex flex-col items-center">
+                    <CheckCircle2 className="w-8 h-8 text-emerald-500 mb-1" />
+                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200">{importFile.name}</span>
+                    <span className="text-[10px] text-slate-500 mt-0.5">
+                      {(importFile.size / 1024).toFixed(1)} KB • Click or drop another file to replace
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center">
+                    <Upload className="w-8 h-8 text-slate-400 mb-2" />
+                    <span className="text-xs font-semibold text-red-600 dark:text-red-400 hover:underline">
+                      Click to choose a JSON template or drag and drop here
+                    </span>
+                    <span className="text-[11px] text-slate-400 mt-1">Accepts MagicCard .json template files</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {importError && (
+              <div className="p-3 rounded-lg bg-red-100 dark:bg-red-950/40 border border-red-200 dark:border-red-800/60 text-red-700 dark:text-red-200 text-xs flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+                <span>{importError}</span>
+              </div>
+            )}
+
+            {/* Imported Template Preview & Details Form */}
+            {importedLayout && (
+              <form onSubmit={handleConfirmImport} className="space-y-4 pt-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Left: Metadata inputs */}
+                  <div className="space-y-3 text-xs">
+                    <div>
+                      <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">
+                        Template Name *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={importTemplateName}
+                        onChange={(e) => setImportTemplateName(e.target.value)}
+                        placeholder="e.g. Executive Corporate Badge"
+                        className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-slate-900 dark:text-white focus:outline-none focus:border-red-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">
+                        Description
+                      </label>
+                      <input
+                        type="text"
+                        value={importTemplateDesc}
+                        onChange={(e) => setImportTemplateDesc(e.target.value)}
+                        placeholder="e.g. Imported template layout"
+                        className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-slate-900 dark:text-white focus:outline-none focus:border-red-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">
+                        Assign to Branch
+                      </label>
+                      <select
+                        value={importBranchId}
+                        onChange={(e) => setImportBranchId(e.target.value)}
+                        className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-slate-900 dark:text-white focus:outline-none focus:border-red-500"
+                      >
+                        <option value="ALL">All Branches (Global Default)</option>
+                        {branches.map((b) => (
+                          <option key={b.id} value={b.id}>
+                            {b.name} ({b.code})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="p-2.5 rounded-lg bg-slate-100 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-[11px] text-slate-600 dark:text-slate-400 space-y-1">
+                      <div>Elements: <strong>{importedLayout.front?.elements?.length || 0} Front</strong>, <strong>{importedLayout.back?.elements?.length || 0} Back</strong></div>
+                      <div>Orientation: <strong>{importedLayout.card?.orientation || 'horizontal'}</strong> ({importedLayout.card?.width || 1013} × {importedLayout.card?.height || 638}px)</div>
+                    </div>
+                  </div>
+
+                  {/* Right: Live Preview */}
+                  <div className="flex flex-col items-center justify-center p-3 rounded-xl bg-slate-100/60 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800">
+                    <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
+                      Live Preview
+                    </span>
+                    <MiniCard2DPreview layout={importedLayout} settings={systemSettings} />
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowImportModal(false);
+                      setImportFile(null);
+                      setImportedLayout(null);
+                    }}
+                    className="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 font-medium text-xs"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isImporting || !importTemplateName.trim()}
+                    className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white font-semibold text-xs shadow flex items-center gap-1.5 disabled:opacity-50 transition"
+                  >
+                    {isImporting ? (
+                      <>
+                        <div className="w-3.5 h-3.5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                        Importing...
+                      </>
+                    ) : (
+                      <>
+                        <Check className="w-3.5 h-3.5" />
+                        Confirm & Import Template
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}

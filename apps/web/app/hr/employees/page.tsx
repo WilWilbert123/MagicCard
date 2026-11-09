@@ -27,6 +27,7 @@ import {
   Check,
   Eye,
   LockKeyhole,
+  ChevronDown,
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { Employee, Branch, Department, DEFAULT_CR80_TEMPLATE } from '@/lib/data/enterpriseStore';
@@ -42,6 +43,136 @@ const ThreeCardViewer = dynamic(() => import('@/components/three/ThreeCardViewer
     </div>
   ),
 });
+
+function JobTitleCombobox({
+  value,
+  onChange,
+  positions,
+  departmentId,
+}: {
+  value: string;
+  onChange: (val: string) => void;
+  positions: any[];
+  departmentId?: string;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const query = (value || '').toLowerCase().trim();
+  const filtered = positions.filter((p) =>
+    !query || p.title.toLowerCase().includes(query)
+  );
+
+  const deptPositions = filtered.filter((p) => !departmentId || p.departmentId === departmentId);
+  const otherPositions = filtered.filter((p) => departmentId && p.departmentId !== departmentId);
+
+  return (
+    <div className="relative w-full" ref={containerRef}>
+      <div className="relative flex items-center">
+        <input
+          type="text"
+          required
+          placeholder="Select or type job title..."
+          value={value}
+          onChange={(e) => {
+            onChange(e.target.value);
+            setIsOpen(true);
+          }}
+          onFocus={() => setIsOpen(true)}
+          className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg pl-2.5 pr-8 py-1.5 text-slate-900 dark:text-white focus:outline-none focus:border-red-500 text-xs sm:text-sm"
+        />
+        <button
+          type="button"
+          tabIndex={-1}
+          onClick={() => setIsOpen((prev) => !prev)}
+          className="absolute right-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition"
+        >
+          <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+        </button>
+      </div>
+
+      {isOpen && (
+        <div className="absolute z-50 mt-1 w-full max-h-56 overflow-y-auto rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-xl py-1 text-xs divide-y divide-slate-100 dark:divide-slate-800">
+          {deptPositions.length > 0 && (
+            <div className="p-1">
+              <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                Department Positions
+              </div>
+              {deptPositions.map((p) => (
+                <button
+                  key={`dept-${p.id}`}
+                  type="button"
+                  onClick={() => {
+                    onChange(p.title);
+                    setIsOpen(false);
+                  }}
+                  className={`w-full text-left px-2.5 py-1.5 rounded-md transition flex items-center justify-between ${
+                    value === p.title
+                      ? 'bg-red-50 text-red-600 dark:bg-red-950/50 dark:text-red-400 font-semibold'
+                      : 'text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  <span>{p.title}</span>
+                  {p.level && (
+                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
+                      {p.level}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {otherPositions.length > 0 && (
+            <div className="p-1">
+              <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                All Positions
+              </div>
+              {otherPositions.map((p) => (
+                <button
+                  key={`all-${p.id}`}
+                  type="button"
+                  onClick={() => {
+                    onChange(p.title);
+                    setIsOpen(false);
+                  }}
+                  className={`w-full text-left px-2.5 py-1.5 rounded-md transition flex items-center justify-between ${
+                    value === p.title
+                      ? 'bg-red-50 text-red-600 dark:bg-red-950/50 dark:text-red-400 font-semibold'
+                      : 'text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  <span>{p.title}</span>
+                  {p.level && (
+                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
+                      {p.level}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {deptPositions.length === 0 && otherPositions.length === 0 && (
+            <div className="p-2.5 text-center text-slate-400 text-[11px]">
+              {positions.length > 0 ? 'No matching positions. Custom title will be saved.' : 'No predefined positions. Custom title will be saved.'}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function HrEmployeesPage() {
   const [mounted, setMounted] = useState(false);
@@ -1274,52 +1405,12 @@ export default function HrEmployeesPage() {
                   </div>
                   <div>
                     <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Job Title</label>
-                    <div className="flex gap-1.5">
-                      <div className="relative flex-1">
-                        <input
-                          type="text"
-                          list="add-employee-positions-datalist"
-                          required
-                          placeholder="e.g. Software Engineer"
-                          value={formData.positionTitle}
-                          onChange={(e) => setFormData({ ...formData, positionTitle: e.target.value })}
-                          className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-900 dark:text-white focus:outline-none focus:border-red-500"
-                        />
-                        <datalist id="add-employee-positions-datalist">
-                          {positions.map((p) => (
-                            <option key={p.id} value={p.title} />
-                          ))}
-                        </datalist>
-                      </div>
-                      {positions.length > 0 && (
-                        <select
-                          value=""
-                          onChange={(e) => {
-                            if (e.target.value) {
-                              setFormData({ ...formData, positionTitle: e.target.value });
-                            }
-                          }}
-                          className="w-28 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-1.5 text-xs text-slate-700 dark:text-slate-300 focus:outline-none focus:border-red-500 cursor-pointer shrink-0"
-                          title="Select a predefined job position"
-                        >
-                          <option value="">Select</option>
-                          {positions.filter((p) => !formData.departmentId || p.departmentId === formData.departmentId).length > 0 && (
-                            <optgroup label="Department Positions">
-                              {positions
-                                .filter((p) => !formData.departmentId || p.departmentId === formData.departmentId)
-                                .map((p) => (
-                                  <option key={`dept-${p.id}`} value={p.title}>{p.title}</option>
-                                ))}
-                            </optgroup>
-                          )}
-                          <optgroup label="All Predefined Positions">
-                            {positions.map((p) => (
-                              <option key={`all-${p.id}`} value={p.title}>{p.title}</option>
-                            ))}
-                          </optgroup>
-                        </select>
-                      )}
-                    </div>
+                    <JobTitleCombobox
+                      value={formData.positionTitle}
+                      onChange={(val) => setFormData({ ...formData, positionTitle: val })}
+                      positions={positions}
+                      departmentId={formData.departmentId}
+                    />
                   </div>
                 </div>
               </div>
@@ -1596,52 +1687,12 @@ export default function HrEmployeesPage() {
                   </div>
                   <div>
                     <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Job Title</label>
-                    <div className="flex gap-1.5">
-                      <div className="relative flex-1">
-                        <input
-                          type="text"
-                          list="edit-employee-positions-datalist"
-                          required
-                          placeholder="e.g. Software Engineer"
-                          value={editFormData.positionTitle}
-                          onChange={(e) => setEditFormData({ ...editFormData, positionTitle: e.target.value })}
-                          className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-900 dark:text-white focus:outline-none focus:border-red-500"
-                        />
-                        <datalist id="edit-employee-positions-datalist">
-                          {positions.map((p) => (
-                            <option key={p.id} value={p.title} />
-                          ))}
-                        </datalist>
-                      </div>
-                      {positions.length > 0 && (
-                        <select
-                          value=""
-                          onChange={(e) => {
-                            if (e.target.value) {
-                              setEditFormData({ ...editFormData, positionTitle: e.target.value });
-                            }
-                          }}
-                          className="w-28 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-1.5 text-xs text-slate-700 dark:text-slate-300 focus:outline-none focus:border-red-500 cursor-pointer shrink-0"
-                          title="Select a predefined job position"
-                        >
-                          <option value="">Select</option>
-                          {positions.filter((p) => !editFormData.departmentId || p.departmentId === editFormData.departmentId).length > 0 && (
-                            <optgroup label="Department Positions">
-                              {positions
-                                .filter((p) => !editFormData.departmentId || p.departmentId === editFormData.departmentId)
-                                .map((p) => (
-                                  <option key={`edit-dept-${p.id}`} value={p.title}>{p.title}</option>
-                                ))}
-                            </optgroup>
-                          )}
-                          <optgroup label="All Predefined Positions">
-                            {positions.map((p) => (
-                              <option key={`edit-all-${p.id}`} value={p.title}>{p.title}</option>
-                            ))}
-                          </optgroup>
-                        </select>
-                      )}
-                    </div>
+                    <JobTitleCombobox
+                      value={editFormData.positionTitle}
+                      onChange={(val) => setEditFormData({ ...editFormData, positionTitle: val })}
+                      positions={positions}
+                      departmentId={editFormData.departmentId}
+                    />
                   </div>
                 </div>
               </div>
