@@ -33,6 +33,7 @@ import {
   LayoutGrid,
   Triangle,
   Minus,
+  Plus,
   PenTool,
   ArrowUp,
   ArrowDown,
@@ -1246,12 +1247,45 @@ export default function CardDesignerPage() {
             <Magnet className="w-4 h-4" />
           </button>
 
-          <div className={`flex items-center border rounded px-2 py-1 text-xs ${zoomBar}`}>
-            <button onClick={() => setZoomLevel(Math.max(0.4, zoomLevel - 0.1))} className={isDark ? 'hover:text-white' : 'hover:text-slate-900'}><ZoomOut className="w-3.5 h-3.5" /></button>
-            <span className="mx-2 font-mono text-[11px]">{Math.round(zoomLevel * 100)}%</span>
-            <button onClick={() => setZoomLevel(Math.min(1.6, zoomLevel + 0.1))} className={isDark ? 'hover:text-white' : 'hover:text-slate-900'}><ZoomIn className="w-3.5 h-3.5" /></button>
-            <div className="w-[1px] h-3 bg-slate-700/50 mx-1.5" />
-            <button onClick={() => setZoomLevel(isVertical ? 0.75 : 0.8)} title="Fit Card to Screen" className="text-[10px] font-bold uppercase tracking-wider text-indigo-400 hover:text-indigo-300">Fit</button>
+          <div className={`flex items-center gap-1.5 border rounded-lg px-2.5 py-1 text-xs shadow-xs ${zoomBar}`}>
+            <button
+              type="button"
+              onClick={() => setZoomLevel((prev) => Math.max(0.4, Math.round((prev - 0.05) * 100) / 100))}
+              className={`p-0.5 rounded transition ${isDark ? 'hover:text-white' : 'hover:text-slate-900'}`}
+              title="Zoom Out"
+            >
+              <Minus className="w-3.5 h-3.5" />
+            </button>
+            <input
+              type="range"
+              min="40"
+              max="200"
+              step="5"
+              value={Math.round(zoomLevel * 100)}
+              onChange={(e) => setZoomLevel(Number(e.target.value) / 100)}
+              className="w-20 sm:w-24 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-slate-500 hover:accent-red-500 transition"
+              title="Adjust Zoom"
+            />
+            <button
+              type="button"
+              onClick={() => setZoomLevel((prev) => Math.min(2.0, Math.round((prev + 0.05) * 100) / 100))}
+              className={`p-0.5 rounded transition ${isDark ? 'hover:text-white' : 'hover:text-slate-900'}`}
+              title="Zoom In"
+            >
+              <Plus className="w-3.5 h-3.5" />
+            </button>
+            <span className="font-mono text-[11px] min-w-[34px] text-right font-medium select-none">
+              {Math.round(zoomLevel * 100)}%
+            </span>
+            <div className={`w-[1px] h-3.5 mx-1 ${isDark ? 'bg-slate-700' : 'bg-slate-300'}`} />
+            <button
+              type="button"
+              onClick={() => setZoomLevel(isVertical ? 0.75 : 0.8)}
+              title="Fit Card to Screen"
+              className="text-[10px] font-bold uppercase tracking-wider text-indigo-500 dark:text-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-300 transition"
+            >
+              Fit
+            </button>
           </div>
 
           <div className={`h-4 w-[1px] mx-1 ${isDark ? 'bg-slate-800' : 'bg-slate-200'}`} />
