@@ -49,11 +49,13 @@ function JobTitleCombobox({
   onChange,
   positions,
   departmentId,
+  departments = [],
 }: {
   value: string;
   onChange: (val: string) => void;
   positions: any[];
   departmentId?: string;
+  departments?: Department[];
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -68,13 +70,14 @@ function JobTitleCombobox({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const query = (value || '').toLowerCase().trim();
-  const filtered = positions.filter((p) =>
-    !query || p.title.toLowerCase().includes(query)
-  );
+  // Department-specific positions & all other corporate positions
+  const deptPositions = positions.filter((p) => departmentId && p.departmentId === departmentId);
+  const otherPositions = positions.filter((p) => !departmentId || p.departmentId !== departmentId);
 
-  const deptPositions = filtered.filter((p) => !departmentId || p.departmentId === departmentId);
-  const otherPositions = filtered.filter((p) => departmentId && p.departmentId !== departmentId);
+  const getDeptName = (deptId?: string) => {
+    if (!deptId) return null;
+    return departments.find((d) => d.id === deptId)?.name || null;
+  };
 
   return (
     <div className="relative w-full" ref={containerRef}>
@@ -96,76 +99,108 @@ function JobTitleCombobox({
           tabIndex={-1}
           onClick={() => setIsOpen((prev) => !prev)}
           className="absolute right-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition"
+          title="Show all job positions"
         >
           <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
         </button>
       </div>
 
       {isOpen && (
-        <div className="absolute z-50 mt-1 w-full max-h-56 overflow-y-auto rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-xl py-1 text-xs divide-y divide-slate-100 dark:divide-slate-800">
-          {deptPositions.length > 0 && (
-            <div className="p-1">
-              <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                Department Positions
-              </div>
-              {deptPositions.map((p) => (
-                <button
-                  key={`dept-${p.id}`}
-                  type="button"
-                  onClick={() => {
-                    onChange(p.title);
-                    setIsOpen(false);
-                  }}
-                  className={`w-full text-left px-2.5 py-1.5 rounded-md transition flex items-center justify-between ${
-                    value === p.title
-                      ? 'bg-red-50 text-red-600 dark:bg-red-950/50 dark:text-red-400 font-semibold'
-                      : 'text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
-                  }`}
-                >
-                  <span>{p.title}</span>
-                  {p.level && (
-                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
-                      {p.level}
-                    </span>
-                  )}
-                </button>
-              ))}
+        <div className="absolute z-50 mt-1 w-full max-h-60 overflow-y-auto rounded-lg bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-700 shadow-xl py-1 text-xs divide-y divide-slate-100 dark:divide-slate-800">
+          {positions.length > 0 ? (
+            <>
+              {deptPositions.length > 0 && (
+                <div className="p-1">
+                  <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-red-600 dark:text-red-400">
+                    {getDeptName(departmentId) || 'Department'} Positions
+                  </div>
+                  {deptPositions.map((p) => {
+                    const isSelected = value?.toLowerCase().trim() === p.title.toLowerCase().trim();
+                    return (
+                      <button
+                        key={`dept-${p.id}`}
+                        type="button"
+                        onClick={() => {
+                          onChange(p.title);
+                          setIsOpen(false);
+                        }}
+                        className={`w-full text-left px-2.5 py-1.5 rounded-md transition flex items-center justify-between ${
+                          isSelected
+                            ? 'bg-red-50 text-red-600 dark:bg-red-950/60 dark:text-red-400 font-bold'
+                            : 'text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
+                        }`}
+                      >
+                        <div className="flex items-center gap-1.5">
+                          {isSelected && <Check className="w-3 h-3 text-red-500 shrink-0" />}
+                          <span>{p.title}</span>
+                        </div>
+                        {p.level && (
+                          <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-mono">
+                            {p.level}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {otherPositions.length > 0 && (
+                <div className="p-1">
+                  <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    {deptPositions.length > 0 ? 'Other Corporate Positions' : 'All Corporate Positions'}
+                  </div>
+                  {otherPositions.map((p) => {
+                    const isSelected = value?.toLowerCase().trim() === p.title.toLowerCase().trim();
+                    const dName = getDeptName(p.departmentId);
+                    return (
+                      <button
+                        key={`all-${p.id}`}
+                        type="button"
+                        onClick={() => {
+                          onChange(p.title);
+                          setIsOpen(false);
+                        }}
+                        className={`w-full text-left px-2.5 py-1.5 rounded-md transition flex items-center justify-between ${
+                          isSelected
+                            ? 'bg-red-50 text-red-600 dark:bg-red-950/60 dark:text-red-400 font-bold'
+                            : 'text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
+                        }`}
+                      >
+                        <div className="flex flex-col text-left">
+                          <div className="flex items-center gap-1.5">
+                            {isSelected && <Check className="w-3 h-3 text-red-500 shrink-0" />}
+                            <span>{p.title}</span>
+                          </div>
+                          {dName && (
+                            <span className="text-[10px] text-slate-400 dark:text-slate-500">
+                              {dName}
+                            </span>
+                          )}
+                        </div>
+                        {p.level && (
+                          <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-mono shrink-0">
+                            {p.level}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="p-3 text-center text-slate-400 text-[11px]">
+              No predefined positions found. Type any custom title above.
             </div>
           )}
 
-          {otherPositions.length > 0 && (
-            <div className="p-1">
-              <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                All Positions
+          {value && !positions.some((p) => p.title.toLowerCase().trim() === value.toLowerCase().trim()) && (
+            <div className="p-1.5 bg-slate-50 dark:bg-slate-900/60 border-t border-slate-100 dark:border-slate-800">
+              <div className="px-2 py-1 text-[11px] text-slate-500 dark:text-slate-400 flex items-center justify-between">
+                <span>Custom Title: <strong className="text-slate-900 dark:text-white font-medium">"{value}"</strong></span>
+                <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 font-bold">CUSTOM</span>
               </div>
-              {otherPositions.map((p) => (
-                <button
-                  key={`all-${p.id}`}
-                  type="button"
-                  onClick={() => {
-                    onChange(p.title);
-                    setIsOpen(false);
-                  }}
-                  className={`w-full text-left px-2.5 py-1.5 rounded-md transition flex items-center justify-between ${
-                    value === p.title
-                      ? 'bg-red-50 text-red-600 dark:bg-red-950/50 dark:text-red-400 font-semibold'
-                      : 'text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
-                  }`}
-                >
-                  <span>{p.title}</span>
-                  {p.level && (
-                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
-                      {p.level}
-                    </span>
-                  )}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {deptPositions.length === 0 && otherPositions.length === 0 && (
-            <div className="p-2.5 text-center text-slate-400 text-[11px]">
-              {positions.length > 0 ? 'No matching positions. Custom title will be saved.' : 'No predefined positions. Custom title will be saved.'}
             </div>
           )}
         </div>
@@ -1410,6 +1445,7 @@ export default function HrEmployeesPage() {
                       onChange={(val) => setFormData({ ...formData, positionTitle: val })}
                       positions={positions}
                       departmentId={formData.departmentId}
+                      departments={departments}
                     />
                   </div>
                 </div>
@@ -1692,6 +1728,7 @@ export default function HrEmployeesPage() {
                       onChange={(val) => setEditFormData({ ...editFormData, positionTitle: val })}
                       positions={positions}
                       departmentId={editFormData.departmentId}
+                      departments={departments}
                     />
                   </div>
                 </div>
