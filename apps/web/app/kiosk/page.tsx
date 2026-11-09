@@ -30,7 +30,7 @@ import PixelBlast from '@/components/kiosk/PixelBlast';
 const ThreeCardViewer = dynamic(() => import('@/components/three/ThreeCardViewer'), {
   ssr: false,
   loading: () => (
-    <div className="w-full h-[380px] rounded-2xl bg-slate-900 flex items-center justify-center text-slate-400 text-sm">
+    <div className="w-full h-[380px] rounded-2xl bg-black border border-zinc-800 flex items-center justify-center text-zinc-500 text-sm">
       Rendering...
     </div>
   ),
@@ -883,7 +883,7 @@ export default function KioskMainPage() {
                   baseUrl={verificationBaseUrl}
                   autoRotate={false}
                   showControls={true}
-                  className="!border-none !bg-transparent !shadow-none"
+                  className="!border-zinc-800/80 !bg-black !shadow-none"
                 />
               </div>
             ) : (

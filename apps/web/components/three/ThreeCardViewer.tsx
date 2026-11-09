@@ -488,7 +488,7 @@ export default function ThreeCardViewer({
       ref={containerRef}
       className={`relative w-full h-full min-h-[440px] rounded-2xl border overflow-hidden select-none transition-colors duration-500 ${stageTheme === 'light'
         ? 'bg-gradient-to-br from-[#c8d4e0] via-[#b8c8da] to-[#a8bad0] border-slate-400 shadow-xl'
-        : 'bg-gradient-to-br from-[#111827] via-[#0a1020] to-[#060c18] border-slate-800/80 shadow-2xl'
+        : 'bg-black border-zinc-800/80 shadow-2xl'
         } ${className}`}
     >
       {/* Icon-Only Controls Overlay */}
@@ -499,7 +499,7 @@ export default function ThreeCardViewer({
             title={isFlipped ? 'Flip to Front (Obverse)' : 'Flip to Back (Reverse)'}
             className={`p-2.5 rounded-xl border backdrop-blur shadow-md transition active:scale-95 flex items-center justify-center ${stageTheme === 'light'
               ? 'bg-white/90 hover:bg-white text-slate-800 border-slate-300'
-              : 'bg-slate-900/80 hover:bg-slate-800 text-white border-slate-700'
+              : 'bg-zinc-900/80 hover:bg-zinc-800 text-white border-zinc-700'
               }`}
           >
             <RotateCcw className="w-4 h-4" />
@@ -512,7 +512,7 @@ export default function ThreeCardViewer({
               ? 'bg-red-600 border-red-600 text-white shadow-red-600/30'
               : stageTheme === 'light'
                 ? 'bg-white/90 hover:bg-white text-slate-800 border-slate-300'
-                : 'bg-slate-900/80 hover:bg-slate-800 text-white border-slate-700'
+                : 'bg-zinc-900/80 hover:bg-zinc-800 text-white border-zinc-700'
               }`}
           >
             {rotating ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
@@ -523,7 +523,7 @@ export default function ThreeCardViewer({
             title={stageTheme === 'light' ? 'Switch to Dark Studio Environment' : 'Switch to Light Studio Environment'}
             className={`p-2.5 rounded-xl border backdrop-blur shadow-md transition active:scale-95 flex items-center justify-center ${stageTheme === 'light'
               ? 'bg-white/90 hover:bg-white text-amber-600 border-slate-300'
-              : 'bg-slate-900/80 hover:bg-slate-800 text-amber-400 border-slate-700'
+              : 'bg-zinc-900/80 hover:bg-zinc-800 text-amber-400 border-zinc-700'
               }`}
           >
             {stageTheme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
