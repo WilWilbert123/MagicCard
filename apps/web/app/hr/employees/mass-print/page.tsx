@@ -667,7 +667,7 @@ function MassPrintContent() {
                 </button>
               </div>
 
-              {/* Template Override */}
+
               <select
                 value={selectedTemplateId}
                 onChange={(e) => setSelectedTemplateId(e.target.value)}
@@ -685,7 +685,7 @@ function MassPrintContent() {
 
           {/* Group Filter Bar */}
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3 pt-3 border-t border-slate-100 dark:border-slate-800/80">
-            {/* Search */}
+
             <div className="relative">
               <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
               <input
@@ -697,7 +697,7 @@ function MassPrintContent() {
               />
             </div>
 
-            {/* Department Filter */}
+
             <div>
               <select
                 value={selectedDept}
