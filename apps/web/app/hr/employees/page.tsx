@@ -3,16 +3,16 @@
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
-import { 
-  Users, 
-  Search, 
-  Upload, 
-  Download, 
-  Plus, 
-  Edit, 
-  CreditCard, 
-  Trash2, 
-  CheckCircle2, 
+import {
+  Users,
+  Search,
+  Upload,
+  Download,
+  Plus,
+  Edit,
+  CreditCard,
+  Trash2,
+  CheckCircle2,
   AlertCircle,
   Clock,
   RotateCcw,
@@ -52,6 +52,7 @@ export default function HrEmployeesPage() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
+  const [positions, setPositions] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -127,7 +128,7 @@ export default function HrEmployeesPage() {
     if (cardTemplates.length > 0) {
       const matchingBranchTpl = cardTemplates.find(
         (t: any) =>
-          (t.branchId && (t.branchId === emp.branchId ||
+        (t.branchId && (t.branchId === emp.branchId ||
           (emp.branchName && t.branchName?.toLowerCase() === emp.branchName?.toLowerCase()) ||
           ((emp as any).branchCode && t.branchCode === (emp as any).branchCode)))
       );
@@ -151,7 +152,7 @@ export default function HrEmployeesPage() {
         setCardTemplates(templates);
         const matchingBranchTpl = templates.find(
           (t: any) =>
-            (t.branchId && (t.branchId === emp.branchId ||
+          (t.branchId && (t.branchId === emp.branchId ||
             (emp.branchName && t.branchName?.toLowerCase() === emp.branchName?.toLowerCase()) ||
             ((emp as any).branchCode && t.branchCode === (emp as any).branchCode)))
         );
@@ -168,7 +169,7 @@ export default function HrEmployeesPage() {
           }
         }
       }
-    } catch {}
+    } catch { }
   };
 
   // New Employee Form
@@ -284,9 +285,10 @@ export default function HrEmployeesPage() {
       }
 
       // 2. Fetch auxiliary metadata in parallel
-      const [brRes, deptRes, tplRes, setRes, profRes] = await Promise.all([
+      const [brRes, deptRes, posRes, tplRes, setRes, profRes] = await Promise.all([
         fetch('/api/branches').then((r) => r.ok ? r.json() : null),
         fetch('/api/departments').then((r) => r.ok ? r.json() : null),
+        fetch('/api/positions').then((r) => r.ok ? r.json() : null),
         fetch('/api/card-templates').then((r) => r.ok ? r.json() : null),
         fetch('/api/settings').then((r) => r.ok ? r.json() : null),
         fetch('/api/auth/profile').then((r) => r.ok ? r.json() : null),
@@ -296,6 +298,7 @@ export default function HrEmployeesPage() {
       const loadedDepartments = deptRes?.data?.length ? deptRes.data : (empRes?.departments ?? []);
       const loadedTemplates = tplRes?.data ?? [];
 
+      if (posRes?.data) setPositions(posRes.data);
       if (setRes?.data) setRestrictCrossBranchPrinting(setRes.data.restrictCrossBranchPrinting ?? false);
       if (profRes?.data) {
         setUserBranchId(profRes.data.branchId || null);
@@ -334,7 +337,7 @@ export default function HrEmployeesPage() {
 
       const labelMap = { PRINTED: 'ISSUED', REPRINT_REQUESTED: 'REPRINT REQ', NOT_ISSUED: 'PENDING' };
       toast.success(`Card status updated to ${labelMap[newStatus]}.`);
-      
+
       // Update local state immediately
       setEmployees((prev) =>
         prev.map((e) => (e.id === empId ? { ...e, cardStatus: newStatus } : e))
@@ -366,7 +369,7 @@ export default function HrEmployeesPage() {
       if (!res.ok) throw new Error(json.error || 'Failed to dispatch print job');
 
       toast.success(`Badge printed! Card status updated to ISSUED for ${emp.fullName}.`);
-      
+
       // Update local state immediately
       setEmployees((prev) =>
         prev.map((e) => (e.id === emp.id ? { ...e, cardStatus: 'PRINTED' } : e))
@@ -389,7 +392,7 @@ export default function HrEmployeesPage() {
             setEmployees(json.data);
           }
         })
-        .catch(() => {});
+        .catch(() => { });
     }, 6000);
 
     return () => clearInterval(interval);
@@ -402,7 +405,7 @@ export default function HrEmployeesPage() {
     const matchesBranch = selectedBranch === 'ALL' || emp.branchId === selectedBranch;
     const matchesDept = selectedDept === 'ALL' || emp.departmentId === selectedDept;
     const matchesStatus = selectedStatus === 'ALL' || emp.employmentStatus === selectedStatus;
-    
+
     const statusVal = (emp.cardStatus || 'NOT_ISSUED') as string;
     const matchesCardStatus =
       selectedCardStatus === 'ALL' ||
@@ -491,6 +494,7 @@ export default function HrEmployeesPage() {
       'branchName',
       'positionTitle',
       'photoUrl',
+      'cardStatus',
       'employmentStatus',
       'dateHired',
       'address',
@@ -502,9 +506,9 @@ export default function HrEmployeesPage() {
       'hrSignatureUrl'
     ].join(',');
 
-    const row1 = 'EMP-100001,John,Alexander,Smith,,Johnny,john.smith@magiccard.corp,+1 (555) 123-4567,Engineering & Technology,Global Headquarters (NYC),Senior Systems Architect,,ACTIVE,2024-01-15,"123 Main St, New York",05-1605331-4,654-117-898,Jane Smith,+1 (555) 999-1111,,';
-    const row2 = 'EMP-100002,Maria,,Garcia,Jr,Maria,maria.garcia@magiccard.corp,+1 (555) 987-6543,Corporate Security,Global Headquarters (NYC),Security Operations Specialist,,ACTIVE,2024-02-01,"456 Oak Ave, NYC",05-9876543-1,987-654-321-000,Carlos Garcia,+1 (555) 888-2222,,';
-    const row3 = 'EMP-100003,David,Robert,Chen,,Dave,david.chen@magiccard.corp,+1 (555) 456-7890,Operations & Facilities,West Coast Tech Campus (SF),Operations Lead,,ACTIVE,2024-03-10,"789 Pine Rd, SF",05-4567890-2,456-789-012-000,Sarah Chen,+1 (555) 777-3333,,';
+    const row1 = 'EMP-100001,John,Alexander,Smith,,Johnny,john.smith@magiccard.corp,+1 (555) 123-4567,Engineering & Technology,Global Headquarters (NYC),Senior Systems Architect,,NOT_ISSUED,ACTIVE,2024-01-15,"123 Main St, New York",05-1605331-4,654-117-898,Jane Smith,+1 (555) 999-1111,,';
+    const row2 = 'EMP-100002,Maria,,Garcia,Jr,Maria,maria.garcia@magiccard.corp,+1 (555) 987-6543,Corporate Security,Global Headquarters (NYC),Security Operations Specialist,,NOT_ISSUED,ACTIVE,2024-02-01,"456 Oak Ave, NYC",05-9876543-1,987-654-321-000,Carlos Garcia,+1 (555) 888-2222,,';
+    const row3 = 'EMP-100003,David,Robert,Chen,,Dave,david.chen@magiccard.corp,+1 (555) 456-7890,Operations & Facilities,West Coast Tech Campus (SF),Operations Lead,,NOT_ISSUED,ACTIVE,2024-03-10,"789 Pine Rd, SF",05-4567890-2,456-789-012-000,Sarah Chen,+1 (555) 777-3333,,';
 
     const csvContent = `${headers}\r\n${row1}\r\n${row2}\r\n${row3}\r\n`;
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -537,6 +541,7 @@ export default function HrEmployeesPage() {
       'departmentName',
       'branchName',
       'positionTitle',
+      'photoUrl',
       'cardStatus',
       'employmentStatus',
       'dateHired',
@@ -562,7 +567,8 @@ export default function HrEmployeesPage() {
         `"${e.departmentName || ''}"`,
         `"${e.branchName || ''}"`,
         `"${e.positionTitle || ''}"`,
-        `"${e.cardStatus || ''}"`,
+        `"${e.photoUrl || ''}"`,
+        `"${e.cardStatus || 'NOT_ISSUED'}"`,
         `"${e.employmentStatus || ''}"`,
         `"${e.dateHired || ''}"`,
         `"${(e.address || '').replace(/"/g, '""')}"`,
@@ -637,6 +643,10 @@ export default function HrEmployeesPage() {
           const branch = headerMap['branchname'] !== undefined ? cols[headerMap['branchname']] : 'Global Headquarters (NYC)';
           const position = headerMap['positiontitle'] !== undefined ? cols[headerMap['positiontitle']] : 'Staff';
           const photo = headerMap['photourl'] !== undefined ? cols[headerMap['photourl']] : '';
+          const rawCardStatus = headerMap['cardstatus'] !== undefined ? cols[headerMap['cardstatus']]?.trim().toUpperCase() : '';
+          const cardStatus = ['PRINTED', 'ISSUED', 'REPRINT_REQUESTED', 'NOT_ISSUED'].includes(rawCardStatus)
+            ? rawCardStatus
+            : 'NOT_ISSUED';
           const status = (headerMap['employmentstatus'] !== undefined && cols[headerMap['employmentstatus']]?.toUpperCase() === 'INACTIVE') ? 'INACTIVE' : 'ACTIVE';
           const dateHired = headerMap['datehired'] !== undefined ? cols[headerMap['datehired']] : new Date().toISOString().split('T')[0];
           const address = headerMap['address'] !== undefined ? cols[headerMap['address']] : '';
@@ -666,7 +676,7 @@ export default function HrEmployeesPage() {
               positionTitle: position,
               photoUrl: photo,
               employmentStatus: status,
-              cardStatus: 'NOT_ISSUED',
+              cardStatus,
               dateHired,
               address,
               sssNumber,
@@ -703,7 +713,7 @@ export default function HrEmployeesPage() {
           body: JSON.stringify(emp),
         });
         if (res.ok) importedCount++;
-      } catch {}
+      } catch { }
     }
 
     await loadData();
@@ -966,15 +976,14 @@ export default function HrEmployeesPage() {
                 return (
                   <tr
                     key={emp.id}
-                    className={`transition ${
-                      isRowSelected
-                        ? 'bg-red-50/70 dark:bg-red-950/30 hover:bg-red-100/60 dark:hover:bg-red-950/40'
-                        : isSuspended
+                    className={`transition ${isRowSelected
+                      ? 'bg-red-50/70 dark:bg-red-950/30 hover:bg-red-100/60 dark:hover:bg-red-950/40'
+                      : isSuspended
                         ? 'bg-red-50/50 dark:bg-red-950/20 hover:bg-red-50 dark:hover:bg-red-950/30 border-l-4 border-l-red-500'
                         : isInactive
-                        ? 'opacity-70 bg-slate-50/60 dark:bg-slate-900/40 hover:opacity-100 border-l-4 border-l-slate-400'
-                        : 'hover:bg-slate-50 dark:hover:bg-slate-800/30'
-                    }`}
+                          ? 'opacity-70 bg-slate-50/60 dark:bg-slate-900/40 hover:opacity-100 border-l-4 border-l-slate-400'
+                          : 'hover:bg-slate-50 dark:hover:bg-slate-800/30'
+                      }`}
                   >
                     <td className="px-5 py-3">
                       <input
@@ -1022,106 +1031,105 @@ export default function HrEmployeesPage() {
                       </div>
                       <div className="text-[10px] text-slate-500">{emp.email}</div>
                     </td>
-                  <td className="px-5 py-3 font-mono text-slate-600 dark:text-slate-300">{emp.employeeNumber}</td>
-                  <td className="px-5 py-3 text-slate-600 dark:text-slate-400">{emp.departmentName}</td>
-                  <td className="px-5 py-3 text-slate-600 dark:text-slate-400">{emp.positionTitle}</td>
-                  <td className="px-5 py-3">
-                    {(() => {
-                      const isIssued = emp.cardStatus === 'PRINTED' || (emp.cardStatus as string) === 'ISSUED';
-                      const isReprint = emp.cardStatus === 'REPRINT_REQUESTED';
-                      return (
-                        <div className="inline-flex items-center gap-1 group relative">
-                          <button
-                            onClick={() => {
-                              const nextStatus = isIssued ? 'REPRINT_REQUESTED' : isReprint ? 'NOT_ISSUED' : 'PRINTED';
-                              handleQuickCardStatusUpdate(emp.id, nextStatus);
-                            }}
-                            title="Click to toggle status (Issued / Pending / Reprint)"
-                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border transition cursor-pointer shadow-xs ${
-                              isIssued
+                    <td className="px-5 py-3 font-mono text-slate-600 dark:text-slate-300">{emp.employeeNumber}</td>
+                    <td className="px-5 py-3 text-slate-600 dark:text-slate-400">{emp.departmentName}</td>
+                    <td className="px-5 py-3 text-slate-600 dark:text-slate-400">{emp.positionTitle}</td>
+                    <td className="px-5 py-3">
+                      {(() => {
+                        const isIssued = emp.cardStatus === 'PRINTED' || (emp.cardStatus as string) === 'ISSUED';
+                        const isReprint = emp.cardStatus === 'REPRINT_REQUESTED';
+                        return (
+                          <div className="inline-flex items-center gap-1 group relative">
+                            <button
+                              onClick={() => {
+                                const nextStatus = isIssued ? 'REPRINT_REQUESTED' : isReprint ? 'NOT_ISSUED' : 'PRINTED';
+                                handleQuickCardStatusUpdate(emp.id, nextStatus);
+                              }}
+                              title="Click to toggle status (Issued / Pending / Reprint)"
+                              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border transition cursor-pointer shadow-xs ${isIssued
                                 ? 'bg-emerald-100 hover:bg-emerald-200 text-emerald-800 border-emerald-200 dark:bg-emerald-950/80 dark:hover:bg-emerald-900 dark:text-emerald-300 dark:border-emerald-800'
                                 : isReprint
-                                ? 'bg-amber-100 hover:bg-amber-200 text-amber-800 border-amber-200 dark:bg-amber-950/80 dark:hover:bg-amber-900 dark:text-amber-300 dark:border-amber-800'
-                                : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300 dark:border-slate-700'
-                            }`}
-                          >
-                            {isIssued ? (
-                              <>
-                                <CheckCircle2 className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
-                                ISSUED
-                              </>
-                            ) : isReprint ? (
-                              <>
-                                <RotateCcw className="w-3 h-3 text-amber-600 dark:text-amber-400" />
-                                REPRINT REQ
-                              </>
-                            ) : (
-                              <>
-                                <Clock className="w-3 h-3 text-amber-500" />
-                                PENDING
-                              </>
-                            )}
-                          </button>
-                        </div>
-                      );
-                    })()}
-                  </td>
-                  <td className="px-5 py-3 text-right">
-                    <div className="flex items-center justify-end gap-1.5">
-                      {isPrintRestricted(emp) ? (
-                        <button
-                          type="button"
-                          disabled
-                          title={`Cross-branch card printing is restricted by admin policy. Employee belongs to ${emp.branchName || 'another branch'}.`}
-                          className="p-1.5 text-slate-300 dark:text-slate-600 cursor-not-allowed rounded opacity-50"
-                        >
-                          <Printer className="w-4 h-4" />
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => handlePrintCard(emp)}
-                          title={emp.cardStatus === 'REPRINT_REQUESTED' ? "Process Reprint Request (Prints & sets to ISSUED)" : "Print Badge (Sets status to ISSUED)"}
-                          className="p-1.5 text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded transition"
-                        >
-                          <Printer className="w-4 h-4" />
-                        </button>
-                      )}
-                      <button
-                        onClick={() => handleOpenPreview3dModal(emp)}
-                        title="View 3D ID Card Badge (Same as KIOSK)"
-                        className="p-1.5 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-950/40 rounded transition"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleOpenEditModal(emp)}
-                        title="Edit Employee & Card Status"
-                        className="p-1.5 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </button>
-                      {(() => {
-                        const targetTplId = getAssignedTemplateId(emp);
-                        return (
-                          <Link
-                            href={`/hr/card-designs/${targetTplId}/designer?employeeNumber=${encodeURIComponent(emp.employeeNumber || emp.id)}`}
-                            title={`Design / Edit Card in Designer for ${emp.fullName}`}
-                            className="p-1.5 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition"
-                          >
-                            <CreditCard className="w-4 h-4" />
-                          </Link>
+                                  ? 'bg-amber-100 hover:bg-amber-200 text-amber-800 border-amber-200 dark:bg-amber-950/80 dark:hover:bg-amber-900 dark:text-amber-300 dark:border-amber-800'
+                                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300 dark:border-slate-700'
+                                }`}
+                            >
+                              {isIssued ? (
+                                <>
+                                  <CheckCircle2 className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                                  ISSUED
+                                </>
+                              ) : isReprint ? (
+                                <>
+                                  <RotateCcw className="w-3 h-3 text-amber-600 dark:text-amber-400" />
+                                  REPRINT REQ
+                                </>
+                              ) : (
+                                <>
+                                  <Clock className="w-3 h-3 text-amber-500" />
+                                  PENDING
+                                </>
+                              )}
+                            </button>
+                          </div>
                         );
                       })()}
-                      <button
-                        onClick={() => handleDeleteEmployee(emp.id)}
-                        title="Delete record"
-                        className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
+                    </td>
+                    <td className="px-5 py-3 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        {isPrintRestricted(emp) ? (
+                          <button
+                            type="button"
+                            disabled
+                            title={`Cross-branch card printing is restricted by admin policy. Employee belongs to ${emp.branchName || 'another branch'}.`}
+                            className="p-1.5 text-slate-300 dark:text-slate-600 cursor-not-allowed rounded opacity-50"
+                          >
+                            <Printer className="w-4 h-4" />
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handlePrintCard(emp)}
+                            title={emp.cardStatus === 'REPRINT_REQUESTED' ? "Process Reprint Request (Prints & sets to ISSUED)" : "Print Badge (Sets status to ISSUED)"}
+                            className="p-1.5 text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded transition"
+                          >
+                            <Printer className="w-4 h-4" />
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleOpenPreview3dModal(emp)}
+                          title="View 3D ID Card Badge (Same as KIOSK)"
+                          className="p-1.5 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-950/40 rounded transition"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleOpenEditModal(emp)}
+                          title="Edit Employee & Card Status"
+                          className="p-1.5 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        {(() => {
+                          const targetTplId = getAssignedTemplateId(emp);
+                          return (
+                            <Link
+                              href={`/hr/card-designs/${targetTplId}/designer?employeeNumber=${encodeURIComponent(emp.employeeNumber || emp.id)}`}
+                              title={`Design / Edit Card in Designer for ${emp.fullName}`}
+                              className="p-1.5 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition"
+                            >
+                              <CreditCard className="w-4 h-4" />
+                            </Link>
+                          );
+                        })()}
+                        <button
+                          onClick={() => handleDeleteEmployee(emp.id)}
+                          title="Delete record"
+                          className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
                 );
               })
             )}
@@ -1154,7 +1162,7 @@ export default function HrEmployeesPage() {
                 <span className="text-[11px] font-bold text-red-600 dark:text-red-400 uppercase tracking-wider block">
                   1. Official Employee Identification
                 </span>
-                
+
                 <div className="grid grid-cols-5 gap-2">
                   <div>
                     <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">First Name *</label>
@@ -1266,13 +1274,52 @@ export default function HrEmployeesPage() {
                   </div>
                   <div>
                     <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Job Title</label>
-                    <input
-                      type="text"
-                      required
-                      value={formData.positionTitle}
-                      onChange={(e) => setFormData({ ...formData, positionTitle: e.target.value })}
-                      className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-900 dark:text-white focus:outline-none focus:border-red-500"
-                    />
+                    <div className="flex gap-1.5">
+                      <div className="relative flex-1">
+                        <input
+                          type="text"
+                          list="add-employee-positions-datalist"
+                          required
+                          placeholder="e.g. Software Engineer"
+                          value={formData.positionTitle}
+                          onChange={(e) => setFormData({ ...formData, positionTitle: e.target.value })}
+                          className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-900 dark:text-white focus:outline-none focus:border-red-500"
+                        />
+                        <datalist id="add-employee-positions-datalist">
+                          {positions.map((p) => (
+                            <option key={p.id} value={p.title} />
+                          ))}
+                        </datalist>
+                      </div>
+                      {positions.length > 0 && (
+                        <select
+                          value=""
+                          onChange={(e) => {
+                            if (e.target.value) {
+                              setFormData({ ...formData, positionTitle: e.target.value });
+                            }
+                          }}
+                          className="w-28 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-1.5 text-xs text-slate-700 dark:text-slate-300 focus:outline-none focus:border-red-500 cursor-pointer shrink-0"
+                          title="Select a predefined job position"
+                        >
+                          <option value="">Select</option>
+                          {positions.filter((p) => !formData.departmentId || p.departmentId === formData.departmentId).length > 0 && (
+                            <optgroup label="Department Positions">
+                              {positions
+                                .filter((p) => !formData.departmentId || p.departmentId === formData.departmentId)
+                                .map((p) => (
+                                  <option key={`dept-${p.id}`} value={p.title}>{p.title}</option>
+                                ))}
+                            </optgroup>
+                          )}
+                          <optgroup label="All Predefined Positions">
+                            {positions.map((p) => (
+                              <option key={`all-${p.id}`} value={p.title}>{p.title}</option>
+                            ))}
+                          </optgroup>
+                        </select>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1438,7 +1485,7 @@ export default function HrEmployeesPage() {
                     </select>
                   </div>
                 </div>
-                
+
                 <div className="grid grid-cols-5 gap-2">
                   <div>
                     <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">First Name *</label>
@@ -1549,13 +1596,52 @@ export default function HrEmployeesPage() {
                   </div>
                   <div>
                     <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Job Title</label>
-                    <input
-                      type="text"
-                      required
-                      value={editFormData.positionTitle}
-                      onChange={(e) => setEditFormData({ ...editFormData, positionTitle: e.target.value })}
-                      className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-900 dark:text-white focus:outline-none focus:border-red-500"
-                    />
+                    <div className="flex gap-1.5">
+                      <div className="relative flex-1">
+                        <input
+                          type="text"
+                          list="edit-employee-positions-datalist"
+                          required
+                          placeholder="e.g. Software Engineer"
+                          value={editFormData.positionTitle}
+                          onChange={(e) => setEditFormData({ ...editFormData, positionTitle: e.target.value })}
+                          className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-900 dark:text-white focus:outline-none focus:border-red-500"
+                        />
+                        <datalist id="edit-employee-positions-datalist">
+                          {positions.map((p) => (
+                            <option key={p.id} value={p.title} />
+                          ))}
+                        </datalist>
+                      </div>
+                      {positions.length > 0 && (
+                        <select
+                          value=""
+                          onChange={(e) => {
+                            if (e.target.value) {
+                              setEditFormData({ ...editFormData, positionTitle: e.target.value });
+                            }
+                          }}
+                          className="w-28 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-1.5 text-xs text-slate-700 dark:text-slate-300 focus:outline-none focus:border-red-500 cursor-pointer shrink-0"
+                          title="Select a predefined job position"
+                        >
+                          <option value="">Select</option>
+                          {positions.filter((p) => !editFormData.departmentId || p.departmentId === editFormData.departmentId).length > 0 && (
+                            <optgroup label="Department Positions">
+                              {positions
+                                .filter((p) => !editFormData.departmentId || p.departmentId === editFormData.departmentId)
+                                .map((p) => (
+                                  <option key={`edit-dept-${p.id}`} value={p.title}>{p.title}</option>
+                                ))}
+                            </optgroup>
+                          )}
+                          <optgroup label="All Predefined Positions">
+                            {positions.map((p) => (
+                              <option key={`edit-all-${p.id}`} value={p.title}>{p.title}</option>
+                            ))}
+                          </optgroup>
+                        </select>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1790,6 +1876,12 @@ export default function HrEmployeesPage() {
                           <td className="p-2 text-slate-500 dark:text-slate-400">Optional</td>
                           <td className="p-2 text-slate-500 dark:text-slate-400">https://...</td>
                           <td className="p-2 font-sans text-slate-500 dark:text-slate-400">Direct image URL for photo badge</td>
+                        </tr>
+                        <tr>
+                          <td className="p-2 text-slate-800 dark:text-white">cardStatus</td>
+                          <td className="p-2 text-slate-500 dark:text-slate-400">Optional</td>
+                          <td className="p-2 text-slate-500 dark:text-slate-400">NOT_ISSUED</td>
+                          <td className="p-2 font-sans text-slate-500 dark:text-slate-400">Card status (NOT_ISSUED, PRINTED, REPRINT_REQUESTED)</td>
                         </tr>
                       </tbody>
                     </table>
