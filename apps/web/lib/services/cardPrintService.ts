@@ -329,7 +329,59 @@ export async function dispatchHardwarePrintJob({
   }
 
   if (!printSuccess) {
-    const errorMsg = `Physical card printing failed: ${printErrorMessage}. Please make sure KioskAgent is running on this computer with your Magicard 600NEO connected via USB.`;
+    // Attempt 2: Dispatch via secure Hardware Queue (handles HTTPS Mixed Content seamlessly from Vercel)
+    onProgress?.({
+      stage: 'SPOOLING',
+      stepNumber: 3,
+      totalSteps: 4,
+      message: `Direct localhost unreachable. Dispatching via hardware queue to ${targetPrinter}...`,
+      percent: 80,
+    });
+
+    try {
+      const queueRes = await fetch('/api/print-jobs/queue', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          employeeId: employee.id,
+          employeeNumber: employee.employeeNumber,
+          employeeName: employee.fullName,
+          targetPrinter,
+          duplexMode,
+          frontCanvasDataUrl: frontDataUrl,
+          backCanvasDataUrl: backDataUrl,
+          idempotencyKey: `idem-${requestId}`,
+        }),
+      });
+
+      if (queueRes.ok) {
+        const queueData = await queueRes.json();
+        const queuedJobId = queueData.jobId;
+
+        // Poll for completion by the local KioskAgent background service (up to 15 seconds)
+        const startTime = Date.now();
+        while (Date.now() - startTime < 15000) {
+          await new Promise((r) => setTimeout(r, 1000));
+          const statusRes = await fetch(`/api/print-jobs/queue?jobId=${queuedJobId}`);
+          if (statusRes.ok) {
+            const statusData = await statusRes.json();
+            if (statusData.status === 'COMPLETED') {
+              printSuccess = true;
+              break;
+            } else if (statusData.status === 'FAILED') {
+              printErrorMessage = statusData.error || 'Print failed on device';
+              break;
+            }
+          }
+        }
+      }
+    } catch (qErr: any) {
+      printErrorMessage = qErr?.message || printErrorMessage;
+    }
+  }
+
+  if (!printSuccess) {
+    const errorMsg = `Physical card printing failed: ${printErrorMessage || 'Agent did not acknowledge job'}. Please verify KioskAgent is running on your PC with Magicard 600NEO connected.`;
     onProgress?.({
       stage: 'FAILED',
       stepNumber: 3,

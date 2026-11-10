@@ -3,6 +3,7 @@ namespace KioskAgent.Models;
 public class PrintRequest
 {
     public string RequestId { get; set; } = string.Empty;
+    public string IdempotencyKey { get; set; } = string.Empty;
     public string EmployeeId { get; set; } = string.Empty;
     public string EmployeeNumber { get; set; } = string.Empty;
     public string TemplateId { get; set; } = string.Empty;

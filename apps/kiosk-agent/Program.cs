@@ -7,7 +7,14 @@ using KioskAgent.Security;
 using KioskAgent.Services;
 using Serilog;
 
-var builder = WebApplication.CreateBuilder(args);
+var baseDir = AppContext.BaseDirectory;
+Directory.SetCurrentDirectory(baseDir);
+
+var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+{
+    Args = args,
+    ContentRootPath = baseDir
+});
 
 // 1. Configure Serilog structured logging
 AgentLogger.ConfigureLogging(builder);
@@ -54,6 +61,7 @@ builder.Services.AddSingleton<IKioskRegistrationService, KioskRegistrationServic
 
 // Register Background Services
 builder.Services.AddHostedService<HeartbeatService>();
+builder.Services.AddHostedService<PrintQueueWorkerService>();
 
 // 5. Configure CORS (allow local Next.js frontend calls from any local origin, Vercel, or LAN)
 builder.Services.AddCors(options =>
