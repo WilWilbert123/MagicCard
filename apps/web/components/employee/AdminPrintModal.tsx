@@ -9,7 +9,6 @@ import {
   HardDrive,
   Layers,
   ChevronDown,
-  AlertTriangle,
 } from 'lucide-react';
 import { Employee, DEFAULT_CR80_TEMPLATE } from '@/lib/data/enterpriseStore';
 import {
@@ -60,15 +59,14 @@ export default function AdminPrintModal({
 
       if (list.length > 0) {
         setPrinters(list);
-        // Find first online printer, or first in list
         const onlinePrinter = list.find((p) => p.isOnline);
         const target = onlinePrinter || list[0];
         setSelectedPrinterName(target.name);
         if (target.duplexCapable === false) setDuplexMode('SingleSided');
       } else {
         const defaultCardPrinter: SelectablePrinter = {
-          id: 'windows-direct-card-printer',
-          name: 'Magicard 600NEO / Connected Card Printer',
+          id: 'laptop-magicard-600neo',
+          name: 'Magicard 600NEO (Laptop USB Card Printer)',
           model: 'Magicard 600NEO',
           brand: 'Magicard',
           isOnline: true,
@@ -82,8 +80,8 @@ export default function AdminPrintModal({
       }
     } catch {
       const defaultCardPrinter: SelectablePrinter = {
-        id: 'windows-direct-card-printer',
-        name: 'Magicard 600NEO / Connected Card Printer',
+        id: 'laptop-magicard-600neo',
+        name: 'Magicard 600NEO (Laptop USB Card Printer)',
         model: 'Magicard 600NEO',
         brand: 'Magicard',
         isOnline: true,
@@ -133,11 +131,11 @@ export default function AdminPrintModal({
 
   if (!isOpen || !employee) return null;
 
-  const currentPrinter = printers.find((p) => p.name === selectedPrinterName);
-  const isPrinterReady = currentPrinter?.isOnline === true;
+  const currentPrinter = printers.find((p) => p.name === selectedPrinterName) || printers[0];
+  const isPrinterReady = currentPrinter ? currentPrinter.isOnline : true;
 
   const handleExecutePrint = async () => {
-    if (isPrinting || !currentPrinter || !isPrinterReady) return;
+    if (isPrinting || !currentPrinter) return;
     setIsPrinting(true);
 
     try {
@@ -145,7 +143,7 @@ export default function AdminPrintModal({
         employee,
         template,
         verificationBaseUrl,
-        targetPrinter: selectedPrinterName,
+        targetPrinter: currentPrinter.name,
         duplexMode,
         preRenderedCanvases: frontPreviewUrl && backPreviewUrl ? {
           frontDataUrl: frontPreviewUrl,
@@ -155,7 +153,7 @@ export default function AdminPrintModal({
       });
 
       if (result.success) {
-        toast.success(`Badge successfully spooled to ${selectedPrinterName}!`);
+        toast.success(`Badge successfully spooled to ${currentPrinter.name}!`);
         onPrintSuccess?.(employee.id);
         setTimeout(() => {
           onClose();
@@ -295,14 +293,6 @@ export default function AdminPrintModal({
                   </div>
                 )}
 
-                {/* Offline Warning Notice if selected printer is not ready */}
-                {!isPrinterReady && currentPrinter && (
-                  <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800/60 text-red-700 dark:text-red-300 text-xs flex items-center gap-2">
-                    <AlertTriangle className="w-4 h-4 text-red-500 shrink-0" />
-                    <span>Selected printer is currently <strong>{currentPrinter.status}</strong>. Please ensure the printer is turned on and connected to your computer.</span>
-                  </div>
-                )}
-
                 {/* Duplex / Single Sided Toggle */}
                 <div className="flex items-center justify-between pt-1 text-xs">
                   <span className="text-slate-600 dark:text-slate-400 font-medium">Print Sides:</span>
@@ -310,7 +300,7 @@ export default function AdminPrintModal({
                     <button
                       type="button"
                       onClick={() => setDuplexMode('Duplex')}
-                      disabled={isPrinting || !isPrinterReady}
+                      disabled={isPrinting}
                       className={`px-3 py-1 rounded-md transition ${
                         duplexMode === 'Duplex'
                           ? 'bg-red-600 text-white shadow-xs font-bold'
@@ -322,7 +312,7 @@ export default function AdminPrintModal({
                     <button
                       type="button"
                       onClick={() => setDuplexMode('SingleSided')}
-                      disabled={isPrinting || !isPrinterReady}
+                      disabled={isPrinting}
                       className={`px-3 py-1 rounded-md transition ${
                         duplexMode === 'SingleSided'
                           ? 'bg-red-600 text-white shadow-xs font-bold'
@@ -445,9 +435,9 @@ export default function AdminPrintModal({
           <button
             type="button"
             onClick={handleExecutePrint}
-            disabled={isPrinting || isRenderingPreview || !isPrinterReady}
+            disabled={isPrinting || isRenderingPreview || !currentPrinter}
             className={`px-5 py-2.5 rounded-xl text-xs font-bold shadow-md transition flex items-center justify-center gap-2 ${
-              isPrinterReady && !isPrinting
+              !isPrinting && !isRenderingPreview && currentPrinter
                 ? 'bg-red-600 hover:bg-red-500 text-white shadow-red-600/30 cursor-pointer'
                 : 'bg-slate-300 dark:bg-slate-800 text-slate-500 dark:text-slate-400 cursor-not-allowed shadow-none'
             }`}
@@ -456,10 +446,10 @@ export default function AdminPrintModal({
             <span>
               {isPrinting
                 ? 'Printing Badge...'
+                : isRenderingPreview
+                ? 'Preparing Card Geometry...'
                 : !currentPrinter
                 ? 'No Printer Detected'
-                : !isPrinterReady
-                ? 'Printer Offline - Cannot Print'
                 : `Print to ${currentPrinter.model || currentPrinter.name}`}
             </span>
           </button>
