@@ -72,6 +72,29 @@ builder.WebHost.UseUrls($"http://127.0.0.1:{port}");
 
 var app = builder.Build();
 
+// Private Network Access (PNA) & CORS preflight handling for Chrome / Edge from cloud origins (e.g. bismacard.vercel.app)
+app.Use(async (context, next) =>
+{
+    if (context.Request.Headers.ContainsKey("Access-Control-Request-Private-Network"))
+    {
+        context.Response.Headers["Access-Control-Allow-Private-Network"] = "true";
+    }
+
+    if (HttpMethods.IsOptions(context.Request.Method))
+    {
+        context.Response.Headers["Access-Control-Allow-Private-Network"] = "true";
+        var origin = context.Request.Headers.Origin.ToString();
+        context.Response.Headers["Access-Control-Allow-Origin"] = string.IsNullOrEmpty(origin) ? "*" : origin;
+        context.Response.Headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS, PUT, DELETE";
+        context.Response.Headers["Access-Control-Allow-Headers"] = "*";
+        context.Response.Headers["Access-Control-Allow-Credentials"] = "true";
+        context.Response.StatusCode = StatusCodes.Status204NoContent;
+        return;
+    }
+
+    await next();
+});
+
 app.UseCors("AllowLocalKioskOrigins");
 
 // Global exception handling middleware

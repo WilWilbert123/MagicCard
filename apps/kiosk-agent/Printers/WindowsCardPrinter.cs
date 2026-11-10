@@ -138,11 +138,13 @@ public class WindowsCardPrinter : ICardPrinter
         return Task.FromResult(list);
     }
 
-    private string? ResolveTargetPrinterName()
+    private string? ResolveTargetPrinterName(string? explicitTarget = null)
     {
-        var configured = !string.IsNullOrWhiteSpace(_targetPrinterOverride) 
-            ? _targetPrinterOverride 
-            : _printerOptions.Name;
+        var configured = !string.IsNullOrWhiteSpace(explicitTarget) && !explicitTarget.Equals("AUTO", StringComparison.OrdinalIgnoreCase)
+            ? explicitTarget
+            : (!string.IsNullOrWhiteSpace(_targetPrinterOverride) 
+                ? _targetPrinterOverride 
+                : _printerOptions.Name);
 
         // 1. If configured target is explicitly specified
         if (!string.IsNullOrWhiteSpace(configured) && !configured.Equals("AUTO", StringComparison.OrdinalIgnoreCase))
@@ -201,9 +203,7 @@ public class WindowsCardPrinter : ICardPrinter
 
     public async Task<PrinterPrintResult> PrintCardAsync(PrintRequest request, CancellationToken cancellationToken = default)
     {
-        var resolvedPrinter = !string.IsNullOrWhiteSpace(request.TargetPrinter) && !request.TargetPrinter.Equals("AUTO", StringComparison.OrdinalIgnoreCase)
-            ? request.TargetPrinter
-            : ResolveTargetPrinterName();
+        var resolvedPrinter = ResolveTargetPrinterName(request.TargetPrinter);
         _logger.LogInformation("Sending card print job for Request ID: {RequestId} (Employee: {EmployeeId}) to printer: {PrinterName}",
             request.RequestId, request.EmployeeNumber ?? request.EmployeeId, resolvedPrinter ?? _printerOptions.Name);
 

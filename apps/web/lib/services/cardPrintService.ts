@@ -42,61 +42,55 @@ const AGENT_SECRET_TOKEN = 'super-secret-local-agent-token-2026';
  * Strictly reflects actual connection and hardware state with zero mock data.
  */
 export async function checkLocalHardwareAgent(agentBaseUrl = DEFAULT_AGENT_URL): Promise<LocalHardwareAgentStatus> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 1200);
+  const endpoints = Array.from(new Set([agentBaseUrl, 'http://127.0.0.1:7125', 'http://localhost:7125']));
 
-  try {
-    const res = await fetch(`${agentBaseUrl}/api/health`, {
-      method: 'GET',
-      headers: { 'Accept': 'application/json' },
-      signal: controller.signal,
-    });
-    clearTimeout(timeoutId);
+  for (const ep of endpoints) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 2000);
 
-    if (!res.ok) {
-      return {
-        isOnline: false,
-        printerModel: 'Disconnected',
-        printerStatus: 'HTTP_ERROR',
-        printerConnected: false,
-        ribbonLevelPct: 0,
-        ribbonType: 'None',
-        agentVersion: 'Unknown',
-        error: `Agent returned HTTP ${res.status}`,
-      };
+    try {
+      const res = await fetch(`${ep}/api/health`, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' },
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
+      if (res.ok) {
+        const data = await res.json();
+        let ribbonPct = 100;
+        if (data.printerStatus) {
+          const match = data.printerStatus.match(/Ribbon\s*(\d+)%/i);
+          if (match) ribbonPct = parseInt(match[1], 10);
+        }
+
+        const isConnected = data.printerConnected !== false && data.printerStatus && !data.printerStatus.includes('OFFLINE') && !data.printerStatus.includes('UNAVAILABLE');
+
+        return {
+          isOnline: true,
+          printerModel: data.printerModel || 'Magicard 600NEO',
+          printerStatus: data.printerStatus || (isConnected ? 'READY' : 'OFFLINE'),
+          printerConnected: isConnected,
+          ribbonLevelPct: ribbonPct,
+          ribbonType: data.ribbonType || 'YMCKO',
+          agentVersion: data.agentVersion || '1.0.0',
+        };
+      }
+    } catch {
+      clearTimeout(timeoutId);
     }
-
-    const data = await res.json();
-    let ribbonPct = 100;
-    if (data.printerStatus) {
-      const match = data.printerStatus.match(/Ribbon\s*(\d+)%/i);
-      if (match) ribbonPct = parseInt(match[1], 10);
-    }
-
-    const isConnected = data.printerConnected !== false && data.printerStatus && !data.printerStatus.includes('OFFLINE') && !data.printerStatus.includes('UNAVAILABLE');
-
-    return {
-      isOnline: true,
-      printerModel: data.printerModel || 'Windows Card Printer',
-      printerStatus: data.printerStatus || (isConnected ? 'READY' : 'OFFLINE'),
-      printerConnected: isConnected,
-      ribbonLevelPct: ribbonPct,
-      ribbonType: data.ribbonType || 'YMCKO',
-      agentVersion: data.agentVersion || '1.0.0',
-    };
-  } catch (err: any) {
-    clearTimeout(timeoutId);
-    return {
-      isOnline: false,
-      printerModel: 'Disconnected',
-      printerStatus: 'OFFLINE',
-      printerConnected: false,
-      ribbonLevelPct: 0,
-      ribbonType: 'None',
-      agentVersion: 'None',
-      error: err?.name === 'AbortError' ? 'Connection timed out' : 'Local hardware agent not reachable on localhost:7125',
-    };
   }
+
+  return {
+    isOnline: false,
+    printerModel: 'Disconnected',
+    printerStatus: 'OFFLINE',
+    printerConnected: false,
+    ribbonLevelPct: 0,
+    ribbonType: 'None',
+    agentVersion: 'None',
+    error: 'Local hardware agent not reachable on localhost:7125',
+  };
 }
 
 /**
@@ -106,36 +100,40 @@ export async function checkLocalHardwareAgent(agentBaseUrl = DEFAULT_AGENT_URL):
 export async function fetchAvailableCardPrinters(agentBaseUrl = DEFAULT_AGENT_URL): Promise<SelectablePrinter[]> {
   const results: SelectablePrinter[] = [];
   const seenNames = new Set<string>();
+  const endpoints = Array.from(new Set([agentBaseUrl, 'http://127.0.0.1:7125', 'http://localhost:7125']));
 
   // 1. Check local agent printers endpoint (queries Windows PrinterSettings.InstalledPrinters on THIS PC)
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 1200);
-    const localRes = await fetch(`${agentBaseUrl}/api/printers`, { signal: controller.signal });
-    clearTimeout(timeout);
-    if (localRes.ok) {
-      const printers = await localRes.json();
-      if (Array.isArray(printers)) {
-        for (const p of printers) {
-          const pName = p.name || p.Name;
-          if (pName && !seenNames.has(pName.toLowerCase())) {
-            seenNames.add(pName.toLowerCase());
-            results.push({
-              id: `local-${pName.toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
-              name: pName,
-              model: pName,
-              brand: detectBrand(pName),
-              isOnline: true,
-              status: 'READY',
-              ribbonLevelPct: 100,
-              source: 'LOCAL_AGENT',
-              duplexCapable: true,
-            });
+  for (const ep of endpoints) {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 2000);
+      const localRes = await fetch(`${ep}/api/printers`, { signal: controller.signal });
+      clearTimeout(timeout);
+      if (localRes.ok) {
+        const printers = await localRes.json();
+        if (Array.isArray(printers)) {
+          for (const p of printers) {
+            const pName = p.name || p.Name;
+            if (pName && !seenNames.has(pName.toLowerCase())) {
+              seenNames.add(pName.toLowerCase());
+              results.push({
+                id: `local-${pName.toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
+                name: pName,
+                model: pName,
+                brand: detectBrand(pName),
+                isOnline: true,
+                status: 'READY',
+                ribbonLevelPct: 100,
+                source: 'LOCAL_AGENT',
+                duplexCapable: true,
+              });
+            }
           }
         }
+        if (results.length > 0) break;
       }
-    }
-  } catch { }
+    } catch { }
+  }
 
   // If local Windows agent returned installed printers, sort ID card printers to the top
   if (results.length > 0) {
@@ -276,21 +274,25 @@ export async function dispatchHardwarePrintJob({
     }
   }
 
-  // Step 3: Spool to physical printer
+  // Step 3: Spool directly to physical printer via local hardware agent (same as Kiosk)
   onProgress?.({
     stage: 'SPOOLING',
     stepNumber: 3,
     totalSteps: 4,
-    message: `Sending print raster to ${targetPrinter}...`,
+    message: `Sending print job directly to ${targetPrinter} via KioskAgent...`,
     percent: 75,
   });
 
   const requestId = `PRINT-${Date.now()}`;
+  let printSuccess = false;
+  let printErrorMessage = '';
 
-  if (agentStatus.isOnline) {
-    // Mode A: Direct spool via local KioskAgent daemon
+  const endpointsToTry = [agentBaseUrl, 'http://127.0.0.1:7125', 'http://localhost:7125'];
+  const uniqueEndpoints = Array.from(new Set(endpointsToTry));
+
+  for (const endpoint of uniqueEndpoints) {
     try {
-      const res = await fetch(`${agentBaseUrl}/api/print`, {
+      const res = await fetch(`${endpoint}/api/print`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -315,50 +317,28 @@ export async function dispatchHardwarePrintJob({
       });
 
       const agentResult = await res.json().catch(() => ({}));
-      if (agentResult.success) {
-        // Successfully spooled via background daemon
+      if (res.ok && agentResult.success) {
+        printSuccess = true;
+        break;
       } else {
-        // Fallback to direct CR80 print if agent driver had an issue
-        await triggerDirectCR80CardPrint({
-          employee,
-          targetPrinter,
-          duplexMode,
-          frontDataUrl,
-          backDataUrl,
-        });
+        printErrorMessage = agentResult.errorMessage || agentResult.error || `Printer returned HTTP ${res.status}`;
       }
-    } catch {
-      // Fallback to direct CR80 print stream
-      await triggerDirectCR80CardPrint({
-        employee,
-        targetPrinter,
-        duplexMode,
-        frontDataUrl,
-        backDataUrl,
-      });
+    } catch (err: any) {
+      printErrorMessage = err?.message || 'Unable to connect to local hardware agent on port 7125';
     }
-  } else {
-    // Mode B: Standalone Admin Mode (No KioskAgent background service needed)
-    // Seamlessly dispatches directly to the physical printer via high-res CR80 card print stream!
+  }
+
+  if (!printSuccess) {
+    const errorMsg = `Physical card printing failed: ${printErrorMessage}. Please make sure KioskAgent is running on this computer with your Magicard 600NEO connected via USB.`;
     onProgress?.({
-      stage: 'SPOOLING',
+      stage: 'FAILED',
       stepNumber: 3,
       totalSteps: 4,
-      message: `Sending print job to ${targetPrinter}...`,
-      percent: 80,
+      message: errorMsg,
+      percent: 75,
+      error: errorMsg,
     });
-
-    try {
-      await triggerDirectCR80CardPrint({
-        employee,
-        targetPrinter,
-        duplexMode,
-        frontDataUrl,
-        backDataUrl,
-      });
-    } catch (printErr: any) {
-      console.warn('Direct card print warning:', printErr);
-    }
+    return { success: false, error: errorMsg };
   }
 
   // Step 4: Record in central database & update employee card status to PRINTED
