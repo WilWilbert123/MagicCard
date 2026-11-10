@@ -2077,10 +2077,10 @@ export default function HrEmployeesPage() {
                     </span>
                   </div>
 
-                  <div className="w-full h-2.5 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden p-0.5">
+                  <div className="w-full h-2 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
                     <div
                       style={{ width: `${Math.round((importProgress.current / importProgress.total) * 100)}%` }}
-                      className="h-full bg-gradient-to-r from-blue-600 via-indigo-500 to-emerald-500 rounded-full transition-all duration-200 ease-out"
+                      className="h-full bg-red-600 rounded-full transition-all duration-200 ease-out"
                     />
                   </div>
 
@@ -2180,15 +2180,18 @@ export default function HrEmployeesPage() {
                   </div>
                   <div className="text-[11px] text-slate-700 dark:text-slate-300 pl-6 flex flex-wrap items-center gap-2">
                     <span>Total <strong>{importResult.total}</strong> records processed:</span>
-                    <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300 font-semibold font-mono text-[10px]">
-                      +{importResult.created} New Created
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300 font-semibold font-mono text-[10px]">
+                      <Plus className="w-2.5 h-2.5 text-emerald-600 dark:text-emerald-400" />
+                      {importResult.created} Created
                     </span>
-                    <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-300 font-semibold font-mono text-[10px]">
-                      ↻ {importResult.updated} Existing Updated
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-300 font-semibold font-mono text-[10px]">
+                      <RefreshCw className="w-2.5 h-2.5 text-blue-600 dark:text-blue-400" />
+                      {importResult.updated} Updated
                     </span>
                     {importResult.failed > 0 && (
-                      <span className="px-2 py-0.5 rounded bg-red-100 text-red-800 dark:bg-red-900/60 dark:text-red-300 font-semibold font-mono text-[10px]">
-                        ! {importResult.failed} Failed
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-red-100 text-red-800 dark:bg-red-900/60 dark:text-red-300 font-semibold font-mono text-[10px]">
+                        <AlertCircle className="w-2.5 h-2.5 text-red-600 dark:text-red-400" />
+                        {importResult.failed} Failed
                       </span>
                     )}
                   </div>
