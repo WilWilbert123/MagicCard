@@ -55,17 +55,12 @@ builder.Services.AddSingleton<IKioskRegistrationService, KioskRegistrationServic
 // Register Background Services
 builder.Services.AddHostedService<HeartbeatService>();
 
-// 5. Configure CORS (allow local Next.js frontend calls from Vercel + localhost)
+// 5. Configure CORS (allow local Next.js frontend calls from any local origin, Vercel, or LAN)
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowLocalKioskOrigins", policy =>
     {
-        policy.WithOrigins(
-                "https://magic-card-trust-id.vercel.app",  // Production Vercel deployment
-                "http://localhost:3000",                     // Local development
-                "http://localhost:3001",
-                "https://localhost:3000"
-              )
+        policy.SetIsOriginAllowed(_ => true)
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();

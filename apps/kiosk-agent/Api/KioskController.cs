@@ -30,7 +30,7 @@ public static class KioskEndpoints
                 AgentVersion = "1.0.0",
                 Port = kioskOptions.Value.Port,
                 IsPaired = auth.IsPaired(),
-                PrinterName = printerOptions.Value.Name,
+                PrinterName = !string.IsNullOrWhiteSpace(printer.CurrentTargetPrinter) ? printer.CurrentTargetPrinter : printerOptions.Value.Name,
                 PrinterStatus = printerStatus,
                 RibbonLevelPct = 94,
                 CardCountTotal = 125,
