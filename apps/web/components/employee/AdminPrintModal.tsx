@@ -116,12 +116,19 @@ export default function AdminPrintModal({
         employee,
         template,
         verificationBaseUrl,
+        preRenderedCanvases: frontPreviewUrl && backPreviewUrl ? {
+          frontDataUrl: frontPreviewUrl,
+          backDataUrl: backPreviewUrl,
+        } : undefined,
         onProgress: (state) => setPrintProgress(state),
       });
 
       if (result.success) {
         toast.success(`Badge successfully printed for ${employee.fullName}!`);
         onPrintSuccess?.(employee.id);
+        setTimeout(() => {
+          onClose();
+        }, 1200);
       } else {
         toast.error(result.error || 'Hardware print job failed.');
       }

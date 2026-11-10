@@ -547,9 +547,6 @@ export default function HrEmployeesPage() {
           )) ||
           ((emp as any).branchCode && t.branchCode === (emp as any).branchCode)
       );
-      loadData();
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to dispatch print job.');
       const defaultTpl = cardTemplates.find((t: any) => t.isDefault) || cardTemplates[0];
       const activeTpl = matchingBranchTpl || defaultTpl;
       if (activeTpl?.layout) targetTpl = activeTpl.layout;
