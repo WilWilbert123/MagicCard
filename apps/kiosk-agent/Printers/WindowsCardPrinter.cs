@@ -201,7 +201,9 @@ public class WindowsCardPrinter : ICardPrinter
 
     public async Task<PrinterPrintResult> PrintCardAsync(PrintRequest request, CancellationToken cancellationToken = default)
     {
-        var resolvedPrinter = ResolveTargetPrinterName();
+        var resolvedPrinter = !string.IsNullOrWhiteSpace(request.TargetPrinter) && !request.TargetPrinter.Equals("AUTO", StringComparison.OrdinalIgnoreCase)
+            ? request.TargetPrinter
+            : ResolveTargetPrinterName();
         _logger.LogInformation("Sending card print job for Request ID: {RequestId} (Employee: {EmployeeId}) to printer: {PrinterName}",
             request.RequestId, request.EmployeeNumber ?? request.EmployeeId, resolvedPrinter ?? _printerOptions.Name);
 
@@ -254,7 +256,8 @@ public class WindowsCardPrinter : ICardPrinter
             printDoc.PrinterSettings.PrinterName = printerName;
             printDoc.PrinterSettings.Copies = 1;
 
-            bool isSingleSided = _duplexModeOverride?.Equals("SingleSided", StringComparison.OrdinalIgnoreCase) == true;
+            bool isSingleSided = (request.DuplexMode?.Equals("SingleSided", StringComparison.OrdinalIgnoreCase) == true) 
+                || (_duplexModeOverride?.Equals("SingleSided", StringComparison.OrdinalIgnoreCase) == true);
 
             // Enable Duplex (Back-to-Back) printing if supported by driver and not forced to single-sided
             if (!isSingleSided && printDoc.PrinterSettings.CanDuplex)

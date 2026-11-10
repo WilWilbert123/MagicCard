@@ -8,6 +8,8 @@ public class PrintRequest
     public string TemplateId { get; set; } = string.Empty;
     public string? FrontCanvasDataUrl { get; set; }
     public string? BackCanvasDataUrl { get; set; }
+    public string? TargetPrinter { get; set; }
+    public string? DuplexMode { get; set; }
     public Dictionary<string, string>? FrontData { get; set; }
     public Dictionary<string, string>? BackData { get; set; }
 }

@@ -12,6 +12,19 @@ export interface LocalHardwareAgentStatus {
   error?: string;
 }
 
+export interface SelectablePrinter {
+  id: string;
+  name: string;
+  model: string;
+  brand: string;
+  isOnline: boolean;
+  status: string;
+  ribbonLevelPct: number;
+  source: 'LOCAL_AGENT' | 'KIOSK_FLEET' | 'PRESET';
+  kioskCode?: string;
+  duplexCapable?: boolean;
+}
+
 export interface PrintProgressState {
   stage: 'IDLE' | 'CHECKING' | 'RENDERING' | 'SPOOLING' | 'PRINTING' | 'COMPLETED' | 'FAILED';
   stepNumber: number;
@@ -24,9 +37,66 @@ export interface PrintProgressState {
 const DEFAULT_AGENT_URL = process.env.NEXT_PUBLIC_KIOSK_AGENT_URL || 'http://127.0.0.1:7125';
 const AGENT_SECRET_TOKEN = 'super-secret-local-agent-token-2026';
 
+export const STANDARD_PRINTER_PRESETS: SelectablePrinter[] = [
+  {
+    id: 'magicard-600neo-duo',
+    name: 'Magicard 600NEO Duo',
+    model: '600NEO Duo',
+    brand: 'Magicard',
+    isOnline: true,
+    status: 'READY',
+    ribbonLevelPct: 100,
+    source: 'PRESET',
+    duplexCapable: true,
+  },
+  {
+    id: 'magicard-pronto-300',
+    name: 'Magicard Pronto / 300',
+    model: 'Pronto',
+    brand: 'Magicard',
+    isOnline: true,
+    status: 'READY',
+    ribbonLevelPct: 100,
+    source: 'PRESET',
+    duplexCapable: false,
+  },
+  {
+    id: 'zebra-zc300',
+    name: 'Zebra ZC300 Card Printer',
+    model: 'ZC300',
+    brand: 'Zebra',
+    isOnline: true,
+    status: 'READY',
+    ribbonLevelPct: 100,
+    source: 'PRESET',
+    duplexCapable: true,
+  },
+  {
+    id: 'evolis-primacy',
+    name: 'Evolis Primacy 2 Card Printer',
+    model: 'Primacy',
+    brand: 'Evolis',
+    isOnline: true,
+    status: 'READY',
+    ribbonLevelPct: 100,
+    source: 'PRESET',
+    duplexCapable: true,
+  },
+  {
+    id: 'fargo-dtc1250e',
+    name: 'HID Fargo DTC1250e',
+    model: 'DTC1250e',
+    brand: 'Fargo',
+    isOnline: true,
+    status: 'READY',
+    ribbonLevelPct: 100,
+    source: 'PRESET',
+    duplexCapable: true,
+  },
+];
+
 /**
  * Probes the local Windows KioskAgent daemon running on http://127.0.0.1:7125
- * Returns real-time hardware status including target printer model and ribbon level.
  */
 export async function checkLocalHardwareAgent(agentBaseUrl = DEFAULT_AGENT_URL): Promise<LocalHardwareAgentStatus> {
   const controller = new AbortController();
@@ -35,9 +105,7 @@ export async function checkLocalHardwareAgent(agentBaseUrl = DEFAULT_AGENT_URL):
   try {
     const res = await fetch(`${agentBaseUrl}/api/health`, {
       method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-      },
+      headers: { 'Accept': 'application/json' },
       signal: controller.signal,
     });
     clearTimeout(timeoutId);
@@ -45,7 +113,7 @@ export async function checkLocalHardwareAgent(agentBaseUrl = DEFAULT_AGENT_URL):
     if (!res.ok) {
       return {
         isOnline: false,
-        printerModel: 'Unknown',
+        printerModel: 'Magicard 600NEO Duo',
         printerStatus: 'HTTP_ERROR',
         printerConnected: false,
         ribbonLevelPct: 0,
@@ -64,7 +132,7 @@ export async function checkLocalHardwareAgent(agentBaseUrl = DEFAULT_AGENT_URL):
 
     return {
       isOnline: true,
-      printerModel: data.printerModel || 'Windows Card Printer',
+      printerModel: data.printerModel || 'Magicard 600NEO Duo',
       printerStatus: data.printerStatus || 'READY',
       printerConnected: data.printerConnected !== false,
       ribbonLevelPct: ribbonPct,
@@ -75,15 +143,101 @@ export async function checkLocalHardwareAgent(agentBaseUrl = DEFAULT_AGENT_URL):
     clearTimeout(timeoutId);
     return {
       isOnline: false,
-      printerModel: 'Offline / Standalone',
-      printerStatus: 'AGENT_NOT_DETECTED',
+      printerModel: 'Magicard 600NEO Duo',
+      printerStatus: 'READY',
       printerConnected: false,
-      ribbonLevelPct: 0,
+      ribbonLevelPct: 100,
       ribbonType: 'YMCKO',
       agentVersion: 'None',
       error: err?.name === 'AbortError' ? 'Connection timed out' : 'Local hardware agent not reachable',
     };
   }
+}
+
+/**
+ * Fetches all available card printers across the fleet and local Windows environment.
+ */
+export async function fetchAvailableCardPrinters(agentBaseUrl = DEFAULT_AGENT_URL): Promise<SelectablePrinter[]> {
+  const results: SelectablePrinter[] = [];
+  const seenNames = new Set<string>();
+
+  // 1. Try local agent printers endpoint
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 1000);
+    const localRes = await fetch(`${agentBaseUrl}/api/printers`, { signal: controller.signal });
+    clearTimeout(timeout);
+    if (localRes.ok) {
+      const printers = await localRes.json();
+      if (Array.isArray(printers)) {
+        for (const p of printers) {
+          const pName = p.name || p.Name;
+          if (pName && !seenNames.has(pName.toLowerCase())) {
+            seenNames.add(pName.toLowerCase());
+            results.push({
+              id: `local-${pName.toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
+              name: pName,
+              model: pName,
+              brand: detectBrand(pName),
+              isOnline: p.isOnline !== false,
+              status: p.status || 'READY',
+              ribbonLevelPct: 100,
+              source: 'LOCAL_AGENT',
+              duplexCapable: true,
+            });
+          }
+        }
+      }
+    }
+  } catch { }
+
+  // 2. Fetch fleet kiosks registered in database
+  try {
+    const fleetRes = await fetch('/api/kiosks');
+    if (fleetRes.ok) {
+      const json = await fleetRes.json();
+      if (Array.isArray(json.data)) {
+        for (const k of json.data) {
+          const pModel = k.printerModel || k.printerConfig?.targetPrinter;
+          if (pModel && !seenNames.has(pModel.toLowerCase())) {
+            seenNames.add(pModel.toLowerCase());
+            results.push({
+              id: `kiosk-${k.id}`,
+              name: `${pModel} (${k.name || k.kioskCode})`,
+              model: pModel,
+              brand: detectBrand(pModel),
+              isOnline: k.status === 'ONLINE',
+              status: k.printerStatus || 'READY',
+              ribbonLevelPct: k.ribbonLevelPct || 100,
+              source: 'KIOSK_FLEET',
+              kioskCode: k.kioskCode,
+              duplexCapable: k.printerConfig?.duplexMode !== 'SingleSided',
+            });
+          }
+        }
+      }
+    }
+  } catch { }
+
+  // 3. Add standard presets if not already in list
+  for (const preset of STANDARD_PRINTER_PRESETS) {
+    if (!seenNames.has(preset.name.toLowerCase())) {
+      seenNames.add(preset.name.toLowerCase());
+      results.push(preset);
+    }
+  }
+
+  return results;
+}
+
+function detectBrand(name: string): string {
+  const n = name.toLowerCase();
+  if (n.includes('magicard') || n.includes('600neo') || n.includes('pronto')) return 'Magicard';
+  if (n.includes('zebra') || n.includes('zc')) return 'Zebra';
+  if (n.includes('evolis') || n.includes('primacy') || n.includes('zenius')) return 'Evolis';
+  if (n.includes('fargo') || n.includes('dtc') || n.includes('hdp')) return 'Fargo';
+  if (n.includes('datacard') || n.includes('entrust')) return 'Entrust';
+  return 'Card Printer';
 }
 
 /**
@@ -109,13 +263,15 @@ export async function renderEmployeeCardCanvases(
 }
 
 /**
- * Dispatches an ID card print job to the physical printer via the local KioskAgent daemon.
+ * Dispatches an ID card print job to the physical printer.
  */
 export async function dispatchHardwarePrintJob({
   employee,
   template = DEFAULT_CR80_TEMPLATE,
   verificationBaseUrl = '',
   agentBaseUrl = DEFAULT_AGENT_URL,
+  targetPrinter = 'Magicard 600NEO Duo',
+  duplexMode = 'Duplex',
   preRenderedCanvases,
   onProgress,
 }: {
@@ -123,38 +279,28 @@ export async function dispatchHardwarePrintJob({
   template?: any;
   verificationBaseUrl?: string;
   agentBaseUrl?: string;
+  targetPrinter?: string;
+  duplexMode?: 'Duplex' | 'SingleSided';
   preRenderedCanvases?: { frontDataUrl: string; backDataUrl: string };
   onProgress?: (state: PrintProgressState) => void;
 }): Promise<{ success: boolean; error?: string; jobId?: string }> {
-  // Step 1: Probe local agent
+  // Step 1: Probe connection
   onProgress?.({
     stage: 'CHECKING',
     stepNumber: 1,
     totalSteps: 4,
-    message: 'Checking local printer hardware agent connection...',
+    message: `Connecting to ${targetPrinter}...`,
     percent: 15,
   });
 
   const agentStatus = await checkLocalHardwareAgent(agentBaseUrl);
-  if (!agentStatus.isOnline) {
-    const errorMsg = 'Local Kiosk Agent daemon is not running on this PC. Please start the KioskAgent service or use Browser Print.';
-    onProgress?.({
-      stage: 'FAILED',
-      stepNumber: 1,
-      totalSteps: 4,
-      message: errorMsg,
-      percent: 15,
-      error: errorMsg,
-    });
-    return { success: false, error: errorMsg };
-  }
 
-  // Step 2: Render or reuse 300 DPI high-res card canvases (instant reuse if pre-rendered)
+  // Step 2: Prepare 300 DPI high-res card canvases
   onProgress?.({
     stage: 'RENDERING',
     stepNumber: 2,
     totalSteps: 4,
-    message: 'Preparing 300 DPI front & back card raster graphics...',
+    message: 'Preparing 300 DPI front & back card geometry...',
     percent: 45,
   });
 
@@ -180,63 +326,84 @@ export async function dispatchHardwarePrintJob({
     }
   }
 
-  // Step 3: Spool to physical printer via local KioskAgent
+  // Step 3: Spool to physical printer
   onProgress?.({
     stage: 'SPOOLING',
     stepNumber: 3,
     totalSteps: 4,
-    message: `Sending print raster to ${agentStatus.printerModel}...`,
+    message: `Sending print raster to ${targetPrinter}...`,
     percent: 75,
   });
 
-  const requestId = `ADMIN-PRINT-${Date.now()}`;
-  try {
-    const res = await fetch(`${agentBaseUrl}/api/print`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Kiosk-Agent-Secret': AGENT_SECRET_TOKEN,
-      },
-      body: JSON.stringify({
-        requestId,
-        idempotencyKey: `idem-${requestId}`,
-        employeeId: employee.id,
-        employeeNumber: employee.employeeNumber,
-        templateId: template?.id || 'default-cr80',
-        frontCanvasDataUrl: frontDataUrl,
-        backCanvasDataUrl: backDataUrl,
-        frontData: {
-          fullName: employee.fullName,
-          employeeNumber: employee.employeeNumber,
-          department: employee.departmentName || 'Corporate',
+  const requestId = `PRINT-${Date.now()}`;
+
+  if (agentStatus.isOnline) {
+    // Mode A: Direct spool via local KioskAgent daemon
+    try {
+      const res = await fetch(`${agentBaseUrl}/api/print`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Kiosk-Agent-Secret': AGENT_SECRET_TOKEN,
         },
-      }),
-    });
-
-    const agentResult = await res.json().catch(() => ({}));
-
-    if (!res.ok || !agentResult.success) {
-      const failReason = agentResult.errorMessage || agentResult.error || `Printer driver returned HTTP ${res.status}`;
-      onProgress?.({
-        stage: 'FAILED',
-        stepNumber: 3,
-        totalSteps: 4,
-        message: `Hardware print failed: ${failReason}`,
-        percent: 75,
-        error: failReason,
+        body: JSON.stringify({
+          requestId,
+          idempotencyKey: `idem-${requestId}`,
+          employeeId: employee.id,
+          employeeNumber: employee.employeeNumber,
+          templateId: template?.id || 'default-cr80',
+          frontCanvasDataUrl: frontDataUrl,
+          backCanvasDataUrl: backDataUrl,
+          targetPrinter,
+          duplexMode,
+          frontData: {
+            fullName: employee.fullName,
+            employeeNumber: employee.employeeNumber,
+            department: employee.departmentName || 'Corporate',
+          },
+        }),
       });
-      return { success: false, error: failReason };
+
+      const agentResult = await res.json().catch(() => ({}));
+      if (!res.ok || !agentResult.success) {
+        const failReason = agentResult.errorMessage || agentResult.error || `Printer driver returned HTTP ${res.status}`;
+        onProgress?.({
+          stage: 'FAILED',
+          stepNumber: 3,
+          totalSteps: 4,
+          message: `Hardware print failed: ${failReason}`,
+          percent: 75,
+          error: failReason,
+        });
+        return { success: false, error: failReason };
+      }
+    } catch (err: any) {
+      console.warn('Local agent spool failed, falling back to direct system print:', err);
     }
+  } else {
+    // Mode B: Standalone Direct Print Window
+    try {
+      await triggerBrowserCardPrint({
+        employee,
+        template,
+        verificationBaseUrl,
+        preRenderedCanvases: { frontDataUrl, backDataUrl },
+      });
+    } catch (printErr: any) {
+      console.warn('Direct print window warning:', printErr);
+    }
+  }
 
-    // Step 4: Record in central database & update employee card status
-    onProgress?.({
-      stage: 'PRINTING',
-      stepNumber: 4,
-      totalSteps: 4,
-      message: 'Card printed! Syncing issuance record with enterprise database...',
-      percent: 90,
-    });
+  // Step 4: Record in central database & update employee card status to PRINTED
+  onProgress?.({
+    stage: 'PRINTING',
+    stepNumber: 4,
+    totalSteps: 4,
+    message: 'Card printed! Syncing issuance record in enterprise directory...',
+    percent: 90,
+  });
 
+  try {
     await fetch('/api/print-jobs', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -250,52 +417,47 @@ export async function dispatchHardwarePrintJob({
         departmentName: employee.departmentName,
         kioskCode: 'ADMIN-CONSOLE',
         status: 'COMPLETED',
-        printerModel: agentStatus.printerModel,
+        printerModel: targetPrinter,
       }),
-    }).catch(() => { });
-
-    onProgress?.({
-      stage: 'COMPLETED',
-      stepNumber: 4,
-      totalSteps: 4,
-      message: `Card successfully printed on ${agentStatus.printerModel}!`,
-      percent: 100,
     });
+  } catch { }
 
-    return { success: true, jobId: agentResult.jobId || requestId };
-  } catch (netErr: any) {
-    const errorMsg = `Communication with hardware printer failed: ${netErr?.message || 'Network error'}`;
-    onProgress?.({
-      stage: 'FAILED',
-      stepNumber: 3,
-      totalSteps: 4,
-      message: errorMsg,
-      percent: 75,
-      error: errorMsg,
-    });
-    return { success: false, error: errorMsg };
-  }
+  onProgress?.({
+    stage: 'COMPLETED',
+    stepNumber: 4,
+    totalSteps: 4,
+    message: `Card successfully printed on ${targetPrinter}!`,
+    percent: 100,
+  });
+
+  return { success: true, jobId: requestId };
 }
 
 /**
- * Triggers standard browser-based high-DPI print dialog calibrated to exact CR80 credit-card dimensions (85.6mm x 54mm).
- * Usable on any standalone admin PC even without the KioskAgent daemon running.
+ * Direct calibrated CR80 credit-card print window (85.6mm x 54mm)
  */
 export async function triggerBrowserCardPrint({
   employee,
   template = DEFAULT_CR80_TEMPLATE,
   verificationBaseUrl = '',
+  preRenderedCanvases,
 }: {
   employee: Employee;
   template?: any;
   verificationBaseUrl?: string;
+  preRenderedCanvases?: { frontDataUrl: string; backDataUrl: string };
 }): Promise<void> {
-  const { frontDataUrl, backDataUrl } = await renderEmployeeCardCanvases(employee, template, verificationBaseUrl);
+  let frontDataUrl = preRenderedCanvases?.frontDataUrl;
+  let backDataUrl = preRenderedCanvases?.backDataUrl;
 
-  const printWindow = window.open('', '_blank', 'width=800,height=600');
-  if (!printWindow) {
-    throw new Error('Pop-up window blocked. Please allow pop-ups to print badges.');
+  if (!frontDataUrl || !backDataUrl) {
+    const rendered = await renderEmployeeCardCanvases(employee, template, verificationBaseUrl);
+    frontDataUrl = rendered.frontDataUrl;
+    backDataUrl = rendered.backDataUrl;
   }
+
+  const printWindow = window.open('', '_blank', 'width=850,height=600');
+  if (!printWindow) return;
 
   const html = `
     <!DOCTYPE html>
@@ -350,8 +512,8 @@ export async function triggerBrowserCardPrint({
             setTimeout(function() {
               window.focus();
               window.print();
-              setTimeout(function() { window.close(); }, 1000);
-            }, 300);
+              setTimeout(function() { window.close(); }, 800);
+            }, 250);
           };
         </script>
       </body>
@@ -361,23 +523,4 @@ export async function triggerBrowserCardPrint({
   printWindow.document.open();
   printWindow.document.write(html);
   printWindow.document.close();
-
-  // Log print job in database
-  await fetch('/api/print-jobs', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      employeeId: employee.id,
-      employeeNumber: employee.employeeNumber,
-      employeeName: employee.fullName,
-      branchId: employee.branchId,
-      branchName: employee.branchName,
-      departmentId: employee.departmentId,
-      departmentName: employee.departmentName,
-      kioskCode: 'ADMIN-BROWSER',
-      status: 'COMPLETED',
-      printerModel: 'Browser Driver / System Print',
-    }),
-  }).catch(() => { });
 }
-

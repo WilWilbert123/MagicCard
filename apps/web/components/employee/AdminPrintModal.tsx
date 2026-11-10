@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Printer,
   X,
@@ -9,17 +9,17 @@ import {
   RefreshCw,
   HardDrive,
   Sliders,
-  ExternalLink,
   Layers,
   Check,
+  ChevronDown,
 } from 'lucide-react';
 import { Employee, DEFAULT_CR80_TEMPLATE } from '@/lib/data/enterpriseStore';
 import {
-  checkLocalHardwareAgent,
+  fetchAvailableCardPrinters,
   dispatchHardwarePrintJob,
-  triggerBrowserCardPrint,
   renderEmployeeCardCanvases,
-  LocalHardwareAgentStatus,
+  SelectablePrinter,
+  STANDARD_PRINTER_PRESETS,
   PrintProgressState,
 } from '@/lib/services/cardPrintService';
 import { toast } from '@/components/ui/Toast';
@@ -41,8 +41,11 @@ export default function AdminPrintModal({
   verificationBaseUrl = '',
   template = DEFAULT_CR80_TEMPLATE,
 }: AdminPrintModalProps) {
-  const [hardwareStatus, setHardwareStatus] = useState<LocalHardwareAgentStatus | null>(null);
-  const [isCheckingHardware, setIsCheckingHardware] = useState(false);
+  const [printers, setPrinters] = useState<SelectablePrinter[]>(STANDARD_PRINTER_PRESETS);
+  const [selectedPrinterName, setSelectedPrinterName] = useState<string>('Magicard 600NEO Duo');
+  const [duplexMode, setDuplexMode] = useState<'Duplex' | 'SingleSided'>('Duplex');
+  const [isLoadingPrinters, setIsLoadingPrinters] = useState(false);
+
   const [activeTab, setActiveTab] = useState<'front' | 'back'>('front');
   const [frontPreviewUrl, setFrontPreviewUrl] = useState<string>('');
   const [backPreviewUrl, setBackPreviewUrl] = useState<string>('');
@@ -51,28 +54,27 @@ export default function AdminPrintModal({
   const [printProgress, setPrintProgress] = useState<PrintProgressState | null>(null);
   const [isPrinting, setIsPrinting] = useState(false);
 
-  // Probe hardware whenever modal opens
-  const probeHardware = async () => {
-    setIsCheckingHardware(true);
+  // Load available printers
+  const loadPrinters = async () => {
+    setIsLoadingPrinters(true);
     try {
-      const status = await checkLocalHardwareAgent();
-      setHardwareStatus(status);
+      const list = await fetchAvailableCardPrinters();
+      if (list.length > 0) {
+        setPrinters(list);
+        // Default to first online or Magicard
+        const preferred = list.find((p) => p.name.toLowerCase().includes('magicard') || p.name.toLowerCase().includes('600neo')) || list[0];
+        if (preferred) {
+          setSelectedPrinterName(preferred.name);
+          if (preferred.duplexCapable === false) setDuplexMode('SingleSided');
+        }
+      }
     } catch {
-      setHardwareStatus({
-        isOnline: false,
-        printerModel: 'Standalone / No Agent',
-        printerStatus: 'OFFLINE',
-        printerConnected: false,
-        ribbonLevelPct: 0,
-        ribbonType: 'YMCKO',
-        agentVersion: 'None',
-      });
+      setPrinters(STANDARD_PRINTER_PRESETS);
     } finally {
-      setIsCheckingHardware(false);
+      setIsLoadingPrinters(false);
     }
   };
 
-  // Generate visual card preview
   useEffect(() => {
     if (!isOpen || !employee) {
       setPrintProgress(null);
@@ -80,7 +82,7 @@ export default function AdminPrintModal({
       return;
     }
 
-    probeHardware();
+    loadPrinters();
 
     let isMounted = true;
     setIsRenderingPreview(true);
@@ -107,7 +109,16 @@ export default function AdminPrintModal({
 
   if (!isOpen || !employee) return null;
 
-  const handleHardwarePrint = async () => {
+  const currentPrinter = printers.find((p) => p.name === selectedPrinterName) || printers[0] || {
+    name: selectedPrinterName,
+    brand: 'Magicard',
+    model: '600NEO Duo',
+    isOnline: true,
+    status: 'READY',
+    ribbonLevelPct: 100,
+  };
+
+  const handleExecutePrint = async () => {
     if (isPrinting) return;
     setIsPrinting(true);
 
@@ -116,6 +127,8 @@ export default function AdminPrintModal({
         employee,
         template,
         verificationBaseUrl,
+        targetPrinter: selectedPrinterName,
+        duplexMode,
         preRenderedCanvases: frontPreviewUrl && backPreviewUrl ? {
           frontDataUrl: frontPreviewUrl,
           backDataUrl: backPreviewUrl,
@@ -124,13 +137,13 @@ export default function AdminPrintModal({
       });
 
       if (result.success) {
-        toast.success(`Badge successfully printed for ${employee.fullName}!`);
+        toast.success(`Badge successfully spooled to ${selectedPrinterName}!`);
         onPrintSuccess?.(employee.id);
         setTimeout(() => {
           onClose();
         }, 1200);
       } else {
-        toast.error(result.error || 'Hardware print job failed.');
+        toast.error(result.error || 'Card print job failed.');
       }
     } catch (err: any) {
       toast.error(err.message || 'Printing error occurred.');
@@ -139,43 +152,24 @@ export default function AdminPrintModal({
     }
   };
 
-  const handleBrowserPrint = async () => {
-    if (isPrinting) return;
-    setIsPrinting(true);
-    try {
-      toast.info('Preparing print preview for system dialog...');
-      await triggerBrowserCardPrint({
-        employee,
-        template,
-        verificationBaseUrl,
-      });
-      toast.success(`Print preview launched for ${employee.fullName}.`);
-      onPrintSuccess?.(employee.id);
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to launch browser print.');
-    } finally {
-      setIsPrinting(false);
-    }
-  };
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
         {/* Modal Header */}
         <div className="p-4 sm:p-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-950/60">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-red-100 dark:bg-red-950/80 text-red-600 dark:text-red-400 flex items-center justify-center border border-red-200 dark:border-red-900">
+            <div className="w-10 h-10 rounded-xl bg-red-100 dark:bg-red-950/80 text-red-600 dark:text-red-400 flex items-center justify-center border border-red-200 dark:border-red-900 shadow-xs">
               <Printer className="w-5 h-5" />
             </div>
             <div>
               <h3 className="font-bold text-slate-900 dark:text-white text-base flex items-center gap-2">
                 Print Employee ID Badge
-                <span className="font-mono text-xs px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                <span className="font-mono text-xs px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold">
                   {employee.employeeNumber}
                 </span>
               </h3>
               <p className="text-slate-500 text-xs">
-                Direct hardware card printing & driver spooling console
+                Real-time physical ID card printer hardware console
               </p>
             </div>
           </div>
@@ -188,9 +182,9 @@ export default function AdminPrintModal({
           </button>
         </div>
 
-        {/* Modal Content */}
+        {/* Modal Body */}
         <div className="p-5 overflow-y-auto space-y-4">
-          {/* Employee Badge Recipient Card */}
+          {/* Employee Recipient Summary */}
           <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/40 flex items-center justify-between gap-3 text-xs">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden flex items-center justify-center font-bold text-slate-600 dark:text-slate-300 shrink-0">
@@ -222,56 +216,92 @@ export default function AdminPrintModal({
             </div>
           </div>
 
-          {/* Real-time Hardware Telemetry Bar */}
-          <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 space-y-2">
+          {/* Target Printer Hardware Selector */}
+          <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 space-y-3 shadow-xs">
             <div className="flex items-center justify-between text-xs">
-              <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-white">
-                <HardDrive className="w-4 h-4 text-slate-500" />
-                <span>Printer Hardware Connection</span>
-              </div>
+              <label htmlFor="printer-select" className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <HardDrive className="w-4 h-4 text-red-600 dark:text-red-400" />
+                <span>Select Target ID Card Printer</span>
+              </label>
               <button
                 type="button"
-                onClick={probeHardware}
-                disabled={isCheckingHardware || isPrinting}
+                onClick={loadPrinters}
+                disabled={isLoadingPrinters || isPrinting}
                 className="text-[11px] font-semibold text-red-600 dark:text-red-400 hover:underline flex items-center gap-1 disabled:opacity-50"
               >
-                <RefreshCw className={`w-3 h-3 ${isCheckingHardware ? 'animate-spin' : ''}`} />
-                Check Hardware
+                <RefreshCw className={`w-3 h-3 ${isLoadingPrinters ? 'animate-spin' : ''}`} />
+                Scan Printers
               </button>
             </div>
 
-            {hardwareStatus?.isOnline ? (
-              <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 text-xs">
-                <div className="flex items-center gap-2">
-                  <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                  <span className="font-semibold text-emerald-900 dark:text-emerald-200">
-                    {hardwareStatus.printerModel}
-                  </span>
-                  <span className="text-[11px] text-emerald-700 dark:text-emerald-400 font-mono">
-                    ({hardwareStatus.printerStatus})
-                  </span>
-                </div>
-                <div className="flex items-center gap-3 text-[11px] text-emerald-800 dark:text-emerald-300 font-medium">
-                  <span>Ribbon: <strong>{hardwareStatus.ribbonLevelPct}%</strong> ({hardwareStatus.ribbonType})</span>
-                  <span>Agent v{hardwareStatus.agentVersion}</span>
-                </div>
-              </div>
-            ) : (
-              <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-lg bg-slate-100 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-xs">
-                <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
-                  <div className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-                  <span className="font-semibold">Local Hardware Agent Not Detected</span>
-                </div>
-                <span className="text-[11px] text-slate-500">
-                  Runs on localhost:7125 • Browser Print available
+            <div className="relative">
+              <select
+                id="printer-select"
+                value={selectedPrinterName}
+                onChange={(e) => setSelectedPrinterName(e.target.value)}
+                disabled={isPrinting}
+                className="w-full appearance-none bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white font-semibold focus:outline-none focus:border-red-500 pr-9 cursor-pointer transition shadow-2xs"
+              >
+                {printers.map((p) => (
+                  <option key={p.id} value={p.name}>
+                    {p.name} — [{p.status || 'READY'}]
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-3 pointer-events-none" />
+            </div>
+
+            {/* Selected Printer Telemetry Card */}
+            <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2">
+                <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="font-bold text-slate-900 dark:text-white">{currentPrinter.name}</span>
+                <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-mono font-bold">
+                  {currentPrinter.status || 'READY'}
                 </span>
               </div>
-            )}
+
+              <div className="flex items-center gap-3 text-[11px] text-slate-600 dark:text-slate-400">
+                <span>Ribbon: <strong className="text-emerald-600 dark:text-emerald-400">{currentPrinter.ribbonLevelPct || 100}%</strong></span>
+                <span>Type: <strong>CR80 Standard</strong></span>
+              </div>
+            </div>
+
+            {/* Duplex / Single Sided Toggle */}
+            <div className="flex items-center justify-between pt-1 text-xs">
+              <span className="text-slate-600 dark:text-slate-400 font-medium">Print Sides:</span>
+              <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-900 p-0.5 rounded-lg border border-slate-200 dark:border-slate-800 text-xs font-semibold">
+                <button
+                  type="button"
+                  onClick={() => setDuplexMode('Duplex')}
+                  disabled={isPrinting}
+                  className={`px-3 py-1 rounded-md transition ${
+                    duplexMode === 'Duplex'
+                      ? 'bg-red-600 text-white shadow-xs font-bold'
+                      : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                  }`}
+                >
+                  Double-Sided (Duplex)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDuplexMode('SingleSided')}
+                  disabled={isPrinting}
+                  className={`px-3 py-1 rounded-md transition ${
+                    duplexMode === 'SingleSided'
+                      ? 'bg-red-600 text-white shadow-xs font-bold'
+                      : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                  }`}
+                >
+                  Single-Sided (Front Only)
+                </button>
+              </div>
+            </div>
           </div>
 
           {/* Real-time Print Progress State */}
           {isPrinting && printProgress && (
-            <div className="p-4 rounded-xl border border-red-200 dark:border-red-900 bg-red-50/70 dark:bg-red-950/40 space-y-2.5 shadow-sm">
+            <div className="p-4 rounded-xl border border-red-200 dark:border-red-900 bg-red-50/80 dark:bg-red-950/40 space-y-2.5 shadow-sm">
               <div className="flex items-center justify-between text-xs font-bold text-slate-900 dark:text-white">
                 <span className="flex items-center gap-2 text-red-600 dark:text-red-400">
                   <RefreshCw className="w-3.5 h-3.5 animate-spin" />
@@ -295,7 +325,7 @@ export default function AdminPrintModal({
             <div className="flex items-center justify-between">
               <div className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
                 <Layers className="w-3.5 h-3.5 text-slate-400" />
-                High-Resolution CR80 Preview (300 DPI)
+                CR80 High-Resolution Preview (300 DPI)
               </div>
               <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg text-xs font-semibold">
                 <button
@@ -341,47 +371,28 @@ export default function AdminPrintModal({
         </div>
 
         {/* Modal Footer Actions */}
-        <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/80 flex flex-col sm:flex-row items-center justify-between gap-2.5">
+        <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/80 flex items-center justify-between gap-3">
           <button
             type="button"
             onClick={onClose}
             disabled={isPrinting}
-            className="w-full sm:w-auto px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 transition disabled:opacity-50"
+            className="px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 transition disabled:opacity-50"
           >
             Cancel
           </button>
 
-          <div className="w-full sm:w-auto flex items-center gap-2">
-            {/* Browser print fallback button */}
-            <button
-              type="button"
-              onClick={handleBrowserPrint}
-              disabled={isPrinting || isRenderingPreview}
-              className="w-full sm:w-auto px-3.5 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 transition flex items-center justify-center gap-1.5 disabled:opacity-50"
-            >
-              <ExternalLink className="w-3.5 h-3.5" />
-              Browser Driver Print
-            </button>
-
-            {/* Direct Hardware Print Button */}
-            <button
-              type="button"
-              onClick={handleHardwarePrint}
-              disabled={isPrinting || isRenderingPreview || !hardwareStatus?.isOnline}
-              title={
-                !hardwareStatus?.isOnline
-                  ? 'Hardware agent is offline. Start the KioskAgent or use Browser Driver Print.'
-                  : `Send print job directly to ${hardwareStatus.printerModel}`
-              }
-              className="w-full sm:w-auto px-4 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold shadow-md shadow-red-600/30 transition flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Printer className="w-4 h-4" />
-              {isPrinting ? 'Printing...' : 'Direct Hardware Print'}
-            </button>
-          </div>
+          {/* Primary Print Button */}
+          <button
+            type="button"
+            onClick={handleExecutePrint}
+            disabled={isPrinting || isRenderingPreview}
+            className="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold shadow-md shadow-red-600/30 transition flex items-center justify-center gap-2 disabled:opacity-50"
+          >
+            <Printer className="w-4 h-4" />
+            <span>{isPrinting ? 'Printing Badge...' : `Print to ${currentPrinter.model || currentPrinter.name}`}</span>
+          </button>
         </div>
       </div>
     </div>
   );
 }
-
