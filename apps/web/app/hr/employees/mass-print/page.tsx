@@ -32,6 +32,7 @@ import { Employee, Branch, Department, DEFAULT_CR80_TEMPLATE } from '@/lib/data/
 import { toast } from '@/components/ui/Toast';
 import { renderCardToCanvas } from '@workspace/card-engine';
 import Card2DViewer from '@/components/card/Card2DViewer';
+import { checkLocalHardwareAgent, dispatchHardwarePrintJob } from '@/lib/services/cardPrintService';
 
 function MassPrintContent() {
   const router = useRouter();
@@ -235,7 +236,7 @@ function MassPrintContent() {
     });
   };
 
-  // 3. Batch Dispatch to Print Queue / Kiosk Fleet
+  // 3. Batch Dispatch to Physical Hardware Printer or Print Queue
   const handleBatchDispatchToQueue = async () => {
     if (selectedEmployees.length === 0) {
       toast.error('Please select at least 1 employee to print.');
@@ -246,23 +247,74 @@ function MassPrintContent() {
     setDispatchProgress({
       current: 0,
       total: selectedEmployees.length,
-      currentName: selectedEmployees[0]?.fullName || 'Starting...',
+      currentName: 'Probing hardware card printer connection...',
       completed: false,
     });
 
-    const payloadJobs = selectedEmployees.map((emp) => ({
-      employeeId: emp.id,
-      employeeNumber: emp.employeeNumber,
-      employeeName: emp.fullName,
-      branchId: emp.branchId,
-      branchName: emp.branchName,
-      departmentId: emp.departmentId,
-      departmentName: emp.departmentName,
-      status: 'COMPLETED',
-    }));
-
     try {
-      // Send as batch payload
+      const agentStatus = await checkLocalHardwareAgent();
+
+      if (agentStatus.isOnline) {
+        toast.info(`Direct hardware printer online (${agentStatus.printerModel}). Printing ${selectedEmployees.length} cards...`);
+        let successCount = 0;
+        let failCount = 0;
+
+        for (let i = 0; i < selectedEmployees.length; i++) {
+          const emp = selectedEmployees[i];
+          const tpl = resolveTemplateForEmployee(emp);
+
+          setDispatchProgress({
+            current: i,
+            total: selectedEmployees.length,
+            currentName: `Printing [${i + 1}/${selectedEmployees.length}]: ${emp.fullName} on ${agentStatus.printerModel}...`,
+            completed: false,
+          });
+
+          const printRes = await dispatchHardwarePrintJob({
+            employee: emp,
+            template: tpl,
+            verificationBaseUrl: settings?.verificationBaseUrl || window.location.origin,
+          });
+
+          if (printRes.success) {
+            successCount++;
+            setEmployees((prev) =>
+              prev.map((e) => (e.id === emp.id ? { ...e, cardStatus: 'PRINTED' } : e))
+            );
+          } else {
+            failCount++;
+          }
+        }
+
+        setDispatchProgress({
+          current: selectedEmployees.length,
+          total: selectedEmployees.length,
+          currentName: `Finished printing ${successCount} card(s)${failCount > 0 ? ` (${failCount} failed)` : ''}!`,
+          completed: true,
+        });
+
+        confetti({
+          particleCount: 100,
+          spread: 70,
+          origin: { y: 0.6 },
+        });
+
+        toast.success(`Successfully printed ${successCount} badge(s) directly to ${agentStatus.printerModel}!`);
+        return;
+      }
+
+      // Fallback: If hardware daemon is offline, record jobs in database
+      const payloadJobs = selectedEmployees.map((emp) => ({
+        employeeId: emp.id,
+        employeeNumber: emp.employeeNumber,
+        employeeName: emp.fullName,
+        branchId: emp.branchId,
+        branchName: emp.branchName,
+        departmentId: emp.departmentId,
+        departmentName: emp.departmentName,
+        status: 'COMPLETED',
+      }));
+
       const res = await fetch('/api/print-jobs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -276,7 +328,7 @@ function MassPrintContent() {
       setDispatchProgress({
         current: selectedEmployees.length,
         total: selectedEmployees.length,
-        currentName: 'All jobs processed successfully!',
+        currentName: 'All jobs processed successfully! Click "Print Badge Sheet" to print via system dialog.',
         completed: true,
       });
 
@@ -291,7 +343,7 @@ function MassPrintContent() {
         origin: { y: 0.6 },
       });
 
-      toast.success(`Successfully sent ${selectedEmployees.length} ID card print jobs to queue!`);
+      toast.success(`Successfully registered ${selectedEmployees.length} ID card print jobs in database!`);
     } catch (err: any) {
       toast.error(err.message || 'Batch print queueing failed.');
     } finally {
@@ -951,9 +1003,10 @@ function MassPrintContent() {
             <button
               onClick={handleBatchDispatchToQueue}
               disabled={isDispatching}
-              className="px-4 py-1.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold shadow-md shadow-red-600/30 transition"
+              className="px-4 py-1.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold shadow-md shadow-red-600/30 transition flex items-center gap-1.5"
             >
-              Send to Print Queue
+              <Printer className="w-3.5 h-3.5" />
+              <span>Print Selected Badges</span>
             </button>
 
             <button

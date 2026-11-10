@@ -34,6 +34,8 @@ import { Employee, Branch, Department, DEFAULT_CR80_TEMPLATE } from '@/lib/data/
 import { toast } from '@/components/ui/Toast';
 import PhotoPreviewCrop from '@/components/employee/PhotoPreviewCrop';
 import SignatureUpload from '@/components/employee/SignatureUpload';
+import AdminPrintModal from '@/components/employee/AdminPrintModal';
+import { checkLocalHardwareAgent, LocalHardwareAgentStatus } from '@/lib/services/cardPrintService';
 
 const ThreeCardViewer = dynamic(() => import('@/components/three/ThreeCardViewer'), {
   ssr: false,
@@ -277,6 +279,12 @@ export default function HrEmployeesPage() {
   const [previewMode, setPreviewMode] = useState<'3D' | '2D'>('3D');
   const [previewCardSide, setPreviewCardSide] = useState<'front' | 'back'>('front');
   const [previewTemplate, setPreviewTemplate] = useState<any>(DEFAULT_CR80_TEMPLATE);
+
+  // Admin Direct Card Print Modal state
+  const [showAdminPrintModal, setShowAdminPrintModal] = useState(false);
+  const [printingEmployee, setPrintingEmployee] = useState<Employee | null>(null);
+  const [printModalTemplate, setPrintModalTemplate] = useState<any>(DEFAULT_CR80_TEMPLATE);
+  const [adminHardwareStatus, setAdminHardwareStatus] = useState<LocalHardwareAgentStatus | null>(null);
 
   const getAssignedTemplateId = (emp: Employee) => {
     if (cardTemplates && cardTemplates.length > 0) {
@@ -526,38 +534,48 @@ export default function HrEmployeesPage() {
     }
   };
 
-  const handlePrintCard = async (emp: Employee) => {
-    try {
-      toast.info(`Dispatching print job for ${emp.fullName}...`);
-      const res = await fetch('/api/print-jobs', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          employeeId: emp.id,
-          employeeNumber: emp.employeeNumber,
-          employeeName: emp.fullName,
-          branchId: emp.branchId,
-          branchName: emp.branchName,
-          departmentId: emp.departmentId,
-          departmentName: emp.departmentName,
-          status: 'COMPLETED',
-        }),
-      });
-
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || 'Failed to dispatch print job');
-
-      toast.success(`Badge printed! Card status updated to ISSUED for ${emp.fullName}.`);
-
-      // Update local state immediately
-      setEmployees((prev) =>
-        prev.map((e) => (e.id === emp.id ? { ...e, cardStatus: 'PRINTED' } : e))
+  const handlePrintCard = (emp: Employee) => {
+    // Resolve matching template for employee
+    let targetTpl = DEFAULT_CR80_TEMPLATE;
+    if (cardTemplates && cardTemplates.length > 0) {
+      const matchingBranchTpl = cardTemplates.find(
+        (t: any) =>
+          (t.branchId && t.branchId === emp.branchId) ||
+          (emp.branchName && (
+            t.branchName?.toLowerCase() === emp.branchName?.toLowerCase() ||
+            (emp.branchName.toLowerCase().includes('sorsogon') && t.branchName?.toLowerCase().includes('sorsogon'))
+          )) ||
+          ((emp as any).branchCode && t.branchCode === (emp as any).branchCode)
       );
-      loadData();
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to dispatch print job.');
+      const defaultTpl = cardTemplates.find((t: any) => t.isDefault) || cardTemplates[0];
+      const activeTpl = matchingBranchTpl || defaultTpl;
+      if (activeTpl?.layout) targetTpl = activeTpl.layout;
     }
+
+    setPrintingEmployee(emp);
+    setPrintModalTemplate(targetTpl);
+    setShowAdminPrintModal(true);
   };
+
+  const handleAdminPrintSuccess = (empId: string) => {
+    // Update local employee card status immediately
+    setEmployees((prev) =>
+      prev.map((e) => (e.id === empId ? { ...e, cardStatus: 'PRINTED' } : e))
+    );
+    loadData();
+  };
+
+  // Real-time hardware status probe for standalone PC setup
+  useEffect(() => {
+    const probe = () => {
+      checkLocalHardwareAgent()
+        .then((st) => setAdminHardwareStatus(st))
+        .catch(() => {});
+    };
+    probe();
+    const interval = setInterval(probe, 15000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     loadData();
@@ -974,6 +992,26 @@ export default function HrEmployeesPage() {
         </div>
 
         <div className="flex items-center gap-2.5">
+          {/* Real-time Hardware Telemetry Pill for Standalone PC Setup */}
+          {adminHardwareStatus?.isOnline ? (
+            <div
+              title={`Physical card printer connected via local agent: ${adminHardwareStatus.printerModel} (${adminHardwareStatus.printerStatus})`}
+              className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold bg-emerald-50 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800 shadow-2xs"
+            >
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+              <span className="truncate max-w-[140px]">{adminHardwareStatus.printerModel}</span>
+              <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-mono">({adminHardwareStatus.ribbonLevelPct}%)</span>
+            </div>
+          ) : (
+            <div
+              title="KioskAgent daemon not detected on this PC. Direct browser printing will be used."
+              className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border-slate-200 dark:border-slate-700"
+            >
+              <span className="w-2 h-2 rounded-full bg-slate-400 shrink-0" />
+              <span>Standalone Print Mode</span>
+            </div>
+          )}
+
           <Link
             href="/hr/employees/mass-print"
             className="px-3.5 py-1.5 rounded-lg border border-red-200 dark:border-red-900/60 bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900/60 text-red-700 dark:text-red-300 text-xs font-semibold shadow-2xs transition flex items-center gap-1.5"
@@ -2361,6 +2399,21 @@ export default function HrEmployeesPage() {
           </button>
         </div>
       )}
+
+      {/* Real-time Admin Hardware Card Print Modal */}
+      <AdminPrintModal
+        isOpen={showAdminPrintModal}
+        employee={printingEmployee}
+        template={printModalTemplate}
+        verificationBaseUrl={typeof window !== 'undefined' ? window.location.origin : ''}
+        onClose={() => {
+          setShowAdminPrintModal(false);
+          setPrintingEmployee(null);
+        }}
+        onPrintSuccess={(empId) => {
+          handleAdminPrintSuccess(empId);
+        }}
+      />
     </div>
   );
 }
