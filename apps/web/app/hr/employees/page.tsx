@@ -547,6 +547,9 @@ export default function HrEmployeesPage() {
           )) ||
           ((emp as any).branchCode && t.branchCode === (emp as any).branchCode)
       );
+      loadData();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to dispatch print job.');
       const defaultTpl = cardTemplates.find((t: any) => t.isDefault) || cardTemplates[0];
       const activeTpl = matchingBranchTpl || defaultTpl;
       if (activeTpl?.layout) targetTpl = activeTpl.layout;
@@ -570,7 +573,7 @@ export default function HrEmployeesPage() {
     const probe = () => {
       checkLocalHardwareAgent()
         .then((st) => setAdminHardwareStatus(st))
-        .catch(() => {});
+        .catch(() => { });
     };
     probe();
     const interval = setInterval(probe, 15000);
@@ -964,8 +967,7 @@ export default function HrEmployeesPage() {
     setParsedPreview([]);
     if (fileInputRef.current) fileInputRef.current.value = '';
     toast.success(
-      `Import complete: ${createdCount} new created, ${updatedCount} existing updated${
-        failedCount > 0 ? `, ${failedCount} failed` : ''
+      `Import complete: ${createdCount} new created, ${updatedCount} existing updated${failedCount > 0 ? `, ${failedCount} failed` : ''
       }.`
     );
   };
@@ -1008,7 +1010,7 @@ export default function HrEmployeesPage() {
               className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border-slate-200 dark:border-slate-700"
             >
               <span className="w-2 h-2 rounded-full bg-slate-400 shrink-0" />
-              <span>Standalone Print Mode</span>
+              <span>Standalone</span>
             </div>
           )}
 
@@ -2375,7 +2377,7 @@ export default function HrEmployeesPage() {
                 {selectedEmpIds.size} Employee{selectedEmpIds.size === 1 ? '' : 's'} Selected
               </div>
               <div className="text-[10px] text-slate-400">
-                Ready for Mass Print ID / Group Badge Print
+                Ready for Mass Print ID
               </div>
             </div>
           </div>

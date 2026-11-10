@@ -375,3 +375,4 @@ export async function triggerBrowserCardPrint({
     }),
   }).catch(() => { });
 }
+
