@@ -73,3 +73,19 @@ public class SystemPrinterInfo
     public bool IsOnline { get; set; }
     public string Status { get; set; } = "READY";
 }
+
+public class RemotePrinterConfig
+{
+    public string? TargetPrinter { get; set; }
+    public string? DuplexMode { get; set; }
+    public double? OffsetXmm { get; set; }
+    public double? OffsetYmm { get; set; }
+    public string? RibbonType { get; set; }
+}
+
+public class HeartbeatServerResponse
+{
+    public string? Status { get; set; }
+    public string? Timestamp { get; set; }
+    public RemotePrinterConfig? PrinterConfig { get; set; }
+}

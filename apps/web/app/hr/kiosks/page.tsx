@@ -18,6 +18,10 @@ import {
   Edit3,
   Layers,
   X,
+  Printer,
+  Settings2,
+  Sliders,
+  Check,
 } from 'lucide-react';
 import { KioskDevice, Branch } from '@/lib/data/enterpriseStore';
 import { toast } from '@/components/ui/Toast';
@@ -41,6 +45,63 @@ export default function HrKiosksPage() {
   const [customCapacityInput, setCustomCapacityInput] = useState<number | string>(50);
   const [resetTrayCount, setResetTrayCount] = useState<boolean>(true);
   const [isUpdatingTray, setIsUpdatingTray] = useState(false);
+
+  // Printer Hardware Configuration Modal State
+  const [editPrinterKiosk, setEditPrinterKiosk] = useState<KioskDevice | null>(null);
+  const [configTargetPrinter, setConfigTargetPrinter] = useState<string>('');
+  const [configBrandProfile, setConfigBrandProfile] = useState<string>('Magicard');
+  const [configDuplexMode, setConfigDuplexMode] = useState<'Duplex' | 'SingleSided' | 'Auto'>('Duplex');
+  const [configRibbonType, setConfigRibbonType] = useState<string>('YMCKO');
+  const [configOffsetXmm, setConfigOffsetXmm] = useState<number>(0);
+  const [configOffsetYmm, setConfigOffsetYmm] = useState<number>(0);
+  const [isSavingPrinterConfig, setIsSavingPrinterConfig] = useState(false);
+
+  const openPrinterConfigModal = (kiosk: KioskDevice) => {
+    setEditPrinterKiosk(kiosk);
+    setConfigTargetPrinter(kiosk.printerConfig?.targetPrinter || kiosk.printerModel || 'Magicard 600NEO');
+    setConfigBrandProfile(kiosk.printerConfig?.brandProfile || 'Magicard');
+    setConfigDuplexMode((kiosk.printerConfig?.duplexMode as any) || 'Duplex');
+    setConfigRibbonType(kiosk.printerConfig?.ribbonType || kiosk.ribbonType || 'YMCKO');
+    setConfigOffsetXmm(kiosk.printerConfig?.offsetXmm ?? 0);
+    setConfigOffsetYmm(kiosk.printerConfig?.offsetYmm ?? 0);
+  };
+
+  const handleSavePrinterConfig = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editPrinterKiosk) return;
+
+    setIsSavingPrinterConfig(true);
+    try {
+      const printerConfig = {
+        targetPrinter: configTargetPrinter.trim(),
+        brandProfile: configBrandProfile,
+        duplexMode: configDuplexMode,
+        ribbonType: configRibbonType,
+        offsetXmm: Number(configOffsetXmm) || 0,
+        offsetYmm: Number(configOffsetYmm) || 0,
+      };
+
+      const res = await fetch('/api/kiosks', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: editPrinterKiosk.id,
+          printerConfig,
+        }),
+      });
+
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Failed to update printer configuration');
+
+      toast.success(`Printer config saved for ${editPrinterKiosk.code}! Real-time synchronization active.`);
+      setEditPrinterKiosk(null);
+      loadKiosks();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to save printer configuration.');
+    } finally {
+      setIsSavingPrinterConfig(false);
+    }
+  };
 
   const formatHeartbeatTime = (dateStr?: string) => {
     if (!dateStr) return 'never';
@@ -382,13 +443,25 @@ export default function HrKiosksPage() {
 
                   {/* Specs Grid */}
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs mb-4">
-                    <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800">
-                      <span className="text-slate-500 block text-[10px] uppercase font-semibold">Printer Model</span>
-                      <span className="font-semibold text-slate-900 dark:text-white">{kiosk.printerModel || 'Magicard 600NEO'}</span>
+                    <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 relative group">
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-500 block text-[10px] uppercase font-semibold">Printer Model</span>
+                        <button
+                          onClick={() => openPrinterConfigModal(kiosk)}
+                          className="px-1.5 py-0.5 rounded text-[10px] font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900 hover:bg-blue-100 transition flex items-center gap-1"
+                          title="Configure Target Hardware Printer & Duplex Mode"
+                        >
+                          <Settings2 className="w-3 h-3" /> Config
+                        </button>
+                      </div>
+                      <span className="font-semibold text-slate-900 dark:text-white block mt-1 truncate" title={kiosk.printerModel || 'Magicard 600NEO'}>
+                        {kiosk.printerModel || 'Magicard 600NEO'}
+                      </span>
                       <span
-                        className={`block text-[11px] mt-1 font-medium ${
+                        className={`block text-[11px] mt-1 font-medium truncate ${
                           isWarning ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'
                         }`}
+                        title={kiosk.printerStatus}
                       >
                         {kiosk.printerStatus}
                       </span>
@@ -643,6 +716,270 @@ export default function HrKiosksPage() {
                     </>
                   ) : (
                     'Save & Update Tray'
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Configure Hardware & ID Card Printer */}
+      {editPrinterKiosk && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="w-full max-w-xl rounded-2xl bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+              <div>
+                <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <Printer className="w-4 h-4 text-blue-500" />
+                  Hardware & Card Printer Configuration
+                </h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  Configure hardware printer binding, duplex mode, and print calibration for <strong className="text-slate-800 dark:text-slate-200">{editPrinterKiosk.code}</strong>.
+                </p>
+              </div>
+              <button
+                onClick={() => setEditPrinterKiosk(null)}
+                className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSavePrinterConfig} className="space-y-4 text-xs">
+              {/* Brand Preset Quick Select */}
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 mb-1.5 font-semibold">
+                  Card Printer Manufacturer / Model Preset
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {[
+                    { label: 'Magicard 600NEO / 300', brand: 'Magicard', printerName: 'Magicard 600 NEO' },
+                    { label: 'Zebra ZC300 / ZC100', brand: 'Zebra', printerName: 'Zebra ZC300' },
+                    { label: 'Evolis Primacy / Zenius', brand: 'Evolis', printerName: 'Evolis Primacy' },
+                    { label: 'HID Fargo DTC1250e', brand: 'Fargo', printerName: 'Fargo DTC1250e' },
+                    { label: 'Entrust / Datacard SD', brand: 'Datacard', printerName: 'Datacard SD260' },
+                    { label: 'Universal Windows Spooler', brand: 'Generic', printerName: 'Generic Card Printer' },
+                  ].map((preset) => (
+                    <button
+                      key={preset.label}
+                      type="button"
+                      onClick={() => {
+                        setConfigBrandProfile(preset.brand);
+                        setConfigTargetPrinter(preset.printerName);
+                      }}
+                      className={`p-2 rounded-lg text-left border transition text-[11px] ${
+                        configBrandProfile === preset.brand
+                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 font-semibold'
+                          : 'border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900 text-slate-700 dark:text-slate-300'
+                      }`}
+                    >
+                      <div className="font-semibold">{preset.brand}</div>
+                      <div className="text-[10px] text-slate-400 truncate">{preset.label}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Physical Printers Auto-Detected on Host Terminal */}
+              {editPrinterKiosk.installedPrinters && editPrinterKiosk.installedPrinters.length > 0 && (
+                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                      Live Physical Printers Detected on Host ({editPrinterKiosk.installedPrinters.length})
+                    </span>
+                    <span className="text-[10px] text-slate-400">Click to bind</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto">
+                    {editPrinterKiosk.installedPrinters.map((p) => {
+                      const isSelected = configTargetPrinter.toLowerCase() === p.name.toLowerCase();
+                      return (
+                        <button
+                          key={p.name}
+                          type="button"
+                          onClick={() => setConfigTargetPrinter(p.name)}
+                          className={`px-2.5 py-1 rounded text-[11px] border transition flex items-center gap-1.5 ${
+                            isSelected
+                              ? 'bg-blue-600 text-white border-blue-600 font-semibold'
+                              : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-blue-400'
+                          }`}
+                        >
+                          <span className={`w-1.5 h-1.5 rounded-full ${p.isOnline ? 'bg-emerald-400' : 'bg-slate-400'}`} />
+                          <span className="truncate max-w-[200px]">{p.name}</span>
+                          {p.isDefault && <span className="text-[9px] opacity-75">(Default)</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Target Printer Name Field */}
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">
+                  Target Windows Printer Name (or driver substring)
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    required
+                    value={configTargetPrinter}
+                    onChange={(e) => setConfigTargetPrinter(e.target.value)}
+                    placeholder="e.g. Magicard 600 NEO, Zebra ZC300, Evolis Primacy"
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2 text-slate-900 dark:text-white font-mono text-xs focus:outline-none focus:border-blue-500"
+                  />
+                  {configTargetPrinter && (
+                    <button
+                      type="button"
+                      onClick={() => setConfigTargetPrinter('')}
+                      className="absolute right-2 top-2 text-slate-400 hover:text-slate-600 text-xs"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+                <p className="text-[10px] text-slate-400 mt-1">
+                  Kiosk Agent will search Windows installed printers for an exact or partial match. If left empty, it auto-detects any card printer.
+                </p>
+              </div>
+
+              {/* Duplex Strategy & Ribbon Type */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Duplex Mode (Dual-Sided)</label>
+                  <select
+                    value={configDuplexMode}
+                    onChange={(e) => setConfigDuplexMode(e.target.value as any)}
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2 text-slate-900 dark:text-white focus:outline-none focus:border-blue-500"
+                  >
+                    <option value="Duplex">Automatic Duplex (Dual-Sided 1-Pass)</option>
+                    <option value="SingleSided">Single-Sided Only (Front Only)</option>
+                    <option value="Auto">Auto (Driver Managed)</option>
+                  </select>
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    Select Single-Sided for single-sided hardware (e.g. Zebra ZC100, Evolis Zenius).
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-slate-700 dark:text-slate-300 mb-1 font-semibold">Ribbon Consumable Profile</label>
+                  <select
+                    value={configRibbonType}
+                    onChange={(e) => setConfigRibbonType(e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2 text-slate-900 dark:text-white focus:outline-none focus:border-blue-500"
+                  >
+                    <option value="YMCKO">YMCKO (Full Color Front + Overlay)</option>
+                    <option value="YMCKOK">YMCKOK (Color Front, Black Resin Back)</option>
+                    <option value="Monochrome">Monochrome Resin Black</option>
+                    <option value="KO">KO (Black + Clear Protective Overlay)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Edge Bleed & Print Alignment Calibration */}
+              <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                    <Sliders className="w-3.5 h-3.5 text-blue-500" />
+                    Edge-to-Edge Print Alignment Calibration (CR80)
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setConfigOffsetXmm(0);
+                      setConfigOffsetYmm(0);
+                    }}
+                    className="text-[10px] text-blue-600 dark:text-blue-400 hover:underline"
+                  >
+                    Reset Offsets (0mm)
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <div className="flex justify-between text-[11px] mb-1">
+                      <span className="text-slate-500 font-medium">Horizontal (X-Offset)</span>
+                      <span className="font-mono font-bold text-slate-800 dark:text-white">{configOffsetXmm.toFixed(1)} mm</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="-3.0"
+                      max="3.0"
+                      step="0.1"
+                      value={configOffsetXmm}
+                      onChange={(e) => setConfigOffsetXmm(parseFloat(e.target.value))}
+                      className="w-full accent-blue-600 cursor-pointer"
+                    />
+                    <div className="flex justify-between text-[9px] text-slate-400 mt-0.5">
+                      <span>-3.0 mm (Left)</span>
+                      <span>+3.0 mm (Right)</span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex justify-between text-[11px] mb-1">
+                      <span className="text-slate-500 font-medium">Vertical (Y-Offset)</span>
+                      <span className="font-mono font-bold text-slate-800 dark:text-white">{configOffsetYmm.toFixed(1)} mm</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="-3.0"
+                      max="3.0"
+                      step="0.1"
+                      value={configOffsetYmm}
+                      onChange={(e) => setConfigOffsetYmm(parseFloat(e.target.value))}
+                      className="w-full accent-blue-600 cursor-pointer"
+                    />
+                    <div className="flex justify-between text-[9px] text-slate-400 mt-0.5">
+                      <span>-3.0 mm (Top)</span>
+                      <span>+3.0 mm (Bottom)</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Simulated Visual CR80 Alignment Preview */}
+                <div className="flex items-center justify-center p-2 bg-white dark:bg-slate-950 rounded-lg border border-slate-200 dark:border-slate-800">
+                  <div className="relative w-40 h-24 rounded border-2 border-dashed border-slate-300 dark:border-slate-700 flex items-center justify-center overflow-hidden">
+                    <div
+                      style={{
+                        transform: `translate(${configOffsetXmm * 3}px, ${configOffsetYmm * 3}px)`,
+                      }}
+                      className="w-36 h-20 rounded bg-blue-500/10 border border-blue-500 flex flex-col items-center justify-center text-[9px] font-mono text-blue-600 dark:text-blue-400 transition-transform"
+                    >
+                      <span>CR80 Card Boundary</span>
+                      <span className="text-[8px] opacity-75">
+                        ΔX: {configOffsetXmm.toFixed(1)}mm • ΔY: {configOffsetYmm.toFixed(1)}mm
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEditPrinterKiosk(null)}
+                  className="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingPrinterConfig}
+                  className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold shadow flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  {isSavingPrinterConfig ? (
+                    <>
+                      <div className="w-3.5 h-3.5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                      Synchronizing...
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-3.5 h-3.5" />
+                      Save & Sync Printer
+                    </>
                   )}
                 </button>
               </div>

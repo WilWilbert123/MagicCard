@@ -137,6 +137,7 @@ end;
 procedure CurStepChanged(CurStep: TSetupStep);
 var
   ConfigFilePath: String;
+  RawContent: AnsiString;
   Content: String;
   TargetUrl: String;
 begin
@@ -149,16 +150,19 @@ begin
     // appsettings.json and appsettings.Production.json bundled in the installer.
     if FileExists(ConfigFilePath) then
     begin
-      LoadStringFromFile(ConfigFilePath, Content);
-      // Replace KioskId value
-      StringChangeEx(Content, '"KioskId": "KIOSK-001"', '"KioskId": "' + KioskIdEdit.Text + '"', True);
-      // Replace BranchId value
-      StringChangeEx(Content, '"BranchId": "BRANCH-001"', '"BranchId": "' + BranchIdEdit.Text + '"', True);
-      // Replace ServerUrl if user changed it
-      TargetUrl := Trim(ServerUrlEdit.Text);
-      if TargetUrl <> '' then
-        StringChangeEx(Content, '"SupabaseUrl": "https://magic-card-trust-id.vercel.app"', '"SupabaseUrl": "' + TargetUrl + '"', True);
-      SaveStringToFile(ConfigFilePath, Content, False);
+      if LoadStringFromFile(ConfigFilePath, RawContent) then
+      begin
+        Content := String(RawContent);
+        // Replace KioskId value
+        StringChangeEx(Content, '"KioskId": "KIOSK-001"', '"KioskId": "' + KioskIdEdit.Text + '"', True);
+        // Replace BranchId value
+        StringChangeEx(Content, '"BranchId": "BRANCH-001"', '"BranchId": "' + BranchIdEdit.Text + '"', True);
+        // Replace ServerUrl if user changed it
+        TargetUrl := Trim(ServerUrlEdit.Text);
+        if TargetUrl <> '' then
+          StringChangeEx(Content, '"SupabaseUrl": "https://magic-card-trust-id.vercel.app"', '"SupabaseUrl": "' + TargetUrl + '"', True);
+        SaveStringToFile(ConfigFilePath, AnsiString(Content), False);
+      end;
     end;
   end;
 end;

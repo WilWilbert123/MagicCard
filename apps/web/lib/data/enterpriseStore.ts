@@ -96,6 +96,22 @@ export interface Employee {
   createdAt: string;
 }
 
+export interface InstalledPrinterInfo {
+  name: string;
+  isDefault: boolean;
+  isOnline: boolean;
+  status: string;
+}
+
+export interface KioskPrinterConfig {
+  targetPrinter?: string;
+  duplexMode?: 'Duplex' | 'SingleSided' | 'Auto';
+  offsetXmm?: number;
+  offsetYmm?: number;
+  ribbonType?: string;
+  brandProfile?: string;
+}
+
 export interface KioskDevice {
   id: string;
   code: string;
@@ -116,6 +132,8 @@ export interface KioskDevice {
   cardsRemaining?: number;
   totalCardsPrinted?: number;
   lastHeartbeat: string;
+  installedPrinters?: InstalledPrinterInfo[];
+  printerConfig?: KioskPrinterConfig;
 }
 
 export interface PrintJobRecord {

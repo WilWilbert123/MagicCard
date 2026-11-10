@@ -6,7 +6,22 @@ public class MockCardPrinter : ICardPrinter
 {
     private readonly ILogger<MockCardPrinter> _logger;
 
-    public string PrinterName => "Magicard 300 Duo (Mock)";
+    private string _targetPrinter = "Magicard 300 Duo (Mock)";
+    private string _duplexMode = "Duplex";
+    private string _ribbonType = "YMCKO";
+
+    public string PrinterName => _targetPrinter;
+    public string CurrentTargetPrinter => _targetPrinter;
+    public string ActiveDuplexMode => _duplexMode;
+    public string ActiveRibbonType => _ribbonType;
+
+    public void Configure(string targetPrinter, string? duplexMode = null, double? offsetXmm = null, double? offsetYmm = null, string? ribbonType = null)
+    {
+        if (!string.IsNullOrWhiteSpace(targetPrinter)) _targetPrinter = targetPrinter;
+        if (!string.IsNullOrWhiteSpace(duplexMode)) _duplexMode = duplexMode;
+        if (!string.IsNullOrWhiteSpace(ribbonType)) _ribbonType = ribbonType;
+        _logger.LogInformation("[MOCK PRINTER] Configured target printer to: {Printer}, Duplex: {Duplex}, Ribbon: {Ribbon}", _targetPrinter, _duplexMode, _ribbonType);
+    }
 
     public MockCardPrinter(ILogger<MockCardPrinter> logger)
     {

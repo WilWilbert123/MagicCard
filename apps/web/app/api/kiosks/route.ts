@@ -100,13 +100,38 @@ export async function GET() {
       
       let rawSummary = k.printer_status_summary || 'READY';
       let extractedModel = k.printer_model || k.printer_type || '';
+      let printerConfig: any = null;
+      let installedPrinters: any[] = [];
       
       if (rawSummary) {
+        // Extract {CFG:...}
+        const cfgMatch = rawSummary.match(/\{CFG:(.*?)\}(?:\s*\{PRINTERS:.*\}|$)/s);
+        if (cfgMatch && cfgMatch[1]) {
+          try {
+            printerConfig = JSON.parse(cfgMatch[1]);
+          } catch {}
+          rawSummary = rawSummary.replace(/\{CFG:.*?\}/s, '').trim();
+        }
+
+        // Extract {PRINTERS:...}
+        const printersMatch = rawSummary.match(/\{PRINTERS:(.*?)\}$/s);
+        if (printersMatch && printersMatch[1]) {
+          try {
+            installedPrinters = JSON.parse(printersMatch[1]);
+          } catch {}
+          rawSummary = rawSummary.replace(/\{PRINTERS:.*?\}$/s, '').trim();
+        }
+
+        // Extract [model]
         const matchModel = rawSummary.match(/\[(.*?)\]/);
         if (matchModel && matchModel[1]) {
           extractedModel = matchModel[1];
           rawSummary = rawSummary.replace(/\[.*?\]/, '').trim();
         }
+      }
+
+      if (printerConfig?.targetPrinter) {
+        extractedModel = printerConfig.targetPrinter;
       }
       if (!rawSummary) rawSummary = 'READY';
 
@@ -128,12 +153,21 @@ export async function GET() {
         printerModel: extractedModel || 'Magicard 600NEO',
         printerStatus: printerStatusSummary,
         ribbonLevelPct: isOffline ? 0 : ribbonPct,
-        ribbonType: k.ribbon_type || 'YMCKO',
+        ribbonType: printerConfig?.ribbonType || k.ribbon_type || 'YMCKO',
         cardsPrinted,
         maxCardCapacity,
         cardsRemaining,
         totalCardsPrinted,
         lastHeartbeat: k.last_heartbeat_at || undefined,
+        installedPrinters,
+        printerConfig: printerConfig || {
+          targetPrinter: extractedModel || 'Magicard 600NEO',
+          duplexMode: 'Duplex',
+          offsetXmm: 0,
+          offsetYmm: 0,
+          ribbonType: 'YMCKO',
+          brandProfile: 'Magicard'
+        },
       };
     });
 
@@ -162,7 +196,7 @@ export async function PATCH(request: Request) {
 
   try {
     const body = await request.json();
-    const { id, status, name, code, ipAddress, maxCardCapacity, resetTray } = body;
+    const { id, status, name, code, ipAddress, maxCardCapacity, resetTray, printerConfig } = body;
     if (!id) {
       return NextResponse.json({ error: 'Missing kiosk id' }, { status: 400 });
     }
@@ -180,6 +214,29 @@ export async function PATCH(request: Request) {
     }
     if (resetTray) {
       updatePayload.tray_reset_at = new Date().toISOString();
+    }
+
+    if (printerConfig) {
+      const { data: currentKiosk } = await supabase
+        .from('kiosks')
+        .select('printer_status_summary')
+        .eq('id', id)
+        .maybeSingle();
+
+      let currentSummary = currentKiosk?.printer_status_summary || 'READY';
+      let existingPrintersTag = '';
+      const printersMatch = currentSummary.match(/\{PRINTERS:.*?\}$/s);
+      if (printersMatch) {
+        existingPrintersTag = printersMatch[0];
+        currentSummary = currentSummary.replace(/\{PRINTERS:.*?\}$/s, '').trim();
+      }
+      currentSummary = currentSummary.replace(/\{CFG:.*?\}/s, '').trim();
+      currentSummary = currentSummary.replace(/\[.*?\]/, '').trim();
+      if (!currentSummary) currentSummary = 'READY';
+
+      const targetPrinterName = printerConfig.targetPrinter || 'Generic Card Printer';
+      const cfgTag = `{CFG:${JSON.stringify(printerConfig)}}`;
+      updatePayload.printer_status_summary = `${currentSummary} [${targetPrinterName}] ${cfgTag} ${existingPrintersTag}`.trim();
     }
 
     const { data, error } = await supabase
