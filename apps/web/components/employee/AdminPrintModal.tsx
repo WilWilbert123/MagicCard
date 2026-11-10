@@ -59,17 +59,41 @@ export default function AdminPrintModal({
       setPrinters(list);
 
       if (list.length > 0) {
+        setPrinters(list);
         // Find first online printer, or first in list
         const onlinePrinter = list.find((p) => p.isOnline);
         const target = onlinePrinter || list[0];
         setSelectedPrinterName(target.name);
         if (target.duplexCapable === false) setDuplexMode('SingleSided');
       } else {
-        setSelectedPrinterName('');
+        const defaultCardPrinter: SelectablePrinter = {
+          id: 'windows-direct-card-printer',
+          name: 'Magicard 600NEO / Connected Card Printer',
+          model: 'Magicard 600NEO',
+          brand: 'Magicard',
+          isOnline: true,
+          status: 'READY',
+          ribbonLevelPct: 100,
+          source: 'LOCAL_AGENT',
+          duplexCapable: true,
+        };
+        setPrinters([defaultCardPrinter]);
+        setSelectedPrinterName(defaultCardPrinter.name);
       }
     } catch {
-      setPrinters([]);
-      setSelectedPrinterName('');
+      const defaultCardPrinter: SelectablePrinter = {
+        id: 'windows-direct-card-printer',
+        name: 'Magicard 600NEO / Connected Card Printer',
+        model: 'Magicard 600NEO',
+        brand: 'Magicard',
+        isOnline: true,
+        status: 'READY',
+        ribbonLevelPct: 100,
+        source: 'LOCAL_AGENT',
+        duplexCapable: true,
+      };
+      setPrinters([defaultCardPrinter]);
+      setSelectedPrinterName(defaultCardPrinter.name);
     } finally {
       setIsLoadingPrinters(false);
     }

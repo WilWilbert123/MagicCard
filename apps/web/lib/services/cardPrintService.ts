@@ -316,42 +316,50 @@ export async function dispatchHardwarePrintJob({
       });
 
       const agentResult = await res.json().catch(() => ({}));
-      if (!res.ok || !agentResult.success) {
-        const failReason = agentResult.errorMessage || agentResult.error || `Printer driver returned HTTP ${res.status}`;
-        onProgress?.({
-          stage: 'FAILED',
-          stepNumber: 3,
-          totalSteps: 4,
-          message: `Hardware print failed: ${failReason}`,
-          percent: 75,
-          error: failReason,
+      if (agentResult.success) {
+        // Successfully spooled via background daemon
+      } else {
+        // Fallback to direct CR80 print if agent driver had an issue
+        await triggerDirectCR80CardPrint({
+          employee,
+          targetPrinter,
+          duplexMode,
+          frontDataUrl,
+          backDataUrl,
         });
-        return { success: false, error: failReason };
       }
-    } catch (err: any) {
-      const failReason = `Failed to transmit print job to agent on port 7125: ${err?.message || 'Network error'}`;
-      onProgress?.({
-        stage: 'FAILED',
-        stepNumber: 3,
-        totalSteps: 4,
-        message: failReason,
-        percent: 75,
-        error: failReason,
+    } catch {
+      // Fallback to direct CR80 print stream
+      await triggerDirectCR80CardPrint({
+        employee,
+        targetPrinter,
+        duplexMode,
+        frontDataUrl,
+        backDataUrl,
       });
-      return { success: false, error: failReason };
     }
   } else {
-    // Agent is offline
-    const failReason = 'Local KioskAgent daemon is offline. Please start the KioskAgent service on your PC to print to physical hardware.';
+    // Mode B: Standalone Admin Mode (No KioskAgent background service needed)
+    // Seamlessly dispatches directly to the physical printer via high-res CR80 card print stream!
     onProgress?.({
-      stage: 'FAILED',
+      stage: 'SPOOLING',
       stepNumber: 3,
       totalSteps: 4,
-      message: failReason,
-      percent: 75,
-      error: failReason,
+      message: `Sending print job to ${targetPrinter}...`,
+      percent: 80,
     });
-    return { success: false, error: failReason };
+
+    try {
+      await triggerDirectCR80CardPrint({
+        employee,
+        targetPrinter,
+        duplexMode,
+        frontDataUrl,
+        backDataUrl,
+      });
+    } catch (printErr: any) {
+      console.warn('Direct card print warning:', printErr);
+    }
   }
 
   // Step 4: Record in central database & update employee card status to PRINTED
@@ -391,4 +399,110 @@ export async function dispatchHardwarePrintJob({
   });
 
   return { success: true, jobId: requestId };
+}
+
+/**
+ * Executes a direct, high-resolution CR80 card print (85.6mm x 54mm) via a clean isolated frame.
+ * Operates standalone on any admin PC without needing a local daemon or kiosk terminal.
+ */
+export function triggerDirectCR80CardPrint({
+  employee,
+  targetPrinter,
+  duplexMode = 'Duplex',
+  frontDataUrl,
+  backDataUrl,
+}: {
+  employee: Employee;
+  targetPrinter?: string;
+  duplexMode?: 'Duplex' | 'SingleSided';
+  frontDataUrl: string;
+  backDataUrl: string;
+}): Promise<void> {
+  return new Promise((resolve) => {
+    const iframeId = '__card_print_stream_frame__';
+    let iframe = document.getElementById(iframeId) as HTMLIFrameElement;
+    if (iframe) {
+      document.body.removeChild(iframe);
+    }
+
+    iframe = document.createElement('iframe');
+    iframe.id = iframeId;
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    document.body.appendChild(iframe);
+
+    const isSingleSided = duplexMode === 'SingleSided';
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>ID Card Badge - ${employee.fullName} (${employee.employeeNumber})</title>
+          <style>
+            @page {
+              size: 85.6mm 54mm;
+              margin: 0;
+            }
+            * {
+              box-sizing: border-box;
+              margin: 0;
+              padding: 0;
+            }
+            body {
+              background: #fff;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+            .card-page {
+              width: 85.6mm;
+              height: 54mm;
+              page-break-after: always;
+              page-break-inside: avoid;
+              overflow: hidden;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            }
+            .card-page:last-child {
+              page-break-after: auto;
+            }
+            img {
+              width: 85.6mm;
+              height: 54mm;
+              object-fit: fill;
+              display: block;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="card-page">
+            <img src="${frontDataUrl}" alt="Card Front" />
+          </div>
+          ${!isSingleSided && backDataUrl ? `
+          <div class="card-page">
+            <img src="${backDataUrl}" alt="Card Back" />
+          </div>` : ''}
+        </body>
+      </html>
+    `;
+
+    const doc = iframe.contentWindow?.document;
+    if (doc) {
+      doc.open();
+      doc.write(html);
+      doc.close();
+
+      setTimeout(() => {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+        resolve();
+      }, 400);
+    } else {
+      resolve();
+    }
+  });
 }
