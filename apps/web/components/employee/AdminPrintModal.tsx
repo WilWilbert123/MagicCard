@@ -4,14 +4,12 @@ import { useState, useEffect } from 'react';
 import {
   Printer,
   X,
-  CheckCircle2,
   AlertCircle,
   RefreshCw,
   HardDrive,
-  Sliders,
   Layers,
-  Check,
   ChevronDown,
+  AlertTriangle,
 } from 'lucide-react';
 import { Employee, DEFAULT_CR80_TEMPLATE } from '@/lib/data/enterpriseStore';
 import {
@@ -19,7 +17,6 @@ import {
   dispatchHardwarePrintJob,
   renderEmployeeCardCanvases,
   SelectablePrinter,
-  STANDARD_PRINTER_PRESETS,
   PrintProgressState,
 } from '@/lib/services/cardPrintService';
 import { toast } from '@/components/ui/Toast';
@@ -41,8 +38,8 @@ export default function AdminPrintModal({
   verificationBaseUrl = '',
   template = DEFAULT_CR80_TEMPLATE,
 }: AdminPrintModalProps) {
-  const [printers, setPrinters] = useState<SelectablePrinter[]>(STANDARD_PRINTER_PRESETS);
-  const [selectedPrinterName, setSelectedPrinterName] = useState<string>('Magicard 600NEO Duo');
+  const [printers, setPrinters] = useState<SelectablePrinter[]>([]);
+  const [selectedPrinterName, setSelectedPrinterName] = useState<string>('');
   const [duplexMode, setDuplexMode] = useState<'Duplex' | 'SingleSided'>('Duplex');
   const [isLoadingPrinters, setIsLoadingPrinters] = useState(false);
 
@@ -54,22 +51,25 @@ export default function AdminPrintModal({
   const [printProgress, setPrintProgress] = useState<PrintProgressState | null>(null);
   const [isPrinting, setIsPrinting] = useState(false);
 
-  // Load available printers
+  // Load REAL available printers with zero mock data
   const loadPrinters = async () => {
     setIsLoadingPrinters(true);
     try {
       const list = await fetchAvailableCardPrinters();
+      setPrinters(list);
+
       if (list.length > 0) {
-        setPrinters(list);
-        // Default to first online or Magicard
-        const preferred = list.find((p) => p.name.toLowerCase().includes('magicard') || p.name.toLowerCase().includes('600neo')) || list[0];
-        if (preferred) {
-          setSelectedPrinterName(preferred.name);
-          if (preferred.duplexCapable === false) setDuplexMode('SingleSided');
-        }
+        // Find first online printer, or first in list
+        const onlinePrinter = list.find((p) => p.isOnline);
+        const target = onlinePrinter || list[0];
+        setSelectedPrinterName(target.name);
+        if (target.duplexCapable === false) setDuplexMode('SingleSided');
+      } else {
+        setSelectedPrinterName('');
       }
     } catch {
-      setPrinters(STANDARD_PRINTER_PRESETS);
+      setPrinters([]);
+      setSelectedPrinterName('');
     } finally {
       setIsLoadingPrinters(false);
     }
@@ -109,17 +109,11 @@ export default function AdminPrintModal({
 
   if (!isOpen || !employee) return null;
 
-  const currentPrinter = printers.find((p) => p.name === selectedPrinterName) || printers[0] || {
-    name: selectedPrinterName,
-    brand: 'Magicard',
-    model: '600NEO Duo',
-    isOnline: true,
-    status: 'READY',
-    ribbonLevelPct: 100,
-  };
+  const currentPrinter = printers.find((p) => p.name === selectedPrinterName);
+  const isPrinterReady = currentPrinter?.isOnline === true;
 
   const handleExecutePrint = async () => {
-    if (isPrinting) return;
+    if (isPrinting || !currentPrinter || !isPrinterReady) return;
     setIsPrinting(true);
 
     try {
@@ -234,69 +228,111 @@ export default function AdminPrintModal({
               </button>
             </div>
 
-            <div className="relative">
-              <select
-                id="printer-select"
-                value={selectedPrinterName}
-                onChange={(e) => setSelectedPrinterName(e.target.value)}
-                disabled={isPrinting}
-                className="w-full appearance-none bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white font-semibold focus:outline-none focus:border-red-500 pr-9 cursor-pointer transition shadow-2xs"
-              >
-                {printers.map((p) => (
-                  <option key={p.id} value={p.name}>
-                    {p.name} — [{p.status || 'READY'}]
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-3 pointer-events-none" />
-            </div>
+            {printers.length > 0 ? (
+              <>
+                <div className="relative">
+                  <select
+                    id="printer-select"
+                    value={selectedPrinterName}
+                    onChange={(e) => setSelectedPrinterName(e.target.value)}
+                    disabled={isPrinting}
+                    className="w-full appearance-none bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white font-semibold focus:outline-none focus:border-red-500 pr-9 cursor-pointer transition shadow-2xs"
+                  >
+                    {printers.map((p) => (
+                      <option key={p.id} value={p.name}>
+                        {p.name} — [{p.status}]
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-3 pointer-events-none" />
+                </div>
 
-            {/* Selected Printer Telemetry Card */}
-            <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs">
-              <div className="flex items-center gap-2">
-                <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="font-bold text-slate-900 dark:text-white">{currentPrinter.name}</span>
-                <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-mono font-bold">
-                  {currentPrinter.status || 'READY'}
-                </span>
-              </div>
+                {/* Selected Printer Telemetry Card */}
+                {currentPrinter && (
+                  <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-2.5 h-2.5 rounded-full ${isPrinterReady ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
+                      <span className="font-bold text-slate-900 dark:text-white">{currentPrinter.name}</span>
+                      <span className={`text-[10px] px-2 py-0.5 rounded font-mono font-bold ${
+                        isPrinterReady
+                          ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                          : 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300'
+                      }`}>
+                        {currentPrinter.status}
+                      </span>
+                    </div>
 
-              <div className="flex items-center gap-3 text-[11px] text-slate-600 dark:text-slate-400">
-                <span>Ribbon: <strong className="text-emerald-600 dark:text-emerald-400">{currentPrinter.ribbonLevelPct || 100}%</strong></span>
-                <span>Type: <strong>CR80 Standard</strong></span>
-              </div>
-            </div>
+                    <div className="flex items-center gap-3 text-[11px] text-slate-600 dark:text-slate-400">
+                      {isPrinterReady && (
+                        <span>Ribbon: <strong className="text-emerald-600 dark:text-emerald-400">{currentPrinter.ribbonLevelPct}%</strong></span>
+                      )}
+                      <span>Format: <strong>CR80 Standard</strong></span>
+                    </div>
+                  </div>
+                )}
 
-            {/* Duplex / Single Sided Toggle */}
-            <div className="flex items-center justify-between pt-1 text-xs">
-              <span className="text-slate-600 dark:text-slate-400 font-medium">Print Sides:</span>
-              <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-900 p-0.5 rounded-lg border border-slate-200 dark:border-slate-800 text-xs font-semibold">
-                <button
-                  type="button"
-                  onClick={() => setDuplexMode('Duplex')}
-                  disabled={isPrinting}
-                  className={`px-3 py-1 rounded-md transition ${
-                    duplexMode === 'Duplex'
-                      ? 'bg-red-600 text-white shadow-xs font-bold'
-                      : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
-                  }`}
-                >
-                  Double-Sided (Duplex)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setDuplexMode('SingleSided')}
-                  disabled={isPrinting}
-                  className={`px-3 py-1 rounded-md transition ${
-                    duplexMode === 'SingleSided'
-                      ? 'bg-red-600 text-white shadow-xs font-bold'
-                      : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
-                  }`}
-                >
-                  Single-Sided (Front Only)
-                </button>
+                {/* Offline Warning Notice if selected printer is not ready */}
+                {!isPrinterReady && currentPrinter && (
+                  <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800/60 text-red-700 dark:text-red-300 text-xs flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 text-red-500 shrink-0" />
+                    <span>Selected printer is currently <strong>{currentPrinter.status}</strong>. Please ensure the printer is turned on and connected to your computer.</span>
+                  </div>
+                )}
+
+                {/* Duplex / Single Sided Toggle */}
+                <div className="flex items-center justify-between pt-1 text-xs">
+                  <span className="text-slate-600 dark:text-slate-400 font-medium">Print Sides:</span>
+                  <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-900 p-0.5 rounded-lg border border-slate-200 dark:border-slate-800 text-xs font-semibold">
+                    <button
+                      type="button"
+                      onClick={() => setDuplexMode('Duplex')}
+                      disabled={isPrinting || !isPrinterReady}
+                      className={`px-3 py-1 rounded-md transition ${
+                        duplexMode === 'Duplex'
+                          ? 'bg-red-600 text-white shadow-xs font-bold'
+                          : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                      }`}
+                    >
+                      Double-Sided (Duplex)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDuplexMode('SingleSided')}
+                      disabled={isPrinting || !isPrinterReady}
+                      className={`px-3 py-1 rounded-md transition ${
+                        duplexMode === 'SingleSided'
+                          ? 'bg-red-600 text-white shadow-xs font-bold'
+                          : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                      }`}
+                    >
+                      Single-Sided (Front Only)
+                    </button>
+                  </div>
+                </div>
+              </>
+            ) : (
+              /* No Printer Detected Warning Box - Real & Honest Telemetry */
+              <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/60 space-y-2 text-xs">
+                <div className="flex items-center gap-2 font-bold text-amber-800 dark:text-amber-300">
+                  <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                  <span>No Physical ID Card Printer Detected</span>
+                </div>
+                <p className="text-amber-700 dark:text-amber-400 text-[11px] leading-relaxed">
+                  No card printer was found on this computer or active kiosk fleet. Please connect your ID card printer (such as <strong>Magicard 600NEO</strong>) via USB cable and verify that the <strong>KioskAgent</strong> daemon is running.
+                </p>
+                <div className="pt-1">
+                  <button
+                    type="button"
+                    onClick={loadPrinters}
+                    disabled={isLoadingPrinters}
+                    className="px-3 py-1.5 rounded-lg bg-amber-200 dark:bg-amber-900 text-amber-900 dark:text-amber-100 font-semibold text-xs hover:bg-amber-300 dark:hover:bg-amber-800 transition flex items-center gap-1.5"
+                  >
+                    <RefreshCw className={`w-3 h-3 ${isLoadingPrinters ? 'animate-spin' : ''}`} />
+                    <span>Scan for Connected Hardware</span>
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Real-time Print Progress State */}
@@ -385,11 +421,23 @@ export default function AdminPrintModal({
           <button
             type="button"
             onClick={handleExecutePrint}
-            disabled={isPrinting || isRenderingPreview}
-            className="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold shadow-md shadow-red-600/30 transition flex items-center justify-center gap-2 disabled:opacity-50"
+            disabled={isPrinting || isRenderingPreview || !isPrinterReady}
+            className={`px-5 py-2.5 rounded-xl text-xs font-bold shadow-md transition flex items-center justify-center gap-2 ${
+              isPrinterReady && !isPrinting
+                ? 'bg-red-600 hover:bg-red-500 text-white shadow-red-600/30 cursor-pointer'
+                : 'bg-slate-300 dark:bg-slate-800 text-slate-500 dark:text-slate-400 cursor-not-allowed shadow-none'
+            }`}
           >
             <Printer className="w-4 h-4" />
-            <span>{isPrinting ? 'Printing Badge...' : `Print to ${currentPrinter.model || currentPrinter.name}`}</span>
+            <span>
+              {isPrinting
+                ? 'Printing Badge...'
+                : !currentPrinter
+                ? 'No Printer Detected'
+                : !isPrinterReady
+                ? 'Printer Offline - Cannot Print'
+                : `Print to ${currentPrinter.model || currentPrinter.name}`}
+            </span>
           </button>
         </div>
       </div>

@@ -20,7 +20,7 @@ export interface SelectablePrinter {
   isOnline: boolean;
   status: string;
   ribbonLevelPct: number;
-  source: 'LOCAL_AGENT' | 'KIOSK_FLEET' | 'PRESET';
+  source: 'LOCAL_AGENT' | 'KIOSK_FLEET';
   kioskCode?: string;
   duplexCapable?: boolean;
 }
@@ -37,66 +37,9 @@ export interface PrintProgressState {
 const DEFAULT_AGENT_URL = process.env.NEXT_PUBLIC_KIOSK_AGENT_URL || 'http://127.0.0.1:7125';
 const AGENT_SECRET_TOKEN = 'super-secret-local-agent-token-2026';
 
-export const STANDARD_PRINTER_PRESETS: SelectablePrinter[] = [
-  {
-    id: 'magicard-600neo-duo',
-    name: 'Magicard 600NEO Duo',
-    model: '600NEO Duo',
-    brand: 'Magicard',
-    isOnline: true,
-    status: 'READY',
-    ribbonLevelPct: 100,
-    source: 'PRESET',
-    duplexCapable: true,
-  },
-  {
-    id: 'magicard-pronto-300',
-    name: 'Magicard Pronto / 300',
-    model: 'Pronto',
-    brand: 'Magicard',
-    isOnline: true,
-    status: 'READY',
-    ribbonLevelPct: 100,
-    source: 'PRESET',
-    duplexCapable: false,
-  },
-  {
-    id: 'zebra-zc300',
-    name: 'Zebra ZC300 Card Printer',
-    model: 'ZC300',
-    brand: 'Zebra',
-    isOnline: true,
-    status: 'READY',
-    ribbonLevelPct: 100,
-    source: 'PRESET',
-    duplexCapable: true,
-  },
-  {
-    id: 'evolis-primacy',
-    name: 'Evolis Primacy 2 Card Printer',
-    model: 'Primacy',
-    brand: 'Evolis',
-    isOnline: true,
-    status: 'READY',
-    ribbonLevelPct: 100,
-    source: 'PRESET',
-    duplexCapable: true,
-  },
-  {
-    id: 'fargo-dtc1250e',
-    name: 'HID Fargo DTC1250e',
-    model: 'DTC1250e',
-    brand: 'Fargo',
-    isOnline: true,
-    status: 'READY',
-    ribbonLevelPct: 100,
-    source: 'PRESET',
-    duplexCapable: true,
-  },
-];
-
 /**
- * Probes the local Windows KioskAgent daemon running on http://127.0.0.1:7125
+ * Probes the local Windows KioskAgent daemon running on http://127.0.0.1:7125.
+ * Strictly reflects actual connection and hardware state with zero mock data.
  */
 export async function checkLocalHardwareAgent(agentBaseUrl = DEFAULT_AGENT_URL): Promise<LocalHardwareAgentStatus> {
   const controller = new AbortController();
@@ -113,11 +56,11 @@ export async function checkLocalHardwareAgent(agentBaseUrl = DEFAULT_AGENT_URL):
     if (!res.ok) {
       return {
         isOnline: false,
-        printerModel: 'Magicard 600NEO Duo',
+        printerModel: 'Disconnected',
         printerStatus: 'HTTP_ERROR',
         printerConnected: false,
         ribbonLevelPct: 0,
-        ribbonType: 'YMCKO',
+        ribbonType: 'None',
         agentVersion: 'Unknown',
         error: `Agent returned HTTP ${res.status}`,
       };
@@ -130,41 +73,44 @@ export async function checkLocalHardwareAgent(agentBaseUrl = DEFAULT_AGENT_URL):
       if (match) ribbonPct = parseInt(match[1], 10);
     }
 
+    const isConnected = data.printerConnected !== false && data.printerStatus && !data.printerStatus.includes('OFFLINE') && !data.printerStatus.includes('UNAVAILABLE');
+
     return {
       isOnline: true,
-      printerModel: data.printerModel || 'Magicard 600NEO Duo',
-      printerStatus: data.printerStatus || 'READY',
-      printerConnected: data.printerConnected !== false,
+      printerModel: data.printerModel || 'Windows Card Printer',
+      printerStatus: data.printerStatus || (isConnected ? 'READY' : 'OFFLINE'),
+      printerConnected: isConnected,
       ribbonLevelPct: ribbonPct,
-      ribbonType: 'YMCKO',
+      ribbonType: data.ribbonType || 'YMCKO',
       agentVersion: data.agentVersion || '1.0.0',
     };
   } catch (err: any) {
     clearTimeout(timeoutId);
     return {
       isOnline: false,
-      printerModel: 'Magicard 600NEO Duo',
-      printerStatus: 'READY',
+      printerModel: 'Disconnected',
+      printerStatus: 'OFFLINE',
       printerConnected: false,
-      ribbonLevelPct: 100,
-      ribbonType: 'YMCKO',
+      ribbonLevelPct: 0,
+      ribbonType: 'None',
       agentVersion: 'None',
-      error: err?.name === 'AbortError' ? 'Connection timed out' : 'Local hardware agent not reachable',
+      error: err?.name === 'AbortError' ? 'Connection timed out' : 'Local hardware agent not reachable on localhost:7125',
     };
   }
 }
 
 /**
- * Fetches all available card printers across the fleet and local Windows environment.
+ * Fetches REAL available card printers from local Windows agent and registered fleet kiosks.
+ * Returns only genuine detected hardware. Zero mock/fake presets.
  */
 export async function fetchAvailableCardPrinters(agentBaseUrl = DEFAULT_AGENT_URL): Promise<SelectablePrinter[]> {
   const results: SelectablePrinter[] = [];
   const seenNames = new Set<string>();
 
-  // 1. Try local agent printers endpoint
+  // 1. Check local agent printers endpoint (real Windows installed printers)
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 1000);
+    const timeout = setTimeout(() => controller.abort(), 1200);
     const localRes = await fetch(`${agentBaseUrl}/api/printers`, { signal: controller.signal });
     clearTimeout(timeout);
     if (localRes.ok) {
@@ -174,14 +120,15 @@ export async function fetchAvailableCardPrinters(agentBaseUrl = DEFAULT_AGENT_UR
           const pName = p.name || p.Name;
           if (pName && !seenNames.has(pName.toLowerCase())) {
             seenNames.add(pName.toLowerCase());
+            const isOnline = p.isOnline === true || (p.status && p.status.toUpperCase() === 'READY');
             results.push({
               id: `local-${pName.toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
               name: pName,
               model: pName,
               brand: detectBrand(pName),
-              isOnline: p.isOnline !== false,
-              status: p.status || 'READY',
-              ribbonLevelPct: 100,
+              isOnline,
+              status: isOnline ? 'READY' : 'OFFLINE',
+              ribbonLevelPct: isOnline ? 100 : 0,
               source: 'LOCAL_AGENT',
               duplexCapable: true,
             });
@@ -191,7 +138,7 @@ export async function fetchAvailableCardPrinters(agentBaseUrl = DEFAULT_AGENT_UR
     }
   } catch { }
 
-  // 2. Fetch fleet kiosks registered in database
+  // 2. Fetch fleet kiosks registered in central database
   try {
     const fleetRes = await fetch('/api/kiosks');
     if (fleetRes.ok) {
@@ -199,33 +146,33 @@ export async function fetchAvailableCardPrinters(agentBaseUrl = DEFAULT_AGENT_UR
       if (Array.isArray(json.data)) {
         for (const k of json.data) {
           const pModel = k.printerModel || k.printerConfig?.targetPrinter;
-          if (pModel && !seenNames.has(pModel.toLowerCase())) {
-            seenNames.add(pModel.toLowerCase());
-            results.push({
-              id: `kiosk-${k.id}`,
-              name: `${pModel} (${k.name || k.kioskCode})`,
-              model: pModel,
-              brand: detectBrand(pModel),
-              isOnline: k.status === 'ONLINE',
-              status: k.printerStatus || 'READY',
-              ribbonLevelPct: k.ribbonLevelPct || 100,
-              source: 'KIOSK_FLEET',
-              kioskCode: k.kioskCode,
-              duplexCapable: k.printerConfig?.duplexMode !== 'SingleSided',
-            });
+          if (pModel) {
+            const isKioskOnline = k.status === 'ONLINE';
+            const rawStatus = k.printerStatus || '';
+            const isPrinterReady = isKioskOnline && (rawStatus === 'READY' || rawStatus.startsWith('READY'));
+            const statusLabel = isPrinterReady ? 'READY' : (isKioskOnline ? (rawStatus || 'OFFLINE') : 'OFFLINE (Agent Disconnected)');
+
+            const displayName = `${pModel} (${k.name || k.kioskCode || 'Kiosk'})`;
+            if (!seenNames.has(displayName.toLowerCase())) {
+              seenNames.add(displayName.toLowerCase());
+              results.push({
+                id: `kiosk-${k.id}`,
+                name: displayName,
+                model: pModel,
+                brand: detectBrand(pModel),
+                isOnline: isPrinterReady,
+                status: statusLabel,
+                ribbonLevelPct: isPrinterReady ? (k.ribbonLevelPct || 100) : 0,
+                source: 'KIOSK_FLEET',
+                kioskCode: k.kioskCode,
+                duplexCapable: k.printerConfig?.duplexMode !== 'SingleSided',
+              });
+            }
           }
         }
       }
     }
   } catch { }
-
-  // 3. Add standard presets if not already in list
-  for (const preset of STANDARD_PRINTER_PRESETS) {
-    if (!seenNames.has(preset.name.toLowerCase())) {
-      seenNames.add(preset.name.toLowerCase());
-      results.push(preset);
-    }
-  }
 
   return results;
 }
@@ -270,7 +217,7 @@ export async function dispatchHardwarePrintJob({
   template = DEFAULT_CR80_TEMPLATE,
   verificationBaseUrl = '',
   agentBaseUrl = DEFAULT_AGENT_URL,
-  targetPrinter = 'Magicard 600NEO Duo',
+  targetPrinter,
   duplexMode = 'Duplex',
   preRenderedCanvases,
   onProgress,
@@ -284,12 +231,16 @@ export async function dispatchHardwarePrintJob({
   preRenderedCanvases?: { frontDataUrl: string; backDataUrl: string };
   onProgress?: (state: PrintProgressState) => void;
 }): Promise<{ success: boolean; error?: string; jobId?: string }> {
+  if (!targetPrinter) {
+    return { success: false, error: 'No printer selected. Please connect and select an ID card printer.' };
+  }
+
   // Step 1: Probe connection
   onProgress?.({
     stage: 'CHECKING',
     stepNumber: 1,
     totalSteps: 4,
-    message: `Connecting to ${targetPrinter}...`,
+    message: `Checking connection to ${targetPrinter}...`,
     percent: 15,
   });
 
@@ -378,20 +329,29 @@ export async function dispatchHardwarePrintJob({
         return { success: false, error: failReason };
       }
     } catch (err: any) {
-      console.warn('Local agent spool failed, falling back to direct system print:', err);
+      const failReason = `Failed to transmit print job to agent on port 7125: ${err?.message || 'Network error'}`;
+      onProgress?.({
+        stage: 'FAILED',
+        stepNumber: 3,
+        totalSteps: 4,
+        message: failReason,
+        percent: 75,
+        error: failReason,
+      });
+      return { success: false, error: failReason };
     }
   } else {
-    // Mode B: Standalone Direct Print Window
-    try {
-      await triggerBrowserCardPrint({
-        employee,
-        template,
-        verificationBaseUrl,
-        preRenderedCanvases: { frontDataUrl, backDataUrl },
-      });
-    } catch (printErr: any) {
-      console.warn('Direct print window warning:', printErr);
-    }
+    // Agent is offline
+    const failReason = 'Local KioskAgent daemon is offline. Please start the KioskAgent service on your PC to print to physical hardware.';
+    onProgress?.({
+      stage: 'FAILED',
+      stepNumber: 3,
+      totalSteps: 4,
+      message: failReason,
+      percent: 75,
+      error: failReason,
+    });
+    return { success: false, error: failReason };
   }
 
   // Step 4: Record in central database & update employee card status to PRINTED
@@ -431,96 +391,4 @@ export async function dispatchHardwarePrintJob({
   });
 
   return { success: true, jobId: requestId };
-}
-
-/**
- * Direct calibrated CR80 credit-card print window (85.6mm x 54mm)
- */
-export async function triggerBrowserCardPrint({
-  employee,
-  template = DEFAULT_CR80_TEMPLATE,
-  verificationBaseUrl = '',
-  preRenderedCanvases,
-}: {
-  employee: Employee;
-  template?: any;
-  verificationBaseUrl?: string;
-  preRenderedCanvases?: { frontDataUrl: string; backDataUrl: string };
-}): Promise<void> {
-  let frontDataUrl = preRenderedCanvases?.frontDataUrl;
-  let backDataUrl = preRenderedCanvases?.backDataUrl;
-
-  if (!frontDataUrl || !backDataUrl) {
-    const rendered = await renderEmployeeCardCanvases(employee, template, verificationBaseUrl);
-    frontDataUrl = rendered.frontDataUrl;
-    backDataUrl = rendered.backDataUrl;
-  }
-
-  const printWindow = window.open('', '_blank', 'width=850,height=600');
-  if (!printWindow) return;
-
-  const html = `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <title>Print ID Badge - ${employee.fullName} (${employee.employeeNumber})</title>
-        <style>
-          @page {
-            size: 85.6mm 54mm;
-            margin: 0;
-          }
-          * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-          }
-          body {
-            background-color: #fff;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-          }
-          .card-page {
-            width: 85.6mm;
-            height: 54mm;
-            page-break-after: always;
-            page-break-inside: avoid;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-          }
-          .card-page:last-child {
-            page-break-after: auto;
-          }
-          .card-img {
-            width: 100%;
-            height: 100%;
-            object-fit: fill;
-            display: block;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="card-page">
-          <img class="card-img" src="${frontDataUrl}" alt="Card Front" />
-        </div>
-        <div class="card-page">
-          <img class="card-img" src="${backDataUrl}" alt="Card Back" />
-        </div>
-        <script>
-          window.onload = function() {
-            setTimeout(function() {
-              window.focus();
-              window.print();
-              setTimeout(function() { window.close(); }, 800);
-            }, 250);
-          };
-        </script>
-      </body>
-    </html>
-  `;
-
-  printWindow.document.open();
-  printWindow.document.write(html);
-  printWindow.document.close();
 }
