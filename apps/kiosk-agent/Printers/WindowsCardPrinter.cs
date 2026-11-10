@@ -12,7 +12,51 @@ public class WindowsCardPrinter : ICardPrinter
     private readonly PrinterOptions _printerOptions;
     private readonly ILogger<WindowsCardPrinter> _logger;
 
-    public string PrinterName => _printerOptions.Name;
+    private string? _targetPrinterOverride;
+    private string? _duplexModeOverride = "Duplex"; // "Duplex" | "SingleSided" | "Auto"
+    private double _offsetXmm = 0.0;
+    private double _offsetYmm = 0.0;
+    private string _ribbonTypeOverride = "YMCKO";
+
+    // Known ID Card Printer manufacturers and brand driver keywords
+    private static readonly string[] CardPrinterKeywords = new[]
+    {
+        "Magicard", "Zebra", "Evolis", "Fargo", "Datacard", "Entrust",
+        "Matica", "Nisca", "Pointman", "Smart", "Badgy", "Primacy",
+        "Zenius", "DTC", "HDP", "ZC100", "ZC300", "ZXP", "TrustID", "Card"
+    };
+
+    public string PrinterName => ResolveTargetPrinterName() ?? _targetPrinterOverride ?? _printerOptions.Name;
+    public string CurrentTargetPrinter => ResolveTargetPrinterName() ?? _targetPrinterOverride ?? (!string.IsNullOrEmpty(_printerOptions.Name) ? _printerOptions.Name : "Default Printer");
+    public string ActiveDuplexMode => _duplexModeOverride ?? "Duplex";
+    public string ActiveRibbonType => _ribbonTypeOverride;
+
+    public void Configure(string targetPrinter, string? duplexMode = null, double? offsetXmm = null, double? offsetYmm = null, string? ribbonType = null)
+    {
+        if (!string.IsNullOrWhiteSpace(targetPrinter))
+        {
+            _targetPrinterOverride = targetPrinter.Trim();
+        }
+        if (!string.IsNullOrWhiteSpace(duplexMode))
+        {
+            _duplexModeOverride = duplexMode.Trim();
+        }
+        if (offsetXmm.HasValue)
+        {
+            _offsetXmm = offsetXmm.Value;
+        }
+        if (offsetYmm.HasValue)
+        {
+            _offsetYmm = offsetYmm.Value;
+        }
+        if (!string.IsNullOrWhiteSpace(ribbonType))
+        {
+            _ribbonTypeOverride = ribbonType.Trim();
+        }
+
+        _logger.LogInformation("WindowsCardPrinter dynamic config updated: Target='{Target}', Duplex='{Duplex}', Offset=({X}mm, {Y}mm), Ribbon='{Ribbon}'",
+            _targetPrinterOverride ?? _printerOptions.Name, _duplexModeOverride, _offsetXmm, _offsetYmm, _ribbonTypeOverride);
+    }
 
     public WindowsCardPrinter(
         IOptions<PrinterOptions> printerOptions,
@@ -96,32 +140,60 @@ public class WindowsCardPrinter : ICardPrinter
 
     private string? ResolveTargetPrinterName()
     {
-        var configured = _printerOptions.Name;
-        if (string.IsNullOrWhiteSpace(configured))
+        var configured = !string.IsNullOrWhiteSpace(_targetPrinterOverride) 
+            ? _targetPrinterOverride 
+            : _printerOptions.Name;
+
+        // 1. If configured target is explicitly specified
+        if (!string.IsNullOrWhiteSpace(configured) && !configured.Equals("AUTO", StringComparison.OrdinalIgnoreCase))
         {
-            return new PrinterSettings().PrinterName;
+            // Exact match
+            foreach (string printer in PrinterSettings.InstalledPrinters)
+            {
+                if (printer.Equals(configured, StringComparison.OrdinalIgnoreCase))
+                    return printer;
+            }
+
+            // Substring match (e.g. "ZC300", "Primacy", "600 NEO", "Magicard")
+            foreach (string printer in PrinterSettings.InstalledPrinters)
+            {
+                if (printer.Contains(configured, StringComparison.OrdinalIgnoreCase) ||
+                    configured.Contains(printer, StringComparison.OrdinalIgnoreCase))
+                    return printer;
+            }
         }
 
-        // 1. Exact match
+        // 2. Intelligent Auto-Discovery: Search for ANY recognized ID card printer
         foreach (string printer in PrinterSettings.InstalledPrinters)
         {
-            if (printer.Equals(configured, StringComparison.OrdinalIgnoreCase))
-                return printer;
+            foreach (var keyword in CardPrinterKeywords)
+            {
+                if (printer.Contains(keyword, StringComparison.OrdinalIgnoreCase))
+                {
+                    _logger.LogInformation("Auto-discovered physical ID Card printer: {PrinterName} (Matched keyword: {Keyword})", printer, keyword);
+                    return printer;
+                }
+            }
         }
 
-        // 2. Substring match (e.g. "Magicard" or "600NEO" or "Magicard 600")
-        foreach (string printer in PrinterSettings.InstalledPrinters)
+        // 3. Fallback to Windows default printer if valid
+        try
         {
-            if (printer.Contains(configured, StringComparison.OrdinalIgnoreCase) ||
-                configured.Contains(printer, StringComparison.OrdinalIgnoreCase))
-                return printer;
+            var defaultPrinter = new PrinterSettings().PrinterName;
+            if (!string.IsNullOrEmpty(defaultPrinter))
+            {
+                return defaultPrinter;
+            }
+        }
+        catch
+        {
+            // Ignore default printer resolution errors
         }
 
-        // 3. Fallback search for any Magicard driver
-        foreach (string printer in PrinterSettings.InstalledPrinters)
+        // 4. Return first installed printer if available
+        if (PrinterSettings.InstalledPrinters.Count > 0)
         {
-            if (printer.Contains("Magicard", StringComparison.OrdinalIgnoreCase))
-                return printer;
+            return PrinterSettings.InstalledPrinters[0];
         }
 
         return null;
@@ -182,8 +254,10 @@ public class WindowsCardPrinter : ICardPrinter
             printDoc.PrinterSettings.PrinterName = printerName;
             printDoc.PrinterSettings.Copies = 1;
 
-            // Enable Duplex (Back-to-Back) printing if supported by driver
-            if (printDoc.PrinterSettings.CanDuplex)
+            bool isSingleSided = _duplexModeOverride?.Equals("SingleSided", StringComparison.OrdinalIgnoreCase) == true;
+
+            // Enable Duplex (Back-to-Back) printing if supported by driver and not forced to single-sided
+            if (!isSingleSided && printDoc.PrinterSettings.CanDuplex)
             {
                 printDoc.PrinterSettings.Duplex = Duplex.Vertical;
             }
@@ -219,21 +293,31 @@ public class WindowsCardPrinter : ICardPrinter
             }
 
             int currentPage = 1;
-            bool hasBackPage = backImage != null || !string.IsNullOrEmpty(request.BackCanvasDataUrl);
+            // Only spool back page if back graphic exists AND not restricted to single-sided mode
+            bool hasBackPage = !isSingleSided && (backImage != null || !string.IsNullOrEmpty(request.BackCanvasDataUrl));
+
+            // Convert mm alignment offsets to 1/100 inch (1 mm = ~3.937 hundredths of an inch)
+            int offsetXUnits = (int)Math.Round(_offsetXmm * 3.937);
+            int offsetYUnits = (int)Math.Round(_offsetYmm * 3.937);
 
             printDoc.PrintPage += (sender, e) =>
             {
                 if (e.Graphics != null)
                 {
-                    // Ultra High-Quality rendering configuration for Magicard 600NEO dye-sublimation
+                    // Ultra High-Quality rendering configuration for CR80 dye-sublimation
                     e.Graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
                     e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
                     e.Graphics.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
                     e.Graphics.CompositingQuality = System.Drawing.Drawing2D.CompositingQuality.HighQuality;
                     e.Graphics.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
 
-                    // Use full page bounds (0,0 to Page width/height) for full edge-to-edge bleed without white border gaps
-                    Rectangle targetBounds = e.PageBounds;
+                    // Apply calibrated print alignment offset bounds
+                    Rectangle targetBounds = new Rectangle(
+                        e.PageBounds.X + offsetXUnits,
+                        e.PageBounds.Y + offsetYUnits,
+                        e.PageBounds.Width,
+                        e.PageBounds.Height
+                    );
 
                     if (currentPage == 1)
                     {

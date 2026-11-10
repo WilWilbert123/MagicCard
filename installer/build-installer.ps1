@@ -45,14 +45,33 @@ foreach ($file in $FilesToCopy) {
 }
 
 # 3. Build Inno Setup installer if ISCC is available
-$IsccPath = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
-$IssFile = Join-Path $ScriptDir "KioskAgentSetup.iss"
+$PossibleIsccPaths = @(
+    "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe",
+    "C:\Program Files (x86)\Inno Setup 6\ISCC.exe",
+    "C:\Program Files\Inno Setup 6\ISCC.exe"
+)
 
-$hasInno = Test-Path -Path $IsccPath
-Write-Host "Inno Setup present: $hasInno"
+$IsccPath = $null
+foreach ($p in $PossibleIsccPaths) {
+    if (Test-Path $p) {
+        $IsccPath = $p
+        break
+    }
+}
+
+if (-not $IsccPath) {
+    $cmd = Get-Command iscc.exe -ErrorAction SilentlyContinue
+    if ($cmd) {
+        $IsccPath = $cmd.Source
+    }
+}
+
+$IssFile = Join-Path $ScriptDir "KioskAgentSetup.iss"
+$hasInno = -not [string]::IsNullOrEmpty($IsccPath)
+Write-Host "Inno Setup compiler found: $hasInno ($IsccPath)"
 
 if ($hasInno) {
-    Write-Host "[2/3] Compiling Inno Setup installer..."
+    Write-Host "[2/3] Compiling Inno Setup installer (.exe)..."
     cmd /c ('"' + $IsccPath + '" /O"' + $OutputDir + '" "' + $IssFile + '"')
     Write-Host "[2/3] DONE - EmployeeID-KioskAgent-Setup.exe created in $OutputDir"
 } else {

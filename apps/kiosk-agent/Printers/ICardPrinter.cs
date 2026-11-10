@@ -14,8 +14,12 @@ public class PrinterPrintResult
 public interface ICardPrinter
 {
     string PrinterName { get; }
+    string CurrentTargetPrinter { get; }
+    string ActiveDuplexMode { get; }
+    string ActiveRibbonType { get; }
     Task<bool> IsAvailableAsync(CancellationToken cancellationToken = default);
     Task<string> GetPrinterStatusAsync(CancellationToken cancellationToken = default);
     Task<List<SystemPrinterInfo>> GetInstalledPrintersAsync(CancellationToken cancellationToken = default);
     Task<PrinterPrintResult> PrintCardAsync(PrintRequest request, CancellationToken cancellationToken = default);
+    void Configure(string targetPrinter, string? duplexMode = null, double? offsetXmm = null, double? offsetYmm = null, string? ribbonType = null);
 }

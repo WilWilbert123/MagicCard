@@ -7,7 +7,7 @@ export const revalidate = 0;
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { kioskCode, kioskId, printerStatus, agentVersion, ipAddress, ribbonLevelPct, ribbonType, printerModel, printerType } = body;
+    const { kioskCode, kioskId, printerStatus, agentVersion, ipAddress, ribbonLevelPct, ribbonType, printerModel, printerType, installedPrinters } = body;
 
     const admin = createAdminSupabaseClient();
     const now = new Date().toISOString();
@@ -20,7 +20,7 @@ export async function POST(request: Request) {
     // Step 1: Try exact match (case-insensitive)
     let { data: kiosk } = await admin
       .from('kiosks')
-      .select('id, kiosk_code, status')
+      .select('id, kiosk_code, status, printer_status_summary')
       .ilike('kiosk_code', rawCode)
       .limit(1)
       .maybeSingle();
@@ -31,7 +31,7 @@ export async function POST(request: Request) {
       if (isUuid) {
         const { data: byId } = await admin
           .from('kiosks')
-          .select('id, kiosk_code, status')
+          .select('id, kiosk_code, status, printer_status_summary')
           .eq('id', rawCode)
           .maybeSingle();
         kiosk = byId;
@@ -42,7 +42,7 @@ export async function POST(request: Request) {
     if (!kiosk) {
       const { data: allKiosks } = await admin
         .from('kiosks')
-        .select('id, kiosk_code, status');
+        .select('id, kiosk_code, status, printer_status_summary');
       kiosk = (allKiosks || []).find((k: any) =>
         k.kiosk_code?.toLowerCase() === rawCode.toLowerCase()
       ) || null;
@@ -50,7 +50,21 @@ export async function POST(request: Request) {
 
     console.log(`[Heartbeat] Lookup for "${rawCode}" =>`, kiosk ? `found id=${kiosk.id}` : 'NOT FOUND');
 
+    let activePrinterConfig: any = null;
+
     if (kiosk) {
+      // Parse any pre-existing admin hardware config from printer_status_summary
+      let existingCfgStr = '';
+      if (kiosk.printer_status_summary) {
+        const cfgMatch = kiosk.printer_status_summary.match(/\{CFG:(.*?)\}(?:\s*\{PRINTERS:.*\}|$)/s);
+        if (cfgMatch && cfgMatch[1]) {
+          try {
+            activePrinterConfig = JSON.parse(cfgMatch[1]);
+            existingCfgStr = `{CFG:${cfgMatch[1]}}`;
+          } catch {}
+        }
+      }
+
       const updateData: any = {
         last_heartbeat_at: now,
         updated_at: now,
@@ -60,13 +74,25 @@ export async function POST(request: Request) {
       } else if (kiosk.status !== 'DISABLED') {
         updateData.status = 'ONLINE';
       }
-      if (printerStatus || printerModel) {
+
+      if (printerStatus || printerModel || installedPrinters) {
         const pStatus = printerStatus || 'READY';
-        const pModel = printerModel || printerType || '';
+        const pModel = activePrinterConfig?.targetPrinter || printerModel || printerType || '';
         const rPct = typeof ribbonLevelPct === 'number' ? ribbonLevelPct : (ribbonType ? 100 : null);
         const rStr = rPct !== null ? `Ribbon ${rPct}%` : '';
         const combinedStatus = rStr && !pStatus.toLowerCase().includes('ribbon') ? `${pStatus} (${rStr})` : pStatus;
-        updateData.printer_status_summary = pModel ? `${combinedStatus} [${pModel}]` : combinedStatus;
+        
+        let summaryLine = pModel ? `${combinedStatus} [${pModel}]` : combinedStatus;
+
+        if (existingCfgStr) {
+          summaryLine += ` ${existingCfgStr}`;
+        }
+
+        if (Array.isArray(installedPrinters) && installedPrinters.length > 0) {
+          summaryLine += ` {PRINTERS:${JSON.stringify(installedPrinters)}}`;
+        }
+
+        updateData.printer_status_summary = summaryLine;
       }
       if (agentVersion) updateData.agent_version = agentVersion;
       if (ipAddress) updateData.ip_address = ipAddress;
@@ -166,6 +192,7 @@ export async function POST(request: Request) {
         versionTag: activeVersion ? `v${activeVersion.version_number}.0.0` : 'v1.0.0',
         publishedAt: activeVersion?.published_at || null,
       },
+      printerConfig: activePrinterConfig || null,
     });
   } catch (err: any) {
     console.error('[Heartbeat Route Exception]:', err);

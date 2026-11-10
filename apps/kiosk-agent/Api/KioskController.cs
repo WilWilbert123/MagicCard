@@ -52,6 +52,35 @@ public static class KioskEndpoints
         .WithName("GetPrinters")
         .WithTags("Kiosk");
 
+        // POST /api/kiosk/printer-config (Real-time dynamic hardware configuration)
+        app.MapPost("/api/kiosk/printer-config", (RemotePrinterConfig config, ICardPrinter printer) =>
+        {
+            if (config == null || string.IsNullOrWhiteSpace(config.TargetPrinter))
+            {
+                return Results.BadRequest(new { error = "TargetPrinter name is required." });
+            }
+
+            printer.Configure(
+                config.TargetPrinter,
+                config.DuplexMode,
+                config.OffsetXmm,
+                config.OffsetYmm,
+                config.RibbonType
+            );
+
+            return Results.Ok(new
+            {
+                success = true,
+                message = $"Configured active printer: {printer.CurrentTargetPrinter}",
+                targetPrinter = printer.CurrentTargetPrinter,
+                duplexMode = printer.ActiveDuplexMode,
+                ribbonType = printer.ActiveRibbonType,
+                timestamp = DateTime.UtcNow
+            });
+        })
+        .WithName("ConfigurePrinter")
+        .WithTags("Kiosk");
+
         // POST /api/kiosk/register
         app.MapPost("/api/kiosk/register", async (
             PairingRequest request,

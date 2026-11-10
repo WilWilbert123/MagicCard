@@ -130,6 +130,8 @@ public class KioskRegistrationService : IKioskRegistrationService
             var endpoint = $"{_kioskOptions.SupabaseUrl.TrimEnd('/')}/api/kiosks/heartbeat";
             
             var printerStatus = await _cardPrinter.GetPrinterStatusAsync(cancellationToken);
+            var installedPrinters = await _cardPrinter.GetInstalledPrintersAsync(cancellationToken);
+
             int ribbonPct = 100;
             var match = System.Text.RegularExpressions.Regex.Match(printerStatus, @"Ribbon\s*(\d+)%", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
             if (match.Success && int.TryParse(match.Groups[1].Value, out var parsedPct))
@@ -145,10 +147,11 @@ public class KioskRegistrationService : IKioskRegistrationService
                 agentVersion = _kioskOptions.AgentVersion,
                 status = statusOverride ?? "ONLINE",
                 printerStatus = printerStatus,
-                printerModel = _printerOptions.Name,   // from appsettings.json Printer:Name
-                printerType = _printerOptions.Type,    // from appsettings.json Printer:Type
+                printerModel = _cardPrinter.CurrentTargetPrinter,
+                printerType = "Windows",
                 ribbonLevelPct = ribbonPct,
-                ribbonType = "YMCKO",
+                ribbonType = _cardPrinter.ActiveRibbonType,
+                installedPrinters = installedPrinters,
                 cpuUsagePct = 2.5,
                 memoryUsagePct = 45.0,
                 timestamp = DateTime.UtcNow
@@ -158,6 +161,27 @@ public class KioskRegistrationService : IKioskRegistrationService
             if (response.IsSuccessStatusCode)
             {
                 _logger.LogInformation("Successfully sent heartbeat ping to central server for KIOSK {KioskId}.", _kioskOptions.KioskId);
+
+                // Synchronize remote printer hardware profile if configured by Admin
+                try
+                {
+                    var hbResult = await response.Content.ReadFromJsonAsync<HeartbeatServerResponse>(cancellationToken: cancellationToken);
+                    if (hbResult?.PrinterConfig != null && !string.IsNullOrWhiteSpace(hbResult.PrinterConfig.TargetPrinter))
+                    {
+                        _cardPrinter.Configure(
+                            hbResult.PrinterConfig.TargetPrinter,
+                            hbResult.PrinterConfig.DuplexMode,
+                            hbResult.PrinterConfig.OffsetXmm,
+                            hbResult.PrinterConfig.OffsetYmm,
+                            hbResult.PrinterConfig.RibbonType
+                        );
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogDebug(ex, "Could not deserialize server printer configuration from heartbeat ACK.");
+                }
+
                 return true;
             }
             else
