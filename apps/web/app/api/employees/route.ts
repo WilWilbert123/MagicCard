@@ -242,13 +242,37 @@ export async function POST(request: Request) {
       newRecord.company_id = companyId;
     }
 
-    const { data, error } = await admin
+    // Check if employee already exists by employee_number (allows clean CSV mass updates without unique constraint collision)
+    const { data: existingEmp } = await admin
       .from('employees')
-      .insert([newRecord])
-      .select()
-      .single();
+      .select('id, employee_number')
+      .eq('employee_number', empNum)
+      .maybeSingle();
 
-    if (error) throw error;
+    let data: any;
+    let isUpdate = false;
+
+    if (existingEmp) {
+      isUpdate = true;
+      const { data: updated, error: updateErr } = await admin
+        .from('employees')
+        .update(newRecord)
+        .eq('id', existingEmp.id)
+        .select()
+        .single();
+
+      if (updateErr) throw updateErr;
+      data = updated;
+    } else {
+      const { data: inserted, error: insertErr } = await admin
+        .from('employees')
+        .insert([newRecord])
+        .select()
+        .single();
+
+      if (insertErr) throw insertErr;
+      data = inserted;
+    }
 
     if (data.photo_url) {
       try {
@@ -267,21 +291,24 @@ export async function POST(request: Request) {
           uploaded_by: auth.user.id || null,
         });
       } catch (photoErr) {
-        console.warn('Could not sync employee_photos record on create:', photoErr);
+        console.warn('Could not sync employee_photos record on create/update:', photoErr);
       }
     }
 
     await recordAuditLog({
       actorId: auth.user.id,
       actorEmail: auth.user.email,
-      action: 'CREATE_EMPLOYEE',
+      action: isUpdate ? 'UPDATE_EMPLOYEE' : 'CREATE_EMPLOYEE',
       entityType: 'Employee',
       entityId: data.id,
       entityName: `${fName} ${lName} (${empNum})`,
-      details: `Added new corporate employee record for "${fName} ${lName}" (Employee ID: ${empNum}).`,
+      details: isUpdate 
+        ? `Updated corporate employee record for "${fName} ${lName}" (Employee ID: ${empNum}).`
+        : `Added new corporate employee record for "${fName} ${lName}" (Employee ID: ${empNum}).`,
     });
 
     return NextResponse.json({
+      action: isUpdate ? 'UPDATED' : 'CREATED',
       data: {
         id: data.id,
         employeeNumber: data.employee_number,
@@ -306,7 +333,7 @@ export async function POST(request: Request) {
         dateHired: data.date_hired,
         createdAt: data.created_at,
       },
-    }, { status: 201 });
+    }, { status: isUpdate ? 200 : 201 });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
