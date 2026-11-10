@@ -116,12 +116,14 @@ export async function dispatchHardwarePrintJob({
   template = DEFAULT_CR80_TEMPLATE,
   verificationBaseUrl = '',
   agentBaseUrl = DEFAULT_AGENT_URL,
+  preRenderedCanvases,
   onProgress,
 }: {
   employee: Employee;
   template?: any;
   verificationBaseUrl?: string;
   agentBaseUrl?: string;
+  preRenderedCanvases?: { frontDataUrl: string; backDataUrl: string };
   onProgress?: (state: PrintProgressState) => void;
 }): Promise<{ success: boolean; error?: string; jobId?: string }> {
   // Step 1: Probe local agent
@@ -147,32 +149,35 @@ export async function dispatchHardwarePrintJob({
     return { success: false, error: errorMsg };
   }
 
-  // Step 2: Render 300 DPI high-res card canvases
+  // Step 2: Render or reuse 300 DPI high-res card canvases (instant reuse if pre-rendered)
   onProgress?.({
     stage: 'RENDERING',
     stepNumber: 2,
     totalSteps: 4,
-    message: 'Rendering 300 DPI front & back card raster graphics...',
+    message: 'Preparing 300 DPI front & back card raster graphics...',
     percent: 45,
   });
 
-  let frontDataUrl = '';
-  let backDataUrl = '';
-  try {
-    const rendered = await renderEmployeeCardCanvases(employee, template, verificationBaseUrl);
-    frontDataUrl = rendered.frontDataUrl;
-    backDataUrl = rendered.backDataUrl;
-  } catch (renderErr: any) {
-    const msg = `Card graphic rendering failed: ${renderErr?.message || 'Unknown error'}`;
-    onProgress?.({
-      stage: 'FAILED',
-      stepNumber: 2,
-      totalSteps: 4,
-      message: msg,
-      percent: 45,
-      error: msg,
-    });
-    return { success: false, error: msg };
+  let frontDataUrl = preRenderedCanvases?.frontDataUrl || '';
+  let backDataUrl = preRenderedCanvases?.backDataUrl || '';
+
+  if (!frontDataUrl || !backDataUrl) {
+    try {
+      const rendered = await renderEmployeeCardCanvases(employee, template, verificationBaseUrl);
+      frontDataUrl = rendered.frontDataUrl;
+      backDataUrl = rendered.backDataUrl;
+    } catch (renderErr: any) {
+      const msg = `Card graphic rendering failed: ${renderErr?.message || 'Unknown error'}`;
+      onProgress?.({
+        stage: 'FAILED',
+        stepNumber: 2,
+        totalSteps: 4,
+        message: msg,
+        percent: 45,
+        error: msg,
+      });
+      return { success: false, error: msg };
+    }
   }
 
   // Step 3: Spool to physical printer via local KioskAgent
