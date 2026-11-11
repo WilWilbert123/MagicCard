@@ -19,8 +19,8 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const requestedDeviceId = searchParams.get('deviceId')?.trim();
 
-    // Use client deviceId if provided; otherwise fallback to host hardware serial
-    const targetSerialNumber = requestedDeviceId || getRealSystemSerialNumber();
+    // In production web deployment, each client machine must supply its deviceId; fallback to host serial only in local dev
+    const targetSerialNumber = requestedDeviceId || (process.env.NODE_ENV === 'production' ? '' : getRealSystemSerialNumber());
     let parsedRecord: LicenseRecord | null = null;
 
     // 1. Primary check: Query dedicated system_licenses table specifically for this device

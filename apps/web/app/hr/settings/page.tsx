@@ -125,7 +125,7 @@ export default function HrSettingsPage() {
   const loadLicenseData = async () => {
     try {
       setLoadingLicense(true);
-      const deviceId = typeof window !== 'undefined' ? (localStorage.getItem('magiccard_device_serial') || '675683451') : '675683451';
+      const deviceId = typeof window !== 'undefined' ? (localStorage.getItem('magiccard_device_id_v2') || '675683451') : '675683451';
       const res = await fetch(`/api/license?deviceId=${encodeURIComponent(deviceId)}&t=${Date.now()}`, { cache: 'no-store' });
       const json = await res.json();
       if (json.data) {

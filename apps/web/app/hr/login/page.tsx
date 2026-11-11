@@ -54,13 +54,13 @@ function HrLoginForm() {
 
   // Fetch initial license status
   const getClientDeviceSerial = () => {
-    if (typeof window === 'undefined') return '675683451';
-    let saved = localStorage.getItem('magiccard_device_serial')?.trim();
+    if (typeof window === 'undefined') return '';
+    let saved = localStorage.getItem('magiccard_device_id_v2')?.trim();
     if (saved) return saved;
 
-    // Check if this browser already had an existing authenticated session (e.g. host machine)
-    const hasExistingSession = document.cookie.includes('sb-') || document.cookie.includes('auth');
-    if (hasExistingSession) {
+    // Check if running in local development
+    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    if (isLocalhost) {
       saved = '675683451';
     } else {
       // New device/laptop: generate a fresh unique 9-digit serial number
@@ -72,7 +72,7 @@ function HrLoginForm() {
         saved = Math.floor(100000000 + Math.random() * 900000000).toString();
       }
     }
-    localStorage.setItem('magiccard_device_serial', saved);
+    localStorage.setItem('magiccard_device_id_v2', saved);
     return saved;
   };
 
@@ -81,7 +81,9 @@ function HrLoginForm() {
       setLicenseChecking(true);
       const targetSerial = customId?.trim() || regProductId?.trim() || getClientDeviceSerial();
       setRegProductId(targetSerial);
-      localStorage.setItem('magiccard_device_serial', targetSerial);
+      if (targetSerial) {
+        localStorage.setItem('magiccard_device_id_v2', targetSerial);
+      }
 
       const res = await fetch(`/api/license?deviceId=${encodeURIComponent(targetSerial)}&t=${Date.now()}`, { cache: 'no-store' });
       const json = await res.json();
@@ -91,7 +93,7 @@ function HrLoginForm() {
       const detectedId = json.systemInfo?.deviceSerialNumber || json.data?.productId || targetSerial;
       if (detectedId) {
         setRegProductId(detectedId);
-        localStorage.setItem('magiccard_device_serial', detectedId);
+        localStorage.setItem('magiccard_device_id_v2', detectedId);
       }
     } catch (err) {
       console.error('Failed to check license:', err);
@@ -135,7 +137,7 @@ function HrLoginForm() {
         return;
       }
 
-      localStorage.setItem('magiccard_device_serial', regProductId.trim());
+      localStorage.setItem('magiccard_device_id_v2', regProductId.trim());
       setRegSuccess('Product registered successfully! System unlocked.');
       setLicenseInfo(json.data);
       setTimeout(() => {
@@ -244,7 +246,7 @@ function HrLoginForm() {
             )}
 
             {/* System / Hardware Telemetry Card */}
-            <div className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800 text-xs">
+            <div className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800 text-xs space-y-2">
               <div className="flex items-center justify-between gap-3">
                 <span className="text-slate-400 font-medium flex items-center gap-1.5 shrink-0">
                   <Cpu className="w-3.5 h-3.5 text-slate-500" /> Device Product Number:
@@ -257,7 +259,7 @@ function HrLoginForm() {
                       const clean = e.target.value.replace(/\D/g, '');
                       setRegProductId(clean);
                       if (clean) {
-                        localStorage.setItem('magiccard_device_serial', clean);
+                        localStorage.setItem('magiccard_device_id_v2', clean);
                       }
                     }}
                     onBlur={() => {
@@ -282,6 +284,21 @@ function HrLoginForm() {
                   </button>
                 </div>
               </div>
+              {regProductId !== '675683451' && (
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRegProductId('675683451');
+                      localStorage.setItem('magiccard_device_id_v2', '675683451');
+                      checkLicense('675683451');
+                    }}
+                    className="text-[10px] text-slate-500 hover:text-slate-400 transition underline"
+                  >
+                    Use Primary Machine ID (675683451)
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* License Registration Form */}
