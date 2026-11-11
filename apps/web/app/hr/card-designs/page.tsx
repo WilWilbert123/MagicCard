@@ -155,7 +155,9 @@ function MiniCard2DPreview({ layout, settings }: { layout?: any; settings?: any 
       {/* Front / Back surface switcher pill */}
       <div className="flex items-center gap-1 mb-2 bg-slate-100 dark:bg-slate-900/90 p-1 rounded-lg border border-slate-200 dark:border-slate-800 text-[10px]">
         <button
+          type="button"
           onClick={(e) => {
+            e.preventDefault();
             e.stopPropagation();
             setActiveSide('front');
           }}
@@ -167,7 +169,9 @@ function MiniCard2DPreview({ layout, settings }: { layout?: any; settings?: any 
           Front ({frontCount})
         </button>
         <button
+          type="button"
           onClick={(e) => {
+            e.preventDefault();
             e.stopPropagation();
             setActiveSide('back');
           }}
@@ -406,6 +410,7 @@ export default function HrCardDesignsPage() {
   const [importTemplateName, setImportTemplateName] = useState('');
   const [importTemplateDesc, setImportTemplateDesc] = useState('');
   const [importBranchId, setImportBranchId] = useState('ALL');
+  const [importIsDefault, setImportIsDefault] = useState(false);
   const [importError, setImportError] = useState('');
   const [isImporting, setIsImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -502,12 +507,16 @@ export default function HrCardDesignsPage() {
   };
 
   const handleDeleteTemplate = async (template: CardTemplateItem) => {
-    if (template.isDefault) {
-      toast.error('The Global Default template cannot be deleted.');
+    if (templates.length <= 1) {
+      toast.error('Cannot delete the only remaining card template in your fleet.');
       return;
     }
 
-    if (!confirm(`Are you sure you want to delete template "${template.name}"?`)) return;
+    const confirmMsg = template.isDefault
+      ? `Template "${template.name}" is currently marked as default fallback. Deleting it will reassign default fallback to another template. Are you sure you want to delete it?`
+      : `Are you sure you want to delete template "${template.name}"?`;
+
+    if (!confirm(confirmMsg)) return;
 
     try {
       const res = await fetch(`/api/card-templates?id=${template.id}`, { method: 'DELETE' });
@@ -637,7 +646,7 @@ export default function HrCardDesignsPage() {
           name: importTemplateName.trim(),
           description: importTemplateDesc.trim(),
           branchId: importBranchId,
-          isDefault: importBranchId === 'ALL',
+          isDefault: importIsDefault,
           layout: importedLayout,
         }),
       });
@@ -652,6 +661,7 @@ export default function HrCardDesignsPage() {
       setImportTemplateName('');
       setImportTemplateDesc('');
       setImportBranchId('ALL');
+      setImportIsDefault(false);
       loadData();
     } catch (err: any) {
       toast.error(err.message);
@@ -698,6 +708,7 @@ export default function HrCardDesignsPage() {
               setImportTemplateName('');
               setImportTemplateDesc('');
               setImportBranchId('ALL');
+              setImportIsDefault(false);
             }}
             className="px-3.5 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#111827] hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold shadow-xs transition flex items-center gap-1.5"
           >
@@ -904,11 +915,11 @@ export default function HrCardDesignsPage() {
                       <Download className="w-3.5 h-3.5 text-blue-500" />
                     </button>
 
-                    {!tpl.isDefault && (
+                    {templates.length > 1 && (
                       <button
                         onClick={() => handleDeleteTemplate(tpl)}
                         className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg transition"
-                        title="Delete Template"
+                        title={tpl.isDefault ? "Delete Template (Will reassign default fallback)" : "Delete Template"}
                       >
                         <Trash2 className="w-3.5 h-3.5 text-rose-500" />
                       </button>
@@ -1197,13 +1208,22 @@ export default function HrCardDesignsPage() {
                         onChange={(e) => setImportBranchId(e.target.value)}
                         className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-slate-900 dark:text-white focus:outline-none focus:border-red-500"
                       >
-                        <option value="ALL">All Branches (Global Default)</option>
+                        <option value="ALL">All Branches</option>
                         {branches.map((b) => (
                           <option key={b.id} value={b.id}>
                             {b.name} ({b.code})
                           </option>
                         ))}
                       </select>
+                      <label className="flex items-center gap-2 cursor-pointer mt-2 text-xs text-slate-600 dark:text-slate-400 select-none">
+                        <input
+                          type="checkbox"
+                          checked={importIsDefault}
+                          onChange={(e) => setImportIsDefault(e.target.checked)}
+                          className="rounded text-red-600 focus:ring-red-500 w-3.5 h-3.5"
+                        />
+                        <span>Set as Global Default Fallback template</span>
+                      </label>
                     </div>
 
                     <div className="p-2.5 rounded-lg bg-slate-100 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-[11px] text-slate-600 dark:text-slate-400 space-y-1">
@@ -1228,6 +1248,7 @@ export default function HrCardDesignsPage() {
                       setShowImportModal(false);
                       setImportFile(null);
                       setImportedLayout(null);
+                      setImportIsDefault(false);
                     }}
                     className="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 font-medium text-xs"
                   >
