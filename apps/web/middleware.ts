@@ -97,7 +97,10 @@ function isKioskOrPublicApi(request: NextRequest): boolean {
     return true;
   }
 
-  // Kiosk print job submission
+  // Kiosk print job submission & Admin Print Queue
+  if (pathname.startsWith('/api/print-jobs/queue')) {
+    return true;
+  }
   if (pathname.startsWith('/api/print-jobs') && method === 'POST' && isKiosk) {
     return true;
   }

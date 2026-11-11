@@ -374,6 +374,9 @@ export async function dispatchHardwarePrintJob({
             }
           }
         }
+      } else {
+        const queueErr = await queueRes.json().catch(() => ({}));
+        printErrorMessage = queueErr.message || queueErr.error || `Server queue returned HTTP ${queueRes.status}`;
       }
     } catch (qErr: any) {
       printErrorMessage = qErr?.message || printErrorMessage;

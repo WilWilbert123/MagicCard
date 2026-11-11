@@ -6,7 +6,7 @@
 #define MyAppName "Admin Card Printer Agent"
 #define MyAppVersion "1.0.0"
 #define MyAppPublisher "MagicCard Technologies"
-#define MyAppURL "https://bismacard.vercel.app"
+#define MyAppURL "https://bismaccard.vercel.app"
 #define MyAppExeName "KioskAgent.exe"
 #define MyServiceName "AdminCardPrinterAgent"
 
