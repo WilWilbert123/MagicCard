@@ -60,3 +60,4 @@ Filename: "wscript.exe"; Parameters: """{app}\start_hidden.vbs"""; WorkingDir: "
 Filename: "{app}\stop.bat"; Flags: runhidden
 Filename: "cmd.exe"; Parameters: "/c del /f /q ""{userstartup}\Admin Card Printer Agent.lnk"""; Flags: runhidden
 Filename: "netsh"; Parameters: "advfirewall firewall delete rule name=""Admin Card Printer Agent Port 7125"""; Flags: runhidden
+
