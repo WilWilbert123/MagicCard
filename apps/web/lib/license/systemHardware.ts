@@ -1,5 +1,5 @@
 import { execSync } from 'child_process';
-import os from 'os';
+import { DEFAULT_PRODUCT_ID } from './licenseValidator';
 
 let cachedSerialNumber: string | null = null;
 
@@ -8,14 +8,21 @@ let cachedSerialNumber: string | null = null;
  * In Windows, this directly mirrors VB.NET's `GetVolumeInformation(drive_letter, ...)`:
  * 1. Reads the volume serial number of the application drive (e.g. C:).
  * 2. Converts the 32-bit hex (e.g. 2846-1C7B) to decimal UInt32 (e.g. 675683451).
- * 3. Fallbacks to BIOS hardware serial or machine-id if volume query is unavailable.
+ * 3. In cloud/Vercel or non-Windows environments, defaults to DEFAULT_PRODUCT_ID ('675683451').
  */
 export function getRealSystemSerialNumber(): string {
   if (cachedSerialNumber) {
     return cachedSerialNumber;
   }
 
-  // 1. Windows platform hardware resolution
+  // 1. Environment variable override (ideal for Vercel/Cloud deployments)
+  const envSerial = process.env.DEVICE_SERIAL_NUMBER || process.env.SYSTEM_PRODUCT_NUMBER;
+  if (envSerial && envSerial.trim()) {
+    cachedSerialNumber = envSerial.trim();
+    return cachedSerialNumber;
+  }
+
+  // 2. Windows platform hardware resolution (Local PC / Laptop / Server)
   if (process.platform === 'win32') {
     // A. Primary: Drive Volume Serial Number via cmd 'vol' (identical to Win32 GetVolumeInformation)
     try {
@@ -57,59 +64,9 @@ export function getRealSystemSerialNumber(): string {
     } catch (err) {
       console.warn('[License Hardware] Failed to query LogicalDisk via PowerShell:', err);
     }
-
-    // C. Tertiary: BIOS Motherboard Serial Number
-    try {
-      const biosOutput = execSync(
-        `powershell -NoProfile -NonInteractive -Command "(Get-CimInstance Win32_BIOS).SerialNumber"`,
-        { encoding: 'utf8', timeout: 4000, windowsHide: true }
-      ).trim();
-
-      if (biosOutput && biosOutput.toLowerCase() !== 'to be filled by o.e.m.' && biosOutput.toLowerCase() !== 'none') {
-        // Hash string to stable UInt32
-        let hash = 0;
-        for (let i = 0; i < biosOutput.length; i++) {
-          hash = (Math.imul(31, hash) + biosOutput.charCodeAt(i)) | 0;
-        }
-        const dec = (hash >>> 0).toString();
-        cachedSerialNumber = dec;
-        return dec;
-      }
-    } catch (err) {
-      console.warn('[License Hardware] Failed to query BIOS serial via PowerShell:', err);
-    }
   }
 
-  // 2. Linux / Unix machine-id resolution
-  if (process.platform === 'linux') {
-    try {
-      const fs = require('fs');
-      let mid = '';
-      if (fs.existsSync('/etc/machine-id')) {
-        mid = fs.readFileSync('/etc/machine-id', 'utf8').trim();
-      } else if (fs.existsSync('/var/lib/dbus/machine-id')) {
-        mid = fs.readFileSync('/var/lib/dbus/machine-id', 'utf8').trim();
-      }
-      if (mid) {
-        let hash = 0;
-        for (let i = 0; i < mid.length; i++) {
-          hash = (Math.imul(31, hash) + mid.charCodeAt(i)) | 0;
-        }
-        const dec = (hash >>> 0).toString();
-        cachedSerialNumber = dec;
-        return dec;
-      }
-    } catch {}
-  }
-
-  // 3. Fallback: Stable hash of Hostname + CPU Architecture
-  let hash = 0;
-  const seed = `${os.hostname()}-${os.cpus()[0]?.model || 'magiccard-workstation'}`;
-  for (let i = 0; i < seed.length; i++) {
-    hash = (Math.imul(31, hash) + seed.charCodeAt(i)) | 0;
-  }
-  const fallbackDec = (hash >>> 0).toString();
-  cachedSerialNumber = fallbackDec;
-  return fallbackDec;
+  // 3. Fallback: Default to configured real workstation ID (675683451)
+  cachedSerialNumber = DEFAULT_PRODUCT_ID;
+  return DEFAULT_PRODUCT_ID;
 }
-

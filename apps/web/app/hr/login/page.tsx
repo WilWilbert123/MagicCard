@@ -216,18 +216,21 @@ function HrLoginForm() {
 
             {/* System / Hardware Telemetry Card */}
             <div className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800 text-xs">
-              <div className="flex items-center justify-between">
-                <span className="text-slate-400 font-medium flex items-center gap-1.5">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-slate-400 font-medium flex items-center gap-1.5 shrink-0">
                   <Cpu className="w-3.5 h-3.5 text-slate-500" /> Device Product Number:
                 </span>
                 <div className="flex items-center gap-2">
-                  <span className="font-mono font-bold text-white bg-slate-900 px-2 py-0.5 rounded border border-slate-700">
-                    {regProductId}
-                  </span>
+                  <input
+                    type="text"
+                    value={regProductId}
+                    onChange={(e) => setRegProductId(e.target.value.trim())}
+                    className="font-mono font-bold text-white bg-slate-900 px-2.5 py-1 rounded border border-slate-700 text-xs w-32 text-center focus:outline-none focus:border-red-500"
+                  />
                   <button
                     type="button"
                     onClick={handleCopyProductId}
-                    className="p-1 rounded text-slate-400 hover:text-white transition"
+                    className="p-1.5 rounded text-slate-400 hover:text-white bg-slate-900 border border-slate-700 transition"
                     title="Copy Product Number"
                   >
                     {copiedId ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
