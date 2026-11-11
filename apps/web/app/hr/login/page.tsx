@@ -58,20 +58,15 @@ function HrLoginForm() {
     let saved = localStorage.getItem('magiccard_device_id_v3')?.trim();
     if (saved) return saved;
 
-    // Check if running in local development
-    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    if (isLocalhost) {
-      saved = '675683451';
+    // Generate a fresh unique 9-digit serial number for this specific machine
+    if (window.crypto?.getRandomValues) {
+      const arr = new Uint32Array(1);
+      window.crypto.getRandomValues(arr);
+      saved = (100000000 + (arr[0] % 900000000)).toString();
     } else {
-      // New device/laptop: generate a fresh unique 9-digit serial number
-      if (window.crypto?.getRandomValues) {
-        const arr = new Uint32Array(1);
-        window.crypto.getRandomValues(arr);
-        saved = (100000000 + (arr[0] % 900000000)).toString();
-      } else {
-        saved = Math.floor(100000000 + Math.random() * 900000000).toString();
-      }
+      saved = Math.floor(100000000 + Math.random() * 900000000).toString();
     }
+
     localStorage.setItem('magiccard_device_id_v3', saved);
     return saved;
   };
@@ -284,21 +279,6 @@ function HrLoginForm() {
                   </button>
                 </div>
               </div>
-              {regProductId !== '675683451' && (
-                <div className="flex justify-end">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setRegProductId('675683451');
-                      localStorage.setItem('magiccard_device_id_v3', '675683451');
-                      checkLicense('675683451');
-                    }}
-                    className="text-[10px] text-slate-500 hover:text-slate-400 transition underline"
-                  >
-                    Use Primary Machine ID (675683451)
-                  </button>
-                </div>
-              )}
             </div>
 
             {/* License Registration Form */}

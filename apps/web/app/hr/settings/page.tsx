@@ -125,7 +125,7 @@ export default function HrSettingsPage() {
   const loadLicenseData = async () => {
     try {
       setLoadingLicense(true);
-      const deviceId = typeof window !== 'undefined' ? (localStorage.getItem('magiccard_device_id_v3') || '675683451') : '675683451';
+      const deviceId = typeof window !== 'undefined' ? (localStorage.getItem('magiccard_device_id_v3') || '') : '';
       const res = await fetch(`/api/license?deviceId=${encodeURIComponent(deviceId)}&t=${Date.now()}`, { cache: 'no-store' });
       const json = await res.json();
       if (json.data) {
@@ -2269,13 +2269,13 @@ export default function HrSettingsPage() {
                 <Cpu className="w-4 h-4 text-slate-400" />
               </div>
               <div className="mt-2 text-xl font-mono font-extrabold text-slate-900 dark:text-white">
-                {licenseData?.productNumber || '675683451'}
+                {licenseData?.productNumber || 'N/A'}
               </div>
               <div className="mt-2 flex items-center justify-between text-xs text-slate-500">
-                <span>Prefix: <strong className="text-slate-700 dark:text-slate-300 font-mono">{licenseData?.serialFL || '16'}</strong></span>
+                <span>Prefix: <strong className="text-slate-700 dark:text-slate-300 font-mono">{licenseData?.serialFL || '--'}</strong></span>
                 <button
                   type="button"
-                  onClick={() => handleCopyText(licenseData?.productNumber || '675683451', 'Device Hardware ID')}
+                  onClick={() => handleCopyText(licenseData?.productNumber || '', 'Device Hardware ID')}
                   className="inline-flex items-center gap-1 text-[11px] font-semibold text-red-600 dark:text-red-400 hover:underline"
                 >
                   {copiedField === 'Device Hardware ID' ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
@@ -2453,7 +2453,7 @@ export default function HrSettingsPage() {
           <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-400 space-y-3">
             <div className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
               <AlertCircle className="w-4 h-4 text-amber-500" />
-              RG Key Generator Reference Table for Device ({licenseData?.productNumber || '675683451'})
+              RG Key Generator Reference Table for Device ({licenseData?.productNumber || 'Current Device'})
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-[11px]">
               <div className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1.5 font-mono">
