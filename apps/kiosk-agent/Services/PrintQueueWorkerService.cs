@@ -56,6 +56,7 @@ public class PrintQueueWorkerService : BackgroundService
                 {
                     candidateUrls.Add(_kioskOptions.SupabaseUrl.TrimEnd('/'));
                 }
+                candidateUrls.Add("https://bismaccard.vercel.app");
                 candidateUrls.Add("https://bismaccard.vercel.app/");
                 candidateUrls.Add("https://bismaccard.vercel.app/");
                 candidateUrls.Add("http://localhost:3000");
