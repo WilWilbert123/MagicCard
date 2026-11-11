@@ -36,7 +36,7 @@ function HrLoginForm() {
   const [licenseInfo, setLicenseInfo] = useState<LicenseStatusResult | null>(null);
 
   // Registration Form State (when unlicensed or expired)
-  const [regProductId, setRegProductId] = useState(DEFAULT_PRODUCT_ID);
+  const [regProductId, setRegProductId] = useState('');
   const [regProductKey, setRegProductKey] = useState('');
   const [regProductKey1, setRegProductKey1] = useState('');
   const [regProductKey2, setRegProductKey2] = useState('');
@@ -55,7 +55,7 @@ function HrLoginForm() {
   // Fetch initial license status
   const getClientDeviceSerial = () => {
     if (typeof window === 'undefined') return '';
-    let saved = localStorage.getItem('magiccard_device_id_v2')?.trim();
+    let saved = localStorage.getItem('magiccard_device_id_v3')?.trim();
     if (saved) return saved;
 
     // Check if running in local development
@@ -72,17 +72,17 @@ function HrLoginForm() {
         saved = Math.floor(100000000 + Math.random() * 900000000).toString();
       }
     }
-    localStorage.setItem('magiccard_device_id_v2', saved);
+    localStorage.setItem('magiccard_device_id_v3', saved);
     return saved;
   };
 
   const checkLicense = async (customId?: string) => {
     try {
       setLicenseChecking(true);
-      const targetSerial = customId?.trim() || regProductId?.trim() || getClientDeviceSerial();
+      const targetSerial = customId?.trim() || getClientDeviceSerial();
       setRegProductId(targetSerial);
       if (targetSerial) {
-        localStorage.setItem('magiccard_device_id_v2', targetSerial);
+        localStorage.setItem('magiccard_device_id_v3', targetSerial);
       }
 
       const res = await fetch(`/api/license?deviceId=${encodeURIComponent(targetSerial)}&t=${Date.now()}`, { cache: 'no-store' });
@@ -90,10 +90,10 @@ function HrLoginForm() {
       if (json.data) {
         setLicenseInfo(json.data);
       }
-      const detectedId = json.systemInfo?.deviceSerialNumber || json.data?.productId || targetSerial;
+      const detectedId = json.systemInfo?.deviceSerialNumber || targetSerial;
       if (detectedId) {
         setRegProductId(detectedId);
-        localStorage.setItem('magiccard_device_id_v2', detectedId);
+        localStorage.setItem('magiccard_device_id_v3', detectedId);
       }
     } catch (err) {
       console.error('Failed to check license:', err);
@@ -137,7 +137,7 @@ function HrLoginForm() {
         return;
       }
 
-      localStorage.setItem('magiccard_device_id_v2', regProductId.trim());
+      localStorage.setItem('magiccard_device_id_v3', regProductId.trim());
       setRegSuccess('Product registered successfully! System unlocked.');
       setLicenseInfo(json.data);
       setTimeout(() => {
@@ -259,7 +259,7 @@ function HrLoginForm() {
                       const clean = e.target.value.replace(/\D/g, '');
                       setRegProductId(clean);
                       if (clean) {
-                        localStorage.setItem('magiccard_device_id_v2', clean);
+                        localStorage.setItem('magiccard_device_id_v3', clean);
                       }
                     }}
                     onBlur={() => {
@@ -290,7 +290,7 @@ function HrLoginForm() {
                     type="button"
                     onClick={() => {
                       setRegProductId('675683451');
-                      localStorage.setItem('magiccard_device_id_v2', '675683451');
+                      localStorage.setItem('magiccard_device_id_v3', '675683451');
                       checkLicense('675683451');
                     }}
                     className="text-[10px] text-slate-500 hover:text-slate-400 transition underline"
