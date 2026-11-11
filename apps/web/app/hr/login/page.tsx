@@ -53,17 +53,45 @@ function HrLoginForm() {
   const [errorMessage, setErrorMessage] = useState('');
 
   // Fetch initial license status
-  const checkLicense = async () => {
+  const getClientDeviceSerial = () => {
+    if (typeof window === 'undefined') return '675683451';
+    let saved = localStorage.getItem('magiccard_device_serial')?.trim();
+    if (saved) return saved;
+
+    // Check if this browser already had an existing authenticated session (e.g. host machine)
+    const hasExistingSession = document.cookie.includes('sb-') || document.cookie.includes('auth');
+    if (hasExistingSession) {
+      saved = '675683451';
+    } else {
+      // New device/laptop: generate a fresh unique 9-digit serial number
+      if (window.crypto?.getRandomValues) {
+        const arr = new Uint32Array(1);
+        window.crypto.getRandomValues(arr);
+        saved = (100000000 + (arr[0] % 900000000)).toString();
+      } else {
+        saved = Math.floor(100000000 + Math.random() * 900000000).toString();
+      }
+    }
+    localStorage.setItem('magiccard_device_serial', saved);
+    return saved;
+  };
+
+  const checkLicense = async (customId?: string) => {
     try {
       setLicenseChecking(true);
-      const res = await fetch('/api/license', { cache: 'no-store' });
+      const targetSerial = customId?.trim() || regProductId?.trim() || getClientDeviceSerial();
+      setRegProductId(targetSerial);
+      localStorage.setItem('magiccard_device_serial', targetSerial);
+
+      const res = await fetch(`/api/license?deviceId=${encodeURIComponent(targetSerial)}&t=${Date.now()}`, { cache: 'no-store' });
       const json = await res.json();
       if (json.data) {
         setLicenseInfo(json.data);
       }
-      const detectedId = json.systemInfo?.deviceSerialNumber || json.data?.productId;
+      const detectedId = json.systemInfo?.deviceSerialNumber || json.data?.productId || targetSerial;
       if (detectedId) {
         setRegProductId(detectedId);
+        localStorage.setItem('magiccard_device_serial', detectedId);
       }
     } catch (err) {
       console.error('Failed to check license:', err);
@@ -107,6 +135,7 @@ function HrLoginForm() {
         return;
       }
 
+      localStorage.setItem('magiccard_device_serial', regProductId.trim());
       setRegSuccess('Product registered successfully! System unlocked.');
       setLicenseInfo(json.data);
       setTimeout(() => {
@@ -224,8 +253,24 @@ function HrLoginForm() {
                   <input
                     type="text"
                     value={regProductId}
-                    onChange={(e) => setRegProductId(e.target.value.trim())}
+                    onChange={(e) => {
+                      const clean = e.target.value.replace(/\D/g, '');
+                      setRegProductId(clean);
+                      if (clean) {
+                        localStorage.setItem('magiccard_device_serial', clean);
+                      }
+                    }}
+                    onBlur={() => {
+                      if (regProductId) checkLicense(regProductId);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        if (regProductId) checkLicense(regProductId);
+                      }
+                    }}
                     className="font-mono font-bold text-white bg-slate-900 px-2.5 py-1 rounded border border-slate-700 text-xs w-32 text-center focus:outline-none focus:border-red-500"
+                    title="Device Hardware Serial (Editable)"
                   />
                   <button
                     type="button"

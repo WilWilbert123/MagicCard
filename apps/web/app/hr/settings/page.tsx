@@ -125,16 +125,17 @@ export default function HrSettingsPage() {
   const loadLicenseData = async () => {
     try {
       setLoadingLicense(true);
-      const res = await fetch('/api/license', { cache: 'no-store' });
+      const deviceId = typeof window !== 'undefined' ? (localStorage.getItem('magiccard_device_serial') || '675683451') : '675683451';
+      const res = await fetch(`/api/license?deviceId=${encodeURIComponent(deviceId)}&t=${Date.now()}`, { cache: 'no-store' });
       const json = await res.json();
       if (json.data) {
-        const detectedSerial = json.systemInfo?.deviceSerialNumber || json.data.productId || '675683451';
+        const detectedSerial = json.systemInfo?.deviceSerialNumber || json.data.productId || deviceId;
         const detectedSerialFL = json.systemInfo?.serialFL || (detectedSerial.slice(-1) + detectedSerial.slice(0, 1));
         setLicenseData({
           ...json.data,
           productNumber: detectedSerial,
           serialFL: detectedSerialFL,
-          programId: json.systemInfo?.programId || json.data.programId || '2267918298',
+          programId: json.systemInfo?.programId || json.data.programId || '2267918294',
           clientId: json.systemInfo?.clientId || json.data.clientId || '25',
         });
       }

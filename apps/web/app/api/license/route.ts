@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createAdminSupabaseClient } from '@/lib/supabase/server';
 import { getRealSystemSerialNumber } from '@/lib/license/systemHardware';
 import {
@@ -7,22 +7,27 @@ import {
   LicenseRecord,
   PROGRAM_ID,
   CLIENT_ID,
+  DEFAULT_PRODUCT_ID,
 } from '@/lib/license/licenseValidator';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const admin = createAdminSupabaseClient();
-    const realSerialNumber = getRealSystemSerialNumber();
+    const searchParams = request.nextUrl.searchParams;
+    const requestedDeviceId = searchParams.get('deviceId')?.trim();
+
+    // Use client deviceId if provided; otherwise fallback to host hardware serial
+    const targetSerialNumber = requestedDeviceId || getRealSystemSerialNumber();
     let parsedRecord: LicenseRecord | null = null;
 
-    // 1. Primary check: Query dedicated system_licenses table for this specific machine
+    // 1. Primary check: Query dedicated system_licenses table specifically for this device
     const { data: licenseRow, error: licenseError } = await admin
       .from('system_licenses')
       .select('*')
-      .eq('product_number', realSerialNumber)
+      .eq('product_number', targetSerialNumber)
       .eq('is_active', true)
       .order('created_at', { ascending: false })
       .limit(1)
@@ -42,29 +47,47 @@ export async function GET() {
         isRegistered: licenseRow.is_active,
       };
     } else {
-      // 2. Fallback check: system_settings table if system_licenses has not been migrated yet
-      const { data: settingsData } = await admin
+      // 2. Secondary check: Query system_settings ONLY if productId matches targetSerialNumber
+      const { data: deviceSettings } = await admin
         .from('system_settings')
         .select('value')
-        .eq('key', 'system_license')
+        .eq('key', `system_license_${targetSerialNumber}`)
         .maybeSingle();
 
-      if (settingsData?.value) {
+      if (deviceSettings?.value) {
         try {
-          const raw = typeof settingsData.value === 'string'
-            ? JSON.parse(settingsData.value)
-            : settingsData.value;
-          if (raw && (raw.productId === realSerialNumber || !raw.productId)) {
+          const raw = typeof deviceSettings.value === 'string'
+            ? JSON.parse(deviceSettings.value)
+            : deviceSettings.value;
+          if (raw && raw.productId === targetSerialNumber) {
             parsedRecord = raw;
           }
         } catch (e) {
-          console.error('Failed to parse system_license value:', e);
+          console.error('Failed to parse device system_license value:', e);
+        }
+      } else {
+        // Legacy fallback: only match if the saved license explicitly belongs to targetSerialNumber
+        const { data: legacySettings } = await admin
+          .from('system_settings')
+          .select('value')
+          .eq('key', 'system_license')
+          .maybeSingle();
+
+        if (legacySettings?.value) {
+          try {
+            const raw = typeof legacySettings.value === 'string'
+              ? JSON.parse(legacySettings.value)
+              : legacySettings.value;
+            if (raw && raw.productId === targetSerialNumber) {
+              parsedRecord = raw;
+            }
+          } catch {}
         }
       }
     }
 
     const evaluation = evaluateLicenseStatus(parsedRecord);
-    evaluation.productId = realSerialNumber;
+    evaluation.productId = targetSerialNumber;
 
     return NextResponse.json({
       success: true,
@@ -72,14 +95,14 @@ export async function GET() {
       systemInfo: {
         programId: PROGRAM_ID,
         clientId: CLIENT_ID,
-        deviceSerialNumber: realSerialNumber,
-        serialFL: (realSerialNumber.slice(-1) + realSerialNumber.slice(0, 1)),
+        deviceSerialNumber: targetSerialNumber,
+        serialFL: (targetSerialNumber.slice(-1) + targetSerialNumber.slice(0, 1)),
       },
     });
   } catch (err: any) {
-    const realSerialNumber = getRealSystemSerialNumber();
+    const fallbackSerial = DEFAULT_PRODUCT_ID;
     const fallbackEval = evaluateLicenseStatus(null);
-    fallbackEval.productId = realSerialNumber;
+    fallbackEval.productId = fallbackSerial;
 
     return NextResponse.json(
       {
@@ -89,8 +112,8 @@ export async function GET() {
         systemInfo: {
           programId: PROGRAM_ID,
           clientId: CLIENT_ID,
-          deviceSerialNumber: realSerialNumber,
-          serialFL: (realSerialNumber.slice(-1) + realSerialNumber.slice(0, 1)),
+          deviceSerialNumber: fallbackSerial,
+          serialFL: (fallbackSerial.slice(-1) + fallbackSerial.slice(0, 1)),
         },
       },
       { status: 500 }
@@ -101,10 +124,8 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const realSerialNumber = getRealSystemSerialNumber();
-    const targetProductId = (body.productId && String(body.productId).trim()) || realSerialNumber;
+    const targetProductId = String(body.productId || body.deviceId || '').trim() || getRealSystemSerialNumber();
 
-    // Support both 3-key RG Generator naming (ProductKey 1, 2, 3) and legacy inputs
     const key1_Main = String(body.productKey1 || body.productKey || body.mainProductKey || '').trim();
     const key2_Duration = String(body.productKey2 || body.productKey1_Duration || '').trim();
     const key3_SystemType = String(body.productKey3 || body.productKey2_SystemType || '').trim();
@@ -128,7 +149,7 @@ export async function POST(request: Request) {
 
     const admin = createAdminSupabaseClient();
 
-    // 1. Insert into dedicated system_licenses table
+    // 1. Insert into dedicated system_licenses table for this specific device
     const { error: insertErr } = await admin
       .from('system_licenses')
       .insert({
@@ -149,19 +170,19 @@ export async function POST(request: Request) {
 
     if (insertErr) {
       console.warn('Could not insert to system_licenses table (may need migration applied):', insertErr.message);
-      // Fallback: try saving to system_settings if company exists
+      // Fallback: save to system_settings keyed by this specific device ID
       const { data: company } = await admin.from('companies').select('id').limit(1).maybeSingle();
       if (company?.id) {
         await admin.from('system_settings').upsert({
           company_id: company.id,
-          key: 'system_license',
+          key: `system_license_${validation.license.productId}`,
           value: validation.license,
         }, { onConflict: 'company_id,key' });
       }
     }
 
     const evaluation = evaluateLicenseStatus(validation.license);
-    evaluation.productId = realSerialNumber;
+    evaluation.productId = validation.license.productId;
 
     return NextResponse.json({
       success: true,
@@ -171,8 +192,8 @@ export async function POST(request: Request) {
       systemInfo: {
         programId: PROGRAM_ID,
         clientId: CLIENT_ID,
-        deviceSerialNumber: realSerialNumber,
-        serialFL: (realSerialNumber.slice(-1) + realSerialNumber.slice(0, 1)),
+        deviceSerialNumber: validation.license.productId,
+        serialFL: (validation.license.productId.slice(-1) + validation.license.productId.slice(0, 1)),
       },
     });
   } catch (err: any) {
