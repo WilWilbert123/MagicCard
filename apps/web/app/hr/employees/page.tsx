@@ -1003,11 +1003,11 @@ export default function HrEmployeesPage() {
             </div>
           ) : (
             <div
-              title="KioskAgent daemon not detected on this PC. Direct browser printing will be used."
-              className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border-slate-200 dark:border-slate-700"
+              title="No hardware card printer detected. Please connect your ID card printer via USB and run KioskAgent."
+              className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400 border-slate-200 dark:border-slate-700"
             >
               <span className="w-2 h-2 rounded-full bg-slate-400 shrink-0" />
-              <span>Standalone</span>
+              <span>Printer: Disconnected</span>
             </div>
           )}
 

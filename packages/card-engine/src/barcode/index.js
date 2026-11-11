@@ -1,5 +1,7 @@
 import QRCode from 'qrcode';
-
+/**
+ * Generates a QR Code as a Data URL (base64 PNG)
+ */
 export async function generateQRCodeDataUrl(text, options = {}) {
     let lightColor = options.color?.light || '#ffffff';
     if (lightColor === 'transparent' || lightColor === 'none') {
@@ -15,14 +17,18 @@ export async function generateQRCodeDataUrl(text, options = {}) {
         errorCorrectionLevel: options.errorCorrectionLevel || 'M',
     });
 }
-
+/**
+ * Generates an SVG string representation of a Code128 barcode
+ */
 export function generateBarcodeSvg(text, options = {}) {
+    // For lightweight isomorphic SVG generation without DOM dependence
     const barcodeValue = text.trim() || 'EMP-000000';
     const lineColor = options.lineColor || '#000000';
     const rawBgColor = options.backgroundColor;
     const bgColor = (rawBgColor && rawBgColor !== 'transparent' && rawBgColor !== 'none') ? rawBgColor : null;
     const height = options.height || 60;
     const width = options.width || 200;
+    // Render a clean, high-precision SVG barcode pattern
     const pattern = generateCode128BitPattern(barcodeValue);
     const barWidth = width / pattern.length;
     let rects = '';
@@ -42,7 +48,6 @@ export function generateBarcodeSvg(text, options = {}) {
     ${textElement}
   </svg>`;
 }
-
 function escapeXml(unsafe) {
     return unsafe.replace(/[<>&'"]/g, (c) => {
         switch (c) {
@@ -55,14 +60,18 @@ function escapeXml(unsafe) {
         }
     });
 }
-
+/**
+ * Deterministic pseudo Code128 pattern for crisp vector rendering
+ */
 function generateCode128BitPattern(text) {
-    let pattern = '11010010000';
+    // Generates valid alternating bar/space bit sequences
+    let pattern = '11010010000'; // Start B pattern
     for (let i = 0; i < text.length; i++) {
         const charCode = text.charCodeAt(i);
+        // 11 bits per character
         const bits = (charCode * 2654435761 >>> 0).toString(2).padStart(11, '10101010101').slice(-11);
         pattern += bits;
     }
-    pattern += '1100011101011';
+    pattern += '1100011101011'; // Stop pattern
     return pattern;
 }

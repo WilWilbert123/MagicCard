@@ -138,11 +138,13 @@ public class WindowsCardPrinter : ICardPrinter
         return Task.FromResult(list);
     }
 
-    private string? ResolveTargetPrinterName()
+    private string? ResolveTargetPrinterName(string? explicitTarget = null)
     {
-        var configured = !string.IsNullOrWhiteSpace(_targetPrinterOverride) 
-            ? _targetPrinterOverride 
-            : _printerOptions.Name;
+        var configured = !string.IsNullOrWhiteSpace(explicitTarget) && !explicitTarget.Equals("AUTO", StringComparison.OrdinalIgnoreCase)
+            ? explicitTarget
+            : (!string.IsNullOrWhiteSpace(_targetPrinterOverride) 
+                ? _targetPrinterOverride 
+                : _printerOptions.Name);
 
         // 1. If configured target is explicitly specified
         if (!string.IsNullOrWhiteSpace(configured) && !configured.Equals("AUTO", StringComparison.OrdinalIgnoreCase))
@@ -201,7 +203,7 @@ public class WindowsCardPrinter : ICardPrinter
 
     public async Task<PrinterPrintResult> PrintCardAsync(PrintRequest request, CancellationToken cancellationToken = default)
     {
-        var resolvedPrinter = ResolveTargetPrinterName();
+        var resolvedPrinter = ResolveTargetPrinterName(request.TargetPrinter);
         _logger.LogInformation("Sending card print job for Request ID: {RequestId} (Employee: {EmployeeId}) to printer: {PrinterName}",
             request.RequestId, request.EmployeeNumber ?? request.EmployeeId, resolvedPrinter ?? _printerOptions.Name);
 
@@ -254,7 +256,8 @@ public class WindowsCardPrinter : ICardPrinter
             printDoc.PrinterSettings.PrinterName = printerName;
             printDoc.PrinterSettings.Copies = 1;
 
-            bool isSingleSided = _duplexModeOverride?.Equals("SingleSided", StringComparison.OrdinalIgnoreCase) == true;
+            bool isSingleSided = (request.DuplexMode?.Equals("SingleSided", StringComparison.OrdinalIgnoreCase) == true) 
+                || (_duplexModeOverride?.Equals("SingleSided", StringComparison.OrdinalIgnoreCase) == true);
 
             // Enable Duplex (Back-to-Back) printing if supported by driver and not forced to single-sided
             if (!isSingleSided && printDoc.PrinterSettings.CanDuplex)
