@@ -51,63 +51,74 @@ public class PrintQueueWorkerService : BackgroundService
         {
             try
             {
-                var baseUrl = !string.IsNullOrWhiteSpace(_kioskOptions.SupabaseUrl)
-                    ? _kioskOptions.SupabaseUrl.TrimEnd('/')
-                    : "https://bismacard.vercel.app";
-
-                var endpoint = $"{baseUrl}/api/print-jobs/queue";
-
-                var response = await _httpClient.GetAsync(endpoint, stoppingToken);
-                if (response.IsSuccessStatusCode)
+                var candidateUrls = new List<string>();
+                if (!string.IsNullOrWhiteSpace(_kioskOptions.SupabaseUrl))
                 {
-                    var data = await response.Content.ReadFromJsonAsync<PendingJobsResponse>(cancellationToken: stoppingToken);
-                    if (data?.Jobs != null && data.Jobs.Count > 0)
+                    candidateUrls.Add(_kioskOptions.SupabaseUrl.TrimEnd('/'));
+                }
+                candidateUrls.Add("https://bismacard.vercel.app");
+                candidateUrls.Add("http://localhost:3000");
+
+                foreach (var baseUrl in candidateUrls.Distinct())
+                {
+                    var endpoint = $"{baseUrl}/api/print-jobs/queue";
+                    try
                     {
-                        foreach (var job in data.Jobs)
+                        var response = await _httpClient.GetAsync(endpoint, stoppingToken);
+                        if (response.IsSuccessStatusCode)
                         {
-                            _logger.LogInformation("Processing cloud print job: {JobId} for employee {EmpName} ({EmpNum}). Target: {Printer}",
-                                job.Id, job.EmployeeName, job.EmployeeNumber, job.TargetPrinter);
-
-                            var printRequest = new PrintRequest
+                            var data = await response.Content.ReadFromJsonAsync<PendingJobsResponse>(cancellationToken: stoppingToken);
+                            if (data?.Jobs != null && data.Jobs.Count > 0)
                             {
-                                RequestId = job.Id,
-                                IdempotencyKey = job.IdempotencyKey,
-                                EmployeeId = job.EmployeeId,
-                                EmployeeNumber = job.EmployeeNumber,
-                                TemplateId = "default-cr80",
-                                FrontCanvasDataUrl = job.FrontCanvasDataUrl,
-                                BackCanvasDataUrl = job.BackCanvasDataUrl,
-                                TargetPrinter = job.TargetPrinter,
-                                DuplexMode = job.DuplexMode,
-                                FrontData = new Dictionary<string, string>
+                                foreach (var job in data.Jobs)
                                 {
-                                    ["FullName"] = job.EmployeeName,
-                                    ["EmployeeNumber"] = job.EmployeeNumber,
-                                    ["Department"] = "Corporate"
+                                    _logger.LogInformation("Processing print job: {JobId} for employee {EmpName} ({EmpNum}). Target: {Printer}",
+                                        job.Id, job.EmployeeName, job.EmployeeNumber, job.TargetPrinter);
+
+                                    var printRequest = new PrintRequest
+                                    {
+                                        RequestId = job.Id,
+                                        IdempotencyKey = job.IdempotencyKey,
+                                        EmployeeId = job.EmployeeId,
+                                        EmployeeNumber = job.EmployeeNumber,
+                                        TemplateId = "default-cr80",
+                                        FrontCanvasDataUrl = job.FrontCanvasDataUrl,
+                                        BackCanvasDataUrl = job.BackCanvasDataUrl,
+                                        TargetPrinter = job.TargetPrinter,
+                                        DuplexMode = job.DuplexMode,
+                                        FrontData = new Dictionary<string, string>
+                                        {
+                                            ["FullName"] = job.EmployeeName,
+                                            ["EmployeeNumber"] = job.EmployeeNumber,
+                                            ["Department"] = "Corporate"
+                                        }
+                                    };
+
+                                    var printResult = await _printJobService.ProcessPrintJobAsync(printRequest, stoppingToken);
+
+                                    // Notify server of print completion
+                                    var patchPayload = new
+                                    {
+                                        jobId = job.Id,
+                                        status = printResult.Success ? "COMPLETED" : "FAILED",
+                                        error = printResult.ErrorMessage
+                                    };
+
+                                    var patchMsg = new HttpRequestMessage(HttpMethod.Patch, endpoint)
+                                    {
+                                        Content = JsonContent.Create(patchPayload)
+                                    };
+
+                                    await _httpClient.SendAsync(patchMsg, stoppingToken);
+
+                                    _logger.LogInformation("Print job {JobId} status updated: {Status}",
+                                        job.Id, printResult.Success ? "COMPLETED" : "FAILED");
                                 }
-                            };
-
-                            var printResult = await _printJobService.ProcessPrintJobAsync(printRequest, stoppingToken);
-
-                            // Notify cloud server of print completion
-                            var patchPayload = new
-                            {
-                                jobId = job.Id,
-                                status = printResult.Success ? "COMPLETED" : "FAILED",
-                                error = printResult.ErrorMessage
-                            };
-
-                            var patchMsg = new HttpRequestMessage(HttpMethod.Patch, endpoint)
-                            {
-                                Content = JsonContent.Create(patchPayload)
-                            };
-
-                            await _httpClient.SendAsync(patchMsg, stoppingToken);
-
-                            _logger.LogInformation("Cloud print job {JobId} status updated: {Status}",
-                                job.Id, printResult.Success ? "COMPLETED" : "FAILED");
+                                break;
+                            }
                         }
                     }
+                    catch { }
                 }
             }
             catch (OperationCanceledException)

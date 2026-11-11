@@ -9,6 +9,7 @@ import {
   HardDrive,
   Layers,
   ChevronDown,
+  Download,
 } from 'lucide-react';
 import { Employee, DEFAULT_CR80_TEMPLATE } from '@/lib/data/enterpriseStore';
 import {
@@ -239,15 +240,26 @@ export default function AdminPrintModal({
                 <HardDrive className="w-4 h-4 text-red-600 dark:text-red-400" />
                 <span>Select Target ID Card Printer</span>
               </label>
-              <button
-                type="button"
-                onClick={loadPrinters}
-                disabled={isLoadingPrinters || isPrinting}
-                className="text-[11px] font-semibold text-red-600 dark:text-red-400 hover:underline flex items-center gap-1 disabled:opacity-50"
-              >
-                <RefreshCw className={`w-3 h-3 ${isLoadingPrinters ? 'animate-spin' : ''}`} />
-                Scan Printers
-              </button>
+              <div className="flex items-center gap-3">
+                <a
+                  href="/api/admin/installer"
+                  download
+                  className="text-[11px] font-semibold text-slate-500 hover:text-red-600 dark:hover:text-red-400 flex items-center gap-1 transition"
+                  title="Download Windows Installer for Admin Card Printer Agent"
+                >
+                  <Download className="w-3 h-3" />
+                  Install Agent
+                </a>
+                <button
+                  type="button"
+                  onClick={loadPrinters}
+                  disabled={isLoadingPrinters || isPrinting}
+                  className="text-[11px] font-semibold text-red-600 dark:text-red-400 hover:underline flex items-center gap-1 disabled:opacity-50"
+                >
+                  <RefreshCw className={`w-3 h-3 ${isLoadingPrinters ? 'animate-spin' : ''}`} />
+                  Scan Printers
+                </button>
+              </div>
             </div>
 
             {printers.length > 0 ? (
