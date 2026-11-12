@@ -422,9 +422,7 @@ function HrLoginForm() {
                   <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-300">
                     Password
                   </label>
-                  <span className="text-[10px] text-slate-400 font-medium flex items-center gap-1">
-                    <ShieldCheck className="w-3 h-3 text-emerald-400" /> MFA Protected
-                  </span>
+
                 </div>
                 <div className="relative">
                   <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
