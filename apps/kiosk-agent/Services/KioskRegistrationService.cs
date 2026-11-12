@@ -155,7 +155,7 @@ public class KioskRegistrationService : IKioskRegistrationService
                 cpuUsagePct = 2.5,
                 memoryUsagePct = 45.0,
                 timestamp = DateTime.UtcNow
-            };
+            }; 
 
             var response = await _httpClient.PostAsJsonAsync(endpoint, payload, cancellationToken);
             if (response.IsSuccessStatusCode)

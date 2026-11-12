@@ -2,18 +2,18 @@
 
 import { useState, useEffect } from 'react';
 import { toast } from '@/components/ui/Toast';
-import { 
-  Settings, 
-  Building2, 
-  Shield, 
-  Printer, 
-  CheckCircle2, 
-  Plus, 
+import {
+  Settings,
+  Building2,
+  Shield,
+  Printer,
+  CheckCircle2,
+  Plus,
   Edit,
-  Trash2, 
-  Layers, 
-  MapPin, 
-  Phone, 
+  Trash2,
+  Layers,
+  MapPin,
+  Phone,
   X,
   Briefcase,
   User,
@@ -29,7 +29,13 @@ import {
   RefreshCw,
   AlertTriangle,
   Lock,
-  Sliders
+  Sliders,
+  Key,
+  Copy,
+  Check,
+  Clock,
+  Calendar,
+  Cpu
 } from 'lucide-react';
 import { Branch, Department } from '@/lib/data/enterpriseStore';
 import { compressImageFile } from '@/lib/utils/imageCompressor';
@@ -250,7 +256,7 @@ export default function HrSettingsPage() {
       .then((json) => {
         setPositions(json.data || []);
       })
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setPositionsLoading(false));
 
     fetch('/api/settings', { cache: 'no-store' })
@@ -284,7 +290,7 @@ export default function HrSettingsPage() {
           }
         }
       })
-      .catch(() => {});
+      .catch(() => { });
 
     loadUsers();
   }, []);
@@ -625,13 +631,13 @@ export default function HrSettingsPage() {
         prev.map((b) =>
           b.id === updated.id
             ? {
-                ...b,
-                name: updated.name,
-                code: updated.code,
-                address: updated.address ?? '',
-                contactNumber: updated.contact_number ?? updated.contactNumber ?? '',
-                isActive: updated.is_active ?? true,
-              }
+              ...b,
+              name: updated.name,
+              code: updated.code,
+              address: updated.address ?? '',
+              contactNumber: updated.contact_number ?? updated.contactNumber ?? '',
+              isActive: updated.is_active ?? true,
+            }
             : b
         )
       );
@@ -769,61 +775,55 @@ export default function HrSettingsPage() {
       <div className="flex border-b border-slate-200 dark:border-slate-800 gap-2">
         <button
           onClick={() => setActiveTab('POLICIES')}
-          className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition flex items-center gap-2 ${
-            activeTab === 'POLICIES'
-              ? 'border-red-600 text-red-600 dark:border-red-500 dark:text-red-400 font-bold'
-              : 'border-transparent text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
-          }`}
+          className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition flex items-center gap-2 ${activeTab === 'POLICIES'
+            ? 'border-red-600 text-red-600 dark:border-red-500 dark:text-red-400 font-bold'
+            : 'border-transparent text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
+            }`}
         >
           <Shield className="w-4 h-4" /> KIOSK & Print Policies
         </button>
         <button
           onClick={() => setActiveTab('BRANCHES')}
-          className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition flex items-center gap-2 ${
-            activeTab === 'BRANCHES'
-              ? 'border-red-600 text-red-600 dark:border-red-500 dark:text-red-400 font-bold'
-              : 'border-transparent text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
-          }`}
+          className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition flex items-center gap-2 ${activeTab === 'BRANCHES'
+            ? 'border-red-600 text-red-600 dark:border-red-500 dark:text-red-400 font-bold'
+            : 'border-transparent text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
+            }`}
         >
           <Building2 className="w-4 h-4" /> Branches ({branches.length})
         </button>
         <button
           onClick={() => setActiveTab('DEPARTMENTS')}
-          className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition flex items-center gap-2 ${
-            activeTab === 'DEPARTMENTS'
-              ? 'border-red-600 text-red-600 dark:border-red-500 dark:text-red-400 font-bold'
-              : 'border-transparent text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
-          }`}
+          className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition flex items-center gap-2 ${activeTab === 'DEPARTMENTS'
+            ? 'border-red-600 text-red-600 dark:border-red-500 dark:text-red-400 font-bold'
+            : 'border-transparent text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
+            }`}
         >
           <Briefcase className="w-4 h-4" /> Departments ({departments.length})
         </button>
         <button
           onClick={() => setActiveTab('POSITIONS')}
-          className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition flex items-center gap-2 ${
-            activeTab === 'POSITIONS'
-              ? 'border-red-600 text-red-600 dark:border-red-500 dark:text-red-400 font-bold'
-              : 'border-transparent text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
-          }`}
+          className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition flex items-center gap-2 ${activeTab === 'POSITIONS'
+            ? 'border-red-600 text-red-600 dark:border-red-500 dark:text-red-400 font-bold'
+            : 'border-transparent text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
+            }`}
         >
           <Layers className="w-4 h-4" /> Job Positions ({positions.length})
         </button>
         <button
           onClick={() => setActiveTab('ACCOUNT')}
-          className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition flex items-center gap-2 ${
-            activeTab === 'ACCOUNT'
-              ? 'border-red-600 text-red-600 dark:border-red-500 dark:text-red-400 font-bold'
-              : 'border-transparent text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
-          }`}
+          className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition flex items-center gap-2 ${activeTab === 'ACCOUNT'
+            ? 'border-red-600 text-red-600 dark:border-red-500 dark:text-red-400 font-bold'
+            : 'border-transparent text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
+            }`}
         >
           <User className="w-4 h-4" /> Account
         </button>
         <button
           onClick={() => setActiveTab('DATABASE')}
-          className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition flex items-center gap-2 ${
-            activeTab === 'DATABASE'
-              ? 'border-red-600 text-red-600 dark:border-red-500 dark:text-red-400 font-bold'
-              : 'border-transparent text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
-          }`}
+          className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition flex items-center gap-2 ${activeTab === 'DATABASE'
+            ? 'border-red-600 text-red-600 dark:border-red-500 dark:text-red-400 font-bold'
+            : 'border-transparent text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
+            }`}
         >
           <Database className="w-4 h-4 text-red-500" /> Clear Tables (Super Admin)
         </button>
@@ -928,9 +928,8 @@ export default function HrSettingsPage() {
                     setAccountForm({ ...accountForm, currentPassword: e.target.value });
                     setPasswordError('');
                   }}
-                  className={`w-full bg-slate-50 dark:bg-slate-900 border ${
-                    passwordError ? 'border-red-500 focus:ring-red-500' : 'border-slate-200 dark:border-slate-700'
-                  } rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white transition`}
+                  className={`w-full bg-slate-50 dark:bg-slate-900 border ${passwordError ? 'border-red-500 focus:ring-red-500' : 'border-slate-200 dark:border-slate-700'
+                    } rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white transition`}
                 />
               </div>
 
@@ -1060,11 +1059,10 @@ export default function HrSettingsPage() {
                           <td className="px-5 py-3 text-slate-600 dark:text-slate-300 font-mono text-[11px]">{u.email}</td>
                           <td className="px-5 py-3">
                             <span
-                              className={`px-2 py-0.5 rounded-full text-[10px] font-bold border inline-flex items-center gap-1 ${
-                                isSuper
-                                  ? 'bg-red-50 text-red-700 dark:bg-red-950/80 dark:text-red-300 border-red-200 dark:border-red-800'
-                                  : 'bg-blue-50 text-blue-700 dark:bg-blue-950/80 dark:text-blue-300 border-blue-200 dark:border-blue-800'
-                              }`}
+                              className={`px-2 py-0.5 rounded-full text-[10px] font-bold border inline-flex items-center gap-1 ${isSuper
+                                ? 'bg-red-50 text-red-700 dark:bg-red-950/80 dark:text-red-300 border-red-200 dark:border-red-800'
+                                : 'bg-blue-50 text-blue-700 dark:bg-blue-950/80 dark:text-blue-300 border-blue-200 dark:border-blue-800'
+                                }`}
                             >
                               <Shield className="w-3 h-3" />
                               {roleName}
@@ -1191,11 +1189,10 @@ export default function HrSettingsPage() {
                   Control whether HR staff assigned to one branch can print ID cards for employees in another branch.
                 </p>
               </div>
-              <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border ${
-                restrictCrossBranchPrinting
-                  ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/70 dark:text-amber-300 border-amber-300 dark:border-amber-800'
-                  : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800'
-              }`}>
+              <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border ${restrictCrossBranchPrinting
+                ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/70 dark:text-amber-300 border-amber-300 dark:border-amber-800'
+                : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800'
+                }`}>
                 {restrictCrossBranchPrinting ? 'RESTRICTED (Same Branch Only)' : 'UNRESTRICTED (Any Branch)'}
               </span>
             </div>
@@ -1548,28 +1545,28 @@ export default function HrSettingsPage() {
                   </tr>
                 ) : (
                   departments.map((d) => (
-                  <tr key={d.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition">
-                    <td className="px-5 py-3 font-mono font-bold text-red-600 dark:text-red-400">{d.code}</td>
-                    <td className="px-5 py-3 font-semibold text-slate-900 dark:text-white">{d.name}</td>
-                    <td className="px-5 py-3 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <button
-                          onClick={() => handleOpenEditDeptModal(d)}
-                          className="p-1.5 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition"
-                          title="Edit department"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteDepartment(d.id)}
-                          className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition"
-                          title="Delete department"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
+                    <tr key={d.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition">
+                      <td className="px-5 py-3 font-mono font-bold text-red-600 dark:text-red-400">{d.code}</td>
+                      <td className="px-5 py-3 font-semibold text-slate-900 dark:text-white">{d.name}</td>
+                      <td className="px-5 py-3 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={() => handleOpenEditDeptModal(d)}
+                            className="p-1.5 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition"
+                            title="Edit department"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteDepartment(d.id)}
+                            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition"
+                            title="Delete department"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
                   ))
                 )}
               </tbody>
@@ -1979,11 +1976,10 @@ export default function HrSettingsPage() {
               return (
                 <div
                   key={tableName}
-                  className={`p-5 rounded-2xl border transition-all flex flex-col justify-between space-y-4 ${
-                    isProtected
-                      ? 'bg-slate-100/90 dark:bg-slate-900/40 border-slate-300 dark:border-slate-800/80'
-                      : 'bg-white dark:bg-[#111827]/90 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 shadow-sm'
-                  }`}
+                  className={`p-5 rounded-2xl border transition-all flex flex-col justify-between space-y-4 ${isProtected
+                    ? 'bg-slate-100/90 dark:bg-slate-900/40 border-slate-300 dark:border-slate-800/80'
+                    : 'bg-white dark:bg-[#111827]/90 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 shadow-sm'
+                    }`}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="space-y-1">
@@ -2125,6 +2121,7 @@ export default function HrSettingsPage() {
           )}
         </div>
       )}
+
       {showAddUserModal && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="w-full max-w-lg rounded-2xl bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
@@ -2206,11 +2203,10 @@ export default function HrSettingsPage() {
                       return (
                         <label
                           key={perm.id}
-                          className={`flex items-start gap-2.5 p-2 rounded-lg border transition cursor-pointer ${
-                            isChecked
-                              ? 'bg-red-50/50 dark:bg-red-950/20 border-red-300 dark:border-red-800/60'
-                              : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300'
-                          }`}
+                          className={`flex items-start gap-2.5 p-2 rounded-lg border transition cursor-pointer ${isChecked
+                            ? 'bg-red-50/50 dark:bg-red-950/20 border-red-300 dark:border-red-800/60'
+                            : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300'
+                            }`}
                         >
                           <input
                             type="checkbox"
@@ -2316,11 +2312,10 @@ export default function HrSettingsPage() {
                     return (
                       <label
                         key={perm.id}
-                        className={`flex items-start gap-2.5 p-2 rounded-lg border transition cursor-pointer ${
-                          isChecked
-                            ? 'bg-blue-50/50 dark:bg-blue-950/20 border-blue-300 dark:border-blue-800/60'
-                            : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300'
-                        }`}
+                        className={`flex items-start gap-2.5 p-2 rounded-lg border transition cursor-pointer ${isChecked
+                          ? 'bg-blue-50/50 dark:bg-blue-950/20 border-blue-300 dark:border-blue-800/60'
+                          : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300'
+                          }`}
                       >
                         <input
                           type="checkbox"

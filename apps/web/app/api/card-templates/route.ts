@@ -235,7 +235,20 @@ export async function DELETE(request: Request) {
     const { data: existing } = await admin.from('card_templates').select('name, is_default').eq('id', id).single();
 
     if (existing?.is_default) {
-      return NextResponse.json({ error: 'Cannot delete the Global Default Card Template' }, { status: 400 });
+      const { data: otherTemplate } = await admin
+        .from('card_templates')
+        .select('id, name')
+        .neq('id', id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (!otherTemplate) {
+        return NextResponse.json({ error: 'Cannot delete the only card template in the fleet' }, { status: 400 });
+      }
+
+      // Reassign default fallback to the next available template before deleting
+      await admin.from('card_templates').update({ is_default: true }).eq('id', otherTemplate.id);
     }
 
     const { error } = await admin.from('card_templates').delete().eq('id', id);

@@ -229,9 +229,10 @@ export default function HrEmployeesPage() {
   const [selectedEmpIds, setSelectedEmpIds] = useState<Set<string>>(new Set());
 
   const handleSelectFirst20 = () => {
-    const ids = filteredEmployees.slice(0, 20).map((e) => e.id);
+    const limit = filteredEmployees.length <= 20 ? filteredEmployees.length : 20;
+    const ids = filteredEmployees.slice(0, limit).map((e) => e.id);
     setSelectedEmpIds(new Set(ids));
-    toast.success(`Selected ${ids.length} employees for mass printing.`);
+    toast.success(`Selected ${ids.length} employee${ids.length === 1 ? '' : 's'} for mass printing.`);
   };
 
   // Branch Security & Policy states
@@ -1159,7 +1160,11 @@ export default function HrEmployeesPage() {
             onClick={handleSelectFirst20}
             className="px-2.5 py-1 rounded-md bg-red-50 hover:bg-red-100 dark:bg-red-950/50 dark:hover:bg-red-900/50 text-red-700 dark:text-red-300 font-semibold text-xs border border-red-200 dark:border-red-900/60 transition flex items-center gap-1 shadow-2xs"
           >
-            <span>Select 20</span>
+            <span>
+              {filteredEmployees.length <= 20
+                ? `Select All (${filteredEmployees.length})`
+                : 'Select 20'}
+            </span>
           </button>
           {selectedEmpIds.size > 0 && (
             <button
