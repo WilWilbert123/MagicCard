@@ -195,11 +195,11 @@ function HrLoginForm() {
 
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-white">
-              MagicCard Administration
+              Administration
             </h1>
             <p className="text-slate-400 text-xs mt-1">
               {isLicenseLocked
-                ? 'Product registration required before administrative access'
+                ? 'Product registration required'
                 : 'Sign in to manage employees, card designs, & issuance fleet'}
             </p>
           </div>
@@ -357,23 +357,21 @@ function HrLoginForm() {
             {/* Top Right License Days Remaining Badge */}
             {licenseInfo?.isRegistered && (
               <div
-                className={`absolute top-5 right-5 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-950/80 border font-mono text-[11px] font-bold shadow-md select-none ${
-                  typeof licenseInfo.daysRemaining === 'number' && licenseInfo.daysRemaining <= 3
-                    ? 'border-rose-500/40 text-rose-400 shadow-rose-950/30'
-                    : typeof licenseInfo.daysRemaining === 'number' && licenseInfo.daysRemaining <= 7
+                className={`absolute top-5 right-5 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-950/80 border font-mono text-[11px] font-bold shadow-md select-none ${typeof licenseInfo.daysRemaining === 'number' && licenseInfo.daysRemaining <= 3
+                  ? 'border-rose-500/40 text-rose-400 shadow-rose-950/30'
+                  : typeof licenseInfo.daysRemaining === 'number' && licenseInfo.daysRemaining <= 7
                     ? 'border-amber-500/40 text-amber-400 shadow-amber-950/30'
                     : 'border-emerald-500/30 text-emerald-400 shadow-emerald-950/30'
-                }`}
+                  }`}
                 title={`${licenseInfo.edition || 'Standalone Edition'} — ${licenseInfo.daysRemaining === 'Lifetime' ? 'Permanent License' : `${licenseInfo.daysRemaining} days remaining`}`}
               >
                 <span
-                  className={`w-1.5 h-1.5 rounded-full animate-pulse ${
-                    typeof licenseInfo.daysRemaining === 'number' && licenseInfo.daysRemaining <= 3
-                      ? 'bg-rose-400'
-                      : typeof licenseInfo.daysRemaining === 'number' && licenseInfo.daysRemaining <= 7
+                  className={`w-1.5 h-1.5 rounded-full animate-pulse ${typeof licenseInfo.daysRemaining === 'number' && licenseInfo.daysRemaining <= 3
+                    ? 'bg-rose-400'
+                    : typeof licenseInfo.daysRemaining === 'number' && licenseInfo.daysRemaining <= 7
                       ? 'bg-amber-400'
                       : 'bg-emerald-400'
-                  }`}
+                    }`}
                 />
                 <span>
                   {licenseInfo.daysRemaining === 'Lifetime'
