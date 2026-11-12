@@ -281,8 +281,11 @@ export function evaluateLicenseStatus(license: LicenseRecord | null): LicenseSta
 
   const now = new Date();
   const end = new Date(license.endDate);
-  const diffMs = end.getTime() - now.getTime();
-  const daysLeft = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+  // Normalize to pure calendar dates to accurately decrement by 1 day every calendar day
+  const nowDateOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const endDateOnly = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+  const daysLeft = Math.round((endDateOnly.getTime() - nowDateOnly.getTime()) / (1000 * 60 * 60 * 24));
 
   if (daysLeft <= 0) {
     return {

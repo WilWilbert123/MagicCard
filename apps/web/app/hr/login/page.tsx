@@ -353,7 +353,36 @@ function HrLoginForm() {
           /* ==================================================================== */
           /* LICENSED & VALID: SHOW NORMAL ADMIN LOGIN FORM                      */
           /* ==================================================================== */
-          <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-xl p-7 shadow-[0_20px_50px_rgba(0,0,0,0.6)] space-y-5 animate-in fade-in duration-200">
+          <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-xl p-7 shadow-[0_20px_50px_rgba(0,0,0,0.6)] space-y-5 animate-in fade-in duration-200 relative">
+            {/* Top Right License Days Remaining Badge */}
+            {licenseInfo?.isRegistered && (
+              <div
+                className={`absolute top-5 right-5 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-950/80 border font-mono text-[11px] font-bold shadow-md select-none ${
+                  typeof licenseInfo.daysRemaining === 'number' && licenseInfo.daysRemaining <= 3
+                    ? 'border-rose-500/40 text-rose-400 shadow-rose-950/30'
+                    : typeof licenseInfo.daysRemaining === 'number' && licenseInfo.daysRemaining <= 7
+                    ? 'border-amber-500/40 text-amber-400 shadow-amber-950/30'
+                    : 'border-emerald-500/30 text-emerald-400 shadow-emerald-950/30'
+                }`}
+                title={`${licenseInfo.edition || 'Standalone Edition'} — ${licenseInfo.daysRemaining === 'Lifetime' ? 'Permanent License' : `${licenseInfo.daysRemaining} days remaining`}`}
+              >
+                <span
+                  className={`w-1.5 h-1.5 rounded-full animate-pulse ${
+                    typeof licenseInfo.daysRemaining === 'number' && licenseInfo.daysRemaining <= 3
+                      ? 'bg-rose-400'
+                      : typeof licenseInfo.daysRemaining === 'number' && licenseInfo.daysRemaining <= 7
+                      ? 'bg-amber-400'
+                      : 'bg-emerald-400'
+                  }`}
+                />
+                <span>
+                  {licenseInfo.daysRemaining === 'Lifetime'
+                    ? 'Lifetime'
+                    : `${licenseInfo.daysRemaining}d`}
+                </span>
+              </div>
+            )}
+
             {/* Grace period warning if <= 7 days */}
             {licenseInfo?.isGracePeriod && (
               <div className="p-3 rounded-xl bg-amber-950/60 border border-amber-800/70 text-xs text-amber-200 flex items-start gap-2.5">
@@ -441,16 +470,6 @@ function HrLoginForm() {
                 </button>
               </div>
             </form>
-
-            {/* License & Security Status pill */}
-            <div className="p-3 rounded-xl bg-slate-950/40 border border-slate-800/80 text-[11px] text-slate-400 flex items-center justify-between">
-              <span className="flex items-center gap-1.5 text-emerald-400 font-semibold">
-                <CheckCircle2 className="w-3.5 h-3.5" /> Licensed ({licenseInfo?.status || 'Active'})
-              </span>
-              <span className="text-[10px] text-slate-500 font-mono">
-                {licenseInfo?.edition || 'Standalone'}
-              </span>
-            </div>
           </div>
         )}
 
