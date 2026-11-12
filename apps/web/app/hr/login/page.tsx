@@ -248,25 +248,10 @@ function HrLoginForm() {
                 <div className="flex items-center gap-2">
                   <input
                     type="text"
-                    value={regProductId}
-                    onChange={(e) => {
-                      const clean = e.target.value.replace(/\D/g, '');
-                      setRegProductId(clean);
-                      if (clean) {
-                        localStorage.setItem(STORAGE_KEY_DEVICE_ID, clean);
-                      }
-                    }}
-                    onBlur={() => {
-                      if (regProductId) checkLicense(regProductId);
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        if (regProductId) checkLicense(regProductId);
-                      }
-                    }}
-                    className="font-mono font-bold text-white bg-slate-900 px-2.5 py-1 rounded border border-slate-700 text-xs w-32 text-center focus:outline-none focus:border-red-500"
-                    title="Device Hardware Serial (Editable)"
+                    readOnly
+                    value={regProductId || 'Detecting...'}
+                    className="font-mono font-bold text-white bg-slate-900/90 px-2.5 py-1 rounded border border-slate-700/80 text-xs w-32 text-center select-all cursor-default focus:outline-none"
+                    title="Hardware Kernel Product Number (Locked to this device)"
                   />
                   <button
                     type="button"
