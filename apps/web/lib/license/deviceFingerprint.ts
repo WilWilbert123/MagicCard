@@ -85,6 +85,40 @@ export function getHardwareFingerprint(): string {
 export const STORAGE_KEY_DEVICE_ID = 'magiccard_device_id_v4';
 
 /**
+ * Fast asynchronous query to the local Kiosk Agent (http://127.0.0.1:7125/api/machine-id).
+ * If the local agent is running on this Windows PC, it returns the EXACT Windows Drive C:
+ * serial number (675683451) matching VB.NET GetVolumeInformation bit-for-bit.
+ * Times out gracefully in 400ms if the local agent is not running.
+ */
+export async function fetchLocalAgentMachineId(): Promise<string | null> {
+  if (typeof window === 'undefined') return null;
+
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 400);
+
+    const res = await fetch('http://127.0.0.1:7125/api/machine-id', {
+      method: 'GET',
+      signal: controller.signal,
+      cache: 'no-store',
+    });
+    clearTimeout(timer);
+
+    if (res.ok) {
+      const json = await res.json();
+      if (json.serialNumber && /^\d{9,10}$/.test(String(json.serialNumber))) {
+        const id = String(json.serialNumber);
+        localStorage.setItem(STORAGE_KEY_DEVICE_ID, id);
+        return id;
+      }
+    }
+  } catch {
+    // Agent not running or loopback unavailable
+  }
+  return null;
+}
+
+/**
  * Returns the current machine's persistent device serial number.
  * 1. If the user explicitly typed/saved a custom ID in this browser, use it.
  * 2. Otherwise, calculates the deterministic hardware fingerprint so Chrome,

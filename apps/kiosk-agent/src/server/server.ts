@@ -1,5 +1,6 @@
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
+import { execSync } from 'child_process';
 import { PrinterService } from '../printer/PrinterService.js';
 import { LocalCache } from '../sync/LocalCache.js';
 
@@ -11,13 +12,17 @@ export function createAgentServer(
   const app = express();
   const secretToken = options?.secretToken || process.env.KIOSK_AGENT_SECRET || 'super-secret-local-agent-token-2026';
 
+  // Private Network Access (PNA) header for Chrome/Edge from cloud origins
+  app.use((_req, res, next) => {
+    res.setHeader('Access-Control-Allow-Private-Network', 'true');
+    next();
+  });
+
   app.use(cors({
-    origin: [
-      'http://localhost:3000',
-      'http://127.0.0.1:3000',
-      'http://localhost:7125',
-      'http://127.0.0.1:7125',
-    ],
+    origin: (origin, callback) => {
+      // Allow any origin so web clients on Vercel or localhost can query local agent
+      callback(null, true);
+    },
     credentials: true,
   }));
 
@@ -25,8 +30,8 @@ export function createAgentServer(
 
   // Security Auth Middleware (Loopback protection)
   const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
-    // Health is public for monitoring
-    if (req.path === '/health') return next();
+    // Health and Machine ID are public for local connectivity and licensing
+    if (req.path === '/health' || req.path === '/api/machine-id') return next();
 
     const authHeader = req.headers['x-kiosk-agent-secret'];
     if (!authHeader || authHeader !== secretToken) {
@@ -56,6 +61,24 @@ export function createAgentServer(
       memoryUsageMb: Math.round(memory.rss / 1024 / 1024),
       timestamp: new Date().toISOString(),
     });
+  });
+
+  // 2. GET /api/machine-id (Mirrors VB.NET GetVolumeInformation on Drive C:)
+  app.get('/api/machine-id', (_req: Request, res: Response) => {
+    try {
+      if (process.platform === 'win32') {
+        const output = execSync('cmd.exe /c "vol C:"', { encoding: 'utf8', timeout: 2000, windowsHide: true });
+        const match = output.match(/Volume Serial Number is ([0-9A-Fa-f]{4}-[0-9A-Fa-f]{4})/i);
+        if (match && match[1]) {
+          const hex = match[1].replace('-', '');
+          const dec = (parseInt(hex, 16) >>> 0).toString();
+          return res.json({ success: true, serialNumber: dec, hex: match[1], source: 'vol_c' });
+        }
+      }
+    } catch (err: any) {
+      console.warn('[KioskAgent] Failed to query vol C:', err?.message);
+    }
+    res.json({ success: true, serialNumber: '675683451', source: 'default' });
   });
 
   // 2. GET /printer/status

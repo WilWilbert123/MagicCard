@@ -27,6 +27,7 @@ import {
 } from '@/lib/license/licenseValidator';
 import {
   getClientDeviceSerial,
+  fetchLocalAgentMachineId,
   STORAGE_KEY_DEVICE_ID,
 } from '@/lib/license/deviceFingerprint';
 
@@ -56,11 +57,23 @@ function HrLoginForm() {
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
-  // Fetch initial license status using deterministic cross-browser hardware fingerprint
+  // Fetch initial license status (Prioritizes local Windows agent vol C: 675683451, falls back to hardware fingerprint)
   const checkLicense = async (customId?: string) => {
     try {
       setLicenseChecking(true);
-      const targetSerial = customId?.trim() || getClientDeviceSerial();
+      let targetSerial = customId?.trim();
+
+      if (!targetSerial) {
+        // 1. Check if the local Windows Kiosk Agent is running on this laptop
+        const agentSerial = await fetchLocalAgentMachineId();
+        if (agentSerial) {
+          targetSerial = agentSerial;
+        } else {
+          // 2. Fall back to deterministic cross-browser hardware fingerprint
+          targetSerial = getClientDeviceSerial();
+        }
+      }
+
       setRegProductId(targetSerial);
       if (targetSerial) {
         localStorage.setItem(STORAGE_KEY_DEVICE_ID, targetSerial);
