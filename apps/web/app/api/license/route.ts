@@ -130,11 +130,23 @@ export async function POST(request: Request) {
     const key2_Duration = String(body.productKey2 || body.productKey1_Duration || '').trim();
     const key3_SystemType = String(body.productKey3 || body.productKey2_SystemType || '').trim();
 
+    const admin = createAdminSupabaseClient();
+
+    // Check if device already has an existing license record in Supabase
+    const { data: existingLicense } = await admin
+      .from('system_licenses')
+      .select('*')
+      .eq('product_number', targetProductId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
     const validation = validateProductKeys(
       targetProductId,
       key1_Main,
       key2_Duration,
-      key3_SystemType
+      key3_SystemType,
+      existingLicense?.installation_date
     );
 
     if (!validation.valid || !validation.license) {
@@ -147,7 +159,20 @@ export async function POST(request: Request) {
       );
     }
 
-    const admin = createAdminSupabaseClient();
+    // VB.NET parity: Prevent reusing expired or older trial/duration keys
+    if (existingLicense?.end_date && existingLicense.end_date !== 'Lifetime') {
+      const prevEnd = new Date(existingLicense.end_date).getTime();
+      const newEnd = validation.license.endDate === 'Lifetime' ? Infinity : new Date(validation.license.endDate).getTime();
+      if (newEnd <= prevEnd) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'This license key has already been used on this device. Please obtain a new renewal key.',
+          },
+          { status: 400 }
+        );
+      }
+    }
 
     // 1. Insert into dedicated system_licenses table for this specific device
     const { error: insertErr } = await admin
