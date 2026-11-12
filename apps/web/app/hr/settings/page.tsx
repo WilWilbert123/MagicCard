@@ -38,6 +38,7 @@ import {
   Cpu
 } from 'lucide-react';
 import { Branch, Department } from '@/lib/data/enterpriseStore';
+import { getClientDeviceSerial } from '@/lib/license/deviceFingerprint';
 import { compressImageFile } from '@/lib/utils/imageCompressor';
 
 export default function HrSettingsPage() {
@@ -125,7 +126,7 @@ export default function HrSettingsPage() {
   const loadLicenseData = async () => {
     try {
       setLoadingLicense(true);
-      const deviceId = typeof window !== 'undefined' ? (localStorage.getItem('magiccard_device_id_v3') || '') : '';
+      const deviceId = typeof window !== 'undefined' ? getClientDeviceSerial() : '';
       const res = await fetch(`/api/license?deviceId=${encodeURIComponent(deviceId)}&t=${Date.now()}`, { cache: 'no-store' });
       const json = await res.json();
       if (json.data) {

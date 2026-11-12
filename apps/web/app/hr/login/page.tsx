@@ -25,6 +25,10 @@ import {
   DEFAULT_PRODUCT_ID,
   LicenseStatusResult,
 } from '@/lib/license/licenseValidator';
+import {
+  getClientDeviceSerial,
+  STORAGE_KEY_DEVICE_ID,
+} from '@/lib/license/deviceFingerprint';
 
 function HrLoginForm() {
   const router = useRouter();
@@ -52,32 +56,14 @@ function HrLoginForm() {
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
-  // Fetch initial license status
-  const getClientDeviceSerial = () => {
-    if (typeof window === 'undefined') return '';
-    let saved = localStorage.getItem('magiccard_device_id_v3')?.trim();
-    if (saved) return saved;
-
-    // Generate a fresh unique 9-digit serial number for this specific machine
-    if (window.crypto?.getRandomValues) {
-      const arr = new Uint32Array(1);
-      window.crypto.getRandomValues(arr);
-      saved = (100000000 + (arr[0] % 900000000)).toString();
-    } else {
-      saved = Math.floor(100000000 + Math.random() * 900000000).toString();
-    }
-
-    localStorage.setItem('magiccard_device_id_v3', saved);
-    return saved;
-  };
-
+  // Fetch initial license status using deterministic cross-browser hardware fingerprint
   const checkLicense = async (customId?: string) => {
     try {
       setLicenseChecking(true);
       const targetSerial = customId?.trim() || getClientDeviceSerial();
       setRegProductId(targetSerial);
       if (targetSerial) {
-        localStorage.setItem('magiccard_device_id_v3', targetSerial);
+        localStorage.setItem(STORAGE_KEY_DEVICE_ID, targetSerial);
       }
 
       const res = await fetch(`/api/license?deviceId=${encodeURIComponent(targetSerial)}&t=${Date.now()}`, { cache: 'no-store' });
@@ -88,7 +74,7 @@ function HrLoginForm() {
       const detectedId = json.systemInfo?.deviceSerialNumber || targetSerial;
       if (detectedId) {
         setRegProductId(detectedId);
-        localStorage.setItem('magiccard_device_id_v3', detectedId);
+        localStorage.setItem(STORAGE_KEY_DEVICE_ID, detectedId);
       }
     } catch (err) {
       console.error('Failed to check license:', err);
@@ -132,7 +118,7 @@ function HrLoginForm() {
         return;
       }
 
-      localStorage.setItem('magiccard_device_id_v3', regProductId.trim());
+      localStorage.setItem(STORAGE_KEY_DEVICE_ID, regProductId.trim());
       setRegSuccess('Product registered successfully! System unlocked.');
       setLicenseInfo(json.data);
       setTimeout(() => {
@@ -254,7 +240,7 @@ function HrLoginForm() {
                       const clean = e.target.value.replace(/\D/g, '');
                       setRegProductId(clean);
                       if (clean) {
-                        localStorage.setItem('magiccard_device_id_v3', clean);
+                        localStorage.setItem(STORAGE_KEY_DEVICE_ID, clean);
                       }
                     }}
                     onBlur={() => {
